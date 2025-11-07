@@ -197,3 +197,51 @@ button {
   border-radius: 8px;
   cursor: pointer;
 }
+
+/* ============================
+   ADIÇÕES ISOLADAS (APENAS O QUE FOI PEDIDO)
+   ============================ */
+
+/* 1) BLOCO DAS MÉDIAS (entre gráfico e histórico) */
+.medias-container {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.media-bloco {
+  flex: 1;
+  background: var(--card);
+  padding: 12px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+/* 2) FOTO SELECIONADA NA COMPARAÇÃO */
+.foto-item.selecionada {
+  outline: 3px solid var(--primary);
+  border-radius: 12px;
+}
+
+/* 3) LAYOUT LADO A LADO (comparação) */
+.comparacao-dupla {
+  display: flex;
+  gap: 12px;
+}
+.col {
+  flex: 1;
+}
+
+/* 4) GALERIA DE FOTOS */
+#listaFotosGaleria img {
+  width: 100%;
+  border-radius: 14px;
+  margin-bottom: 6px;
+}
+
+/* 5) BOTÃO MINI DE EXCLUSÃO (opcional: cor) */
+.btn-mini.btn-danger {
+  background: var(--danger);
+  color: white;
+  border: none;
+}
