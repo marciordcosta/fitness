@@ -1,0 +1,9 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8" />
+<title>Upload de Fotos</title><link rel="stylesheet" href="style.css" />
+<script src="js/supabase.js"></script><script src="js/fotos.js"></script></head><body>
+<script>supabase.auth.getUser().then(({data})=>{if(!data.user) window.location.href="login.html";});</script>
+<div class="container"><h1>Enviar Foto</h1>
+<div class="card"><input type="date" id="dataFoto" />
+<input type="file" id="arquivoFoto" /><button onclick="uploadFoto()">Enviar</button></div></div>
+<div class="navbar"><a href="index.html">Peso</a><a href="upload.html">Fotos</a><a href="comparacao.html">Comparar</a></div>
+</body></html>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="js/supabase.js"></script>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Entrar</h1>
+    <div class="card">
+      <button onclick="loginGoogle()">Entrar com Google</button>
+    </div>
+  </div>
+
+<script>
+async function loginGoogle() {
+  console.log("loginGoogle() chamado");
+
+  await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: window.location.origin + "/index.html"
+    }
+  });
+}
+</script>
+
+</body>
+</html>

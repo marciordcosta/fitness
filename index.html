@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Peso</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script src="js/supabase.js"></script>
+  <script src="js/pesos.js"></script>
+</head>
+<body>
+
+<header class="app-header">
+  <h1>Peso</h1>
+</header>
+
+<div class="container">
+
+  <div class="top-actions">
+    <button class="btn-primary" onclick="abrirMenuAdicionar()">+ Adicionar</button>
+    <button class="btn-secondary" onclick="abrirPeriodo()">Período</button>
+  </div>
+
+  <div class="card">
+    <canvas id="graficoPeso"></canvas>
+  </div>
+
+  <div class="card">
+    <h2>Histórico</h2>
+    <div id="listaPesos"></div>
+  </div>
+
+</div>
+
+<!-- MENU ADICIONAR -->
+<div id="modalMenu" class="modal" aria-hidden="true">
+  <div class="modal-backdrop" onclick="fecharModals()"></div>
+  <div class="modal-box">
+    <h3>Ações</h3>
+    <button class="btn-primary" onclick="abrirAddPeso()">Adicionar Peso</button>
+    <button class="btn-secondary" onclick="abrirAddFoto()">Carregar Foto</button>
+    <button class="btn-accent" onclick="abrirComparacao()">Comparação</button>
+  </div>
+</div>
+
+<!-- ADICIONAR PESO -->
+<div id="modalPeso" class="modal" aria-hidden="true">
+  <div class="modal-backdrop" onclick="fecharModals()"></div>
+  <div class="modal-box">
+    <h3>Adicionar Peso</h3>
+
+    <label>Data</label>
+    <input type="date" id="dataNovoPeso" />
+
+    <label>Peso (kg)</label>
+    <input type="number" id="valorNovoPeso" step="0.1" />
+
+    <button class="btn-primary" onclick="salvarPesoNovo()">Salvar</button>
+  </div>
+</div>
+
+<!-- ADICIONAR FOTO -->
+<div id="modalFoto" class="modal" aria-hidden="true">
+  <div class="modal-backdrop" onclick="fecharModals()"></div>
+  <div class="modal-box">
+    <h3>Carregar Foto</h3>
+
+    <label>Data</label>
+    <input type="date" id="dataFoto" />
+
+    <label>Arquivo</label>
+    <input type="file" id="arquivoFoto" accept="image/*" />
+
+    <button class="btn-primary" onclick="salvarFoto()">Enviar</button>
+  </div>
+</div>
+
+<!-- PERÍODO -->
+<div id="modalPeriodo" class="modal" aria-hidden="true">
+  <div class="modal-backdrop" onclick="fecharModals()"></div>
+  <div class="modal-box">
+    <h3>Período</h3>
+    <button onclick="filtroPeriodo(7)">1 semana</button>
+    <button onclick="filtroPeriodo(30)">1 mês</button>
+    <button onclick="filtroPeriodo(180)">6 meses</button>
+    <button onclick="filtroPeriodo(365)">1 ano</button>
+  </div>
+</div>
+
+<!-- EDITAR PESO -->
+<div id="modalEditar" class="modal" aria-hidden="true">
+  <div class="modal-backdrop" onclick="fecharModals()"></div>
+  <div class="modal-box">
+    <h3 id="tituloEditar"></h3>
+
+    <label>Data</label>
+    <input type="date" id="dataEditar" />
+
+    <label>Peso (kg)</label>
+    <input type="number" id="pesoEditar" step="0.1" />
+
+    <div class="modal-actions">
+      <button class="btn-danger" onclick="excluirPeso()">Excluir</button>
+      <button class="btn-primary" onclick="salvarEdicao()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- COMPARAÇÃO → SELEÇÃO DE DATAS -->
+<div id="modalComparacao" class="modal" aria-hidden="true">
+  <div class="modal-backdrop" onclick="fecharModals()"></div>
+  <div class="modal-box">
+    <h3>Comparar Fotos</h3>
+
+    <label>Data 1</label>
+    <select id="compData1"></select>
+
+    <label>Data 2</label>
+    <select id="compData2"></select>
+
+    <button class="btn-primary" onclick="abrirTelaComparacao()">Avançar</button>
+  </div>
+</div>
+
+</body>
+</html>

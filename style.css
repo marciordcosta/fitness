@@ -1,0 +1,192 @@
+/* ===== VARIÁVEIS ===== */
+:root {
+  --bg: #f5f5f7;
+  --fg: #1c1c1e;
+  --card: #ffffff;
+  --muted: #8e8e93;
+  --primary: #007aff;
+  --accent: #34c759;
+  --danger: #ff3b30;
+  --secondary: #5e5ce6;
+
+  --shadow: 0 4px 14px rgba(0,0,0,0.08);
+  --radius: 16px;
+}
+
+/* ===== BASE ===== */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+  color: var(--fg);
+  overflow-x: hidden;
+}
+
+h2 {
+  margin: 0 0 10px 0;
+  font-size: 20px;
+}
+
+/* HEADER */
+.app-header {
+  padding: 18px;
+  background: var(--bg);
+  font-size: 26px;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* CONTAINER */
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* CARDS */
+.card {
+  background: var(--card);
+  padding: 16px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+}
+
+/* INPUTS */
+label {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 4px;
+  display: block;
+}
+
+input[type="date"],
+input[type="number"],
+input[type="file"],
+select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #d5d5d6;
+  margin-bottom: 12px;
+  background: #fff;
+  font-size: 16px;
+}
+
+/* BOTOES */
+button {
+  cursor: pointer;
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-accent,
+.btn-danger {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  display: block;
+  margin-top: 12px;
+}
+
+.btn-primary { background: var(--primary); }
+.btn-secondary { background: var(--secondary); }
+.btn-accent { background: var(--accent); color:#0b3d1f; }
+.btn-danger { background: var(--danger); }
+
+.top-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.top-actions button {
+  flex: 1;
+}
+
+/* HISTÓRICO COMPACTO */
+.item {
+  background: #fff;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #ededed;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor:pointer;
+}
+
+.item-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.item-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: 10px;
+}
+
+/* GRÁFICO */
+#graficoPeso {
+  height: 260px !important;
+}
+
+/* ===== MODAIS ===== */
+.modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 100;
+}
+.modal[aria-hidden="false"] {
+  display: flex;
+}
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+}
+.modal-box {
+  position: relative;
+  margin: auto;
+  background: white;
+  padding: 22px;
+  border-radius: 18px;
+  width: 94%;
+  max-width: 380px;
+  z-index: 10;
+  animation: fadeUp .25s ease-out;
+}
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+@keyframes fadeUp {
+  from { opacity:0; transform: translateY(12px);}
+  to { opacity:1; transform: translateY(0);}
+}
+
+/* BOTÕES DO PERÍODO */
+#modalPeriodo .modal-box button {
+  background: #f2f2f7;
+  border: 1px solid #e1e1e5;
+  color: #1c1c1e;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 10px;
+}
+#modalPeriodo .modal-box button:hover {
+  background: #eaeaec;
+}
