@@ -1,93 +1,44 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Comparação</title>
 
 <link rel="stylesheet" href="style.css">
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="js/supabase.js"></script>
 <script src="js/comparacao.js"></script>
-
-<style>
-.comparacao-container {
-  display: flex;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.coluna {
-  flex: 1;
-  background: white;
-  padding: 10px;
-  border-radius: 14px;
-  box-shadow: var(--shadow);
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-.foto-item {
-  width: 100%;
-  border-radius: 10px;
-  margin-bottom: 10px;
-  cursor: pointer;
-  border: 3px solid transparent;
-}
-
-.foto-item.selecionada {
-  border-color: var(--primary);
-}
-
-.botoes-acao {
-  margin-top: 20px;
-  display: flex;
-  gap: 10px;
-}
-</style>
 </head>
-
 <body>
-<header class="app-header">
+
+<header>
   <h1>Comparação</h1>
+  <a href="index.html" class="btn-secondary" style="margin-left:10px;">← Voltar</a>
 </header>
 
-<div class="container">
+<div class="card">
+  <h3>Selecione uma foto de cada lado</h3>
 
-  <h2>Selecione uma foto de cada lado</h2>
-
-  <div id="datasEscolhidas"></div>
-
-  <div class="comparacao-container">
-    <div class="coluna">
-      <h3>Data 1</h3>
-      <div id="coluna1"></div>
-    </div>
-
-    <div class="coluna">
-      <h3>Data 2</h3>
-      <div id="coluna2"></div>
-    </div>
+  <div class="comparacao-dupla">
+    <div class="col" id="coluna1"></div>
+    <div class="col" id="coluna2"></div>
   </div>
 
-  <div class="botoes-acao">
-    <button class="btn-secondary" onclick="voltarSelecao()">Voltar</button>
-    <button class="btn-primary" id="btnComparar" disabled onclick="mostrarComparacaoFinal()">Comparar</button>
-  </div>
-
+  <button id="btnComparar" class="btn-primary" disabled onclick="mostrarComparacaoFinal()">
+    Comparar Selecionadas
+  </button>
 </div>
 
-<!-- MODAL DE CONFIRMAÇÃO DE EXCLUSÃO -->
+<!-- Modal Excluir -->
 <div id="modalExcluirFoto" class="modal" aria-hidden="true">
   <div class="modal-backdrop" onclick="fecharModalExcluir()"></div>
   <div class="modal-box">
     <h3>Excluir foto?</h3>
     <p>Esta ação não pode ser desfeita.</p>
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="fecharModalExcluir()">Cancelar</button>
-      <button class="btn-danger" onclick="confirmarExclusaoFoto()">Excluir</button>
-    </div>
+
+    <button class="btn-secondary" onclick="fecharModalExcluir()">Cancelar</button>
+    <button class="btn-danger" onclick="confirmarExclusaoFoto()">Excluir</button>
   </div>
 </div>
 
