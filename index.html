@@ -126,5 +126,13 @@
   </div>
 </div>
 
+<script>
+supabase.auth.getUser().then(({ data }) => {
+  if (!data.user) {
+    window.location.href = "login.html";
+  }
+});
+</script>
+
 </body>
 </html>
