@@ -241,7 +241,8 @@ async function abrirGaleria() {
   data.forEach(f => {
     area.innerHTML += `
       <div style="margin-bottom:15px;">
-        <img src="${f.url}?t=${Date.now()}" style="width:100%;border-radius:12px;margin-bottom:6px;">
+        <img src="${f.url}?v=${Date.now()}" 
+          style="width:100%;border-radius:12px;margin-bottom:6px;">
         <div style="display:flex;justify-content:space-between;">
           <small>${f.data_foto}</small>
           <button class="btn-mini" onclick="editarFoto(${f.id}, '${f.url}', '${f.data_foto}')">Editar</button>
