@@ -1,160 +1,169 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Controle de Peso</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Controle de Peso</title>
 
-<link rel="stylesheet" href="style.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script src="js/supabase.js"></script>
-<script src="js/pesos.js"></script>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+  <!-- app -->
+  <script src="js/supabase.js?v=2"></script>
+  <script src="js/pesos.js?v=2"></script>
 </head>
 <body>
 
-<header>
-  <h1>Meu Peso</h1>
-</header>
+  <header class="app-header">
+    <h1>Meu Peso</h1>
+  </header>
 
-<!-- BOTÕES -->
-<div class="grupo-botoes">
-  <button class="btn-primary" onclick="abrirMenuAdicionar()">Adicionar</button>
-  <button class="btn-secondary" onclick="abrirPeriodo()">Período</button>
-  <button class="btn-secondary" onclick="abrirComparacao()">Comparar Fotos</button>
-</div>
+  <div class="container">
 
-<!-- GRÁFICO -->
-<div class="card grafico-card">
-  <canvas id="graficoPeso"></canvas>
-</div>
+    <!-- Ações do topo -->
+    <div class="top-actions">
+      <button class="btn-primary" onclick="abrirMenuAdicionar()">Adicionar</button>
+      <button class="btn-secondary" onclick="abrirPeriodo()">Período</button>
+      <button class="btn-secondary" onclick="abrirComparacao()">Comparar Fotos</button>
+    </div>
 
-<!-- MÉDIAS -->
-<div class="card medias-container">
-  <div class="media-bloco">
-    <h3>Média semanal</h3>
-    <div id="mediaSemanalValor">--</div>
+    <!-- Gráfico -->
+    <div class="card">
+      <canvas id="graficoPeso"></canvas>
+    </div>
+
+    <!-- Médias (entre gráfico e histórico) -->
+    <div class="card medias-container">
+      <div class="media-bloco">
+        <h3>Média semanal</h3>
+        <div id="mediaSemanalValor">--</div>
+      </div>
+      <div class="media-bloco">
+        <h3>Progressão (%)</h3>
+        <div id="mediaProgressoValor">--</div>
+      </div>
+    </div>
+
+    <!-- Histórico -->
+    <div class="card">
+      <h2>Histórico</h2>
+      <div id="listaPesos"></div>
+    </div>
+
   </div>
 
-  <div class="media-bloco">
-    <h3>Progressão (%)</h3>
-    <div id="mediaProgressoValor">--</div>
+  <!-- ===== Modais ===== -->
+
+  <!-- Menu Adicionar -->
+  <div id="modalMenu" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" onclick="fecharModals()"></div>
+    <div class="modal-box">
+      <button class="btn-primary" onclick="abrirAddPeso()">Adicionar Peso</button>
+      <button class="btn-primary" onclick="abrirAddFoto()">Carregar Foto</button>
+      <button class="btn-secondary" onclick="abrirGaleria()">Abrir Galeria</button>
+    </div>
   </div>
-</div>
 
-<!-- HISTÓRICO -->
-<div class="card">
-  <h2>Histórico</h2>
-  <div id="listaPesos"></div>
-</div>
-
-<!-- ======= MODAIS ======= -->
-
-<!-- MENU -->
-<div id="modalMenu" class="modal" aria-hidden="true">
-  <div class="modal-backdrop" onclick="fecharModals()"></div>
-  <div class="modal-box">
-    <button class="btn-primary" onclick="abrirAddPeso()">Adicionar Peso</button>
-    <button class="btn-primary" onclick="abrirAddFoto()">Carregar Foto</button>
-    <button class="btn-secondary" onclick="abrirGaleria()">Abrir Galeria</button>
+  <!-- Adicionar Peso -->
+  <div id="modalPeso" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" onclick="fecharModals()"></div>
+    <div class="modal-box">
+      <h3>Novo Peso</h3>
+      <label>Data</label>
+      <input type="date" id="dataNovoPeso" />
+      <label>Peso (kg)</label>
+      <input type="number" id="valorNovoPeso" step="0.1" />
+      <button class="btn-primary" onclick="salvarPesoNovo()">Salvar</button>
+    </div>
   </div>
-</div>
 
-<!-- ADICIONAR PESO -->
-<div id="modalPeso" class="modal" aria-hidden="true">
-  <div class="modal-backdrop" onclick="fecharModals()"></div>
-  <div class="modal-box">
-    <h3>Novo Peso</h3>
-    <label>Data</label>
-    <input type="date" id="dataNovoPeso">
-
-    <label>Peso (kg)</label>
-    <input type="number" id="valorNovoPeso">
-
-    <button class="btn-primary" onclick="salvarPesoNovo()">Salvar</button>
+  <!-- Editar Peso -->
+  <div id="modalEditar" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" onclick="fecharModals()"></div>
+    <div class="modal-box">
+      <h3>Editar Peso</h3>
+      <label>Data</label>
+      <input type="date" id="dataEditar" />
+      <label>Peso (kg)</label>
+      <input type="number" id="pesoEditar" step="0.1" />
+      <div class="modal-actions">
+        <button class="btn-danger" onclick="excluirPeso()">Excluir</button>
+        <button class="btn-primary" onclick="salvarEdicao()">Salvar</button>
+      </div>
+    </div>
   </div>
-</div>
 
-<!-- EDITAR PESO -->
-<div id="modalEditar" class="modal" aria-hidden="true">
-  <div class="modal-backdrop" onclick="fecharModals()"></div>
-  <div class="modal-box">
-    <h3>Editar Peso</h3>
-
-    <label>Data</label>
-    <input type="date" id="dataEditar">
-
-    <label>Peso</label>
-    <input type="number" id="pesoEditar">
-
-    <button class="btn-primary" onclick="salvarEdicao()">Salvar</button>
-    <button class="btn-danger" onclick="excluirPeso()">Excluir</button>
+  <!-- Adicionar Foto -->
+  <div id="modalFoto" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" onclick="fecharModals()"></div>
+    <div class="modal-box">
+      <h3>Carregar Foto</h3>
+      <label>Data da Foto</label>
+      <input type="date" id="dataFoto" />
+      <label>Arquivo</label>
+      <input type="file" id="arquivoFoto" accept="image/*" />
+      <button class="btn-primary" onclick="salvarFoto()">Enviar</button>
+      <button class="btn-secondary" onclick="abrirGaleria()">Abrir Galeria</button>
+    </div>
   </div>
-</div>
 
-<!-- ADICIONAR FOTO -->
-<div id="modalFoto" class="modal" aria-hidden="true">
-  <div class="modal-backdrop" onclick="fecharModals()"></div>
-  <div class="modal-box">
-    <h3>Carregar Foto</h3>
-
-    <label>Data da Foto</label>
-    <input type="date" id="dataFoto">
-
-    <label>Arquivo</label>
-    <input type="file" id="arquivoFoto">
-
-    <button class="btn-primary" onclick="salvarFoto()">Enviar</button>
-    <button class="btn-secondary" onclick="abrirGaleria()">Abrir Galeria</button>
+  <!-- Galeria -->
+  <div id="modalGaleria" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" onclick="fecharModals()"></div>
+    <div class="modal-box" style="max-height:80vh;overflow-y:auto;">
+      <h3>Galeria</h3>
+      <div id="listaFotosGaleria"></div>
+    </div>
   </div>
-</div>
 
-<!-- GALERIA -->
-<div id="modalGaleria" class="modal" aria-hidden="true">
-  <div class="modal-backdrop" onclick="fecharModals()"></div>
-  <div class="modal-box" style="max-height:80vh;overflow-y:auto;">
-    <h3>Galeria</h3>
-    <div id="listaFotosGaleria"></div>
+  <!-- Editar Foto -->
+  <div id="modalFotoEditar" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" onclick="fecharModals()"></div>
+    <div class="modal-box">
+      <h3>Editar Foto</h3>
+      <img id="fotoEditarPreview" style="width:100%;border-radius:12px;margin-bottom:8px;" />
+      <label>Data</label>
+      <input type="date" id="fotoEditarData" />
+      <div class="modal-actions">
+        <button class="btn-danger" onclick="excluirFotoSelecionada()">Excluir</button>
+        <button class="btn-primary" onclick="salvarEdicaoFoto()">Salvar</button>
+      </div>
+    </div>
   </div>
-</div>
 
-<!-- EDITAR FOTO -->
-<div id="modalFotoEditar" class="modal" aria-hidden="true">
-  <div class="modal-backdrop" onclick="fecharModals()"></div>
-  <div class="modal-box">
-    <h3>Editar Foto</h3>
-
-    <img id="fotoEditarPreview" style="width:100%;border-radius:12px;margin-bottom:8px;">
-
-    <label>Data</label>
-    <input type="date" id="fotoEditarData">
-
-    <button class="btn-danger" onclick="excluirFotoSelecionada()">Excluir</button>
-    <button class="btn-primary" onclick="salvarEdicaoFoto()">Salvar</button>
+  <!-- Comparação (seleção das datas) -->
+  <div id="modalComparacao" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" onclick="fecharModals()"></div>
+    <div class="modal-box">
+      <h3>Comparar Fotos</h3>
+      <label>Data 1</label>
+      <select id="compData1"></select>
+      <label>Data 2</label>
+      <select id="compData2"></select>
+      <button class="btn-primary" onclick="abrirTelaComparacao()">Avançar</button>
+    </div>
   </div>
-</div>
 
-<!-- COMPARAÇÃO -->
-<div id="modalComparacao" class="modal" aria-hidden="true">
-  <div class="modal-backdrop" onclick="fecharModals()"></div>
-  <div class="modal-box">
-    <h3>Comparar Fotos</h3>
-
-    <label>Data 1</label>
-    <select id="compData1"></select>
-
-    <label>Data 2</label>
-    <select id="compData2"></select>
-
-    <button class="btn-primary" onclick="abrirTelaComparacao()">Comparar</button>
+  <!-- Período -->
+  <div id="modalPeriodo" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" onclick="fecharModals()"></div>
+    <div class="modal-box">
+      <h3>Período</h3>
+      <button onclick="filtroPeriodo(7)">1 semana</button>
+      <button onclick="filtroPeriodo(30)">1 mês</button>
+      <button onclick="filtroPeriodo(180)">6 meses</button>
+      <button onclick="filtroPeriodo(365)">1 ano</button>
+    </div>
   </div>
-</div>
 
-<script>
-supabase.auth.getUser().then(({ data }) => {
-  if (!data.user) window.location.href = "login.html";
-});
-</script>
-
+  <!-- Guard de sessão -->
+  <script>
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) window.location.href = "login.html";
+    });
+  </script>
 </body>
 </html>
