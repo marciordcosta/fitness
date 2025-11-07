@@ -1,46 +1,45 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Comparação</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Comparação</title>
 
-<link rel="stylesheet" href="style.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script src="js/supabase.js"></script>
-<script src="js/comparacao.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="js/supabase.js?v=2"></script>
+  <script src="js/comparacao.js?v=2"></script>
 </head>
 <body>
 
-<header>
-  <h1>Comparação</h1>
-  <a href="index.html" class="btn-secondary" style="margin-left:10px;">← Voltar</a>
-</header>
+  <header class="app-header">
+    <h1>Comparação</h1>
+    <a href="index.html" class="btn-secondary" style="margin-left:10px;">← Voltar</a>
+  </header>
 
-<div class="card">
-  <h3>Selecione uma foto de cada lado</h3>
-
-  <div class="comparacao-dupla">
-    <div class="col" id="coluna1"></div>
-    <div class="col" id="coluna2"></div>
+  <div class="container">
+    <div class="card">
+      <h3>Selecione uma foto de cada lado</h3>
+      <div class="comparacao-dupla">
+        <div class="col" id="coluna1"></div>
+        <div class="col" id="coluna2"></div>
+      </div>
+      <button id="btnComparar" class="btn-primary" disabled onclick="mostrarComparacaoFinal()">Comparar Selecionadas</button>
+    </div>
   </div>
 
-  <button id="btnComparar" class="btn-primary" disabled onclick="mostrarComparacaoFinal()">
-    Comparar Selecionadas
-  </button>
-</div>
-
-<!-- Modal Excluir -->
-<div id="modalExcluirFoto" class="modal" aria-hidden="true">
-  <div class="modal-backdrop" onclick="fecharModalExcluir()"></div>
-  <div class="modal-box">
-    <h3>Excluir foto?</h3>
-    <p>Esta ação não pode ser desfeita.</p>
-
-    <button class="btn-secondary" onclick="fecharModalExcluir()">Cancelar</button>
-    <button class="btn-danger" onclick="confirmarExclusaoFoto()">Excluir</button>
+  <!-- Modal Excluir -->
+  <div id="modalExcluirFoto" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" onclick="fecharModalExcluir()"></div>
+    <div class="modal-box">
+      <h3>Excluir foto?</h3>
+      <p>Esta ação não pode ser desfeita.</p>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="fecharModalExcluir()">Cancelar</button>
+        <button class="btn-danger" onclick="confirmarExclusaoFoto()">Excluir</button>
+      </div>
+    </div>
   </div>
-</div>
 
 </body>
 </html>
