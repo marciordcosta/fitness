@@ -1,35 +1,27 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Login</title>
-
-<link rel="stylesheet" href="style.css">
-
+<link rel="stylesheet" href="style.css" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script src="js/supabase.js"></script>
+<script src="js/supabase.js?v=2"></script>
 </head>
 <body>
-
-<div class="container">
-  <h1>Entrar</h1>
-
-  <div class="card">
-    <button class="btn-primary" onclick="loginGoogle()">Entrar com Google</button>
+  <div class="container">
+    <h1>Entrar</h1>
+    <div class="card">
+      <button class="btn-primary" onclick="loginGoogle()">Entrar com Google</button>
+    </div>
   </div>
-</div>
-
-<script>
-async function loginGoogle() {
-  await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: "https://marciordcosta.github.io/fitness/index.html"
+  <script>
+    async function loginGoogle() {
+      await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: "https://marciordcosta.github.io/fitness/index.html" }
+      });
     }
-  });
-}
-</script>
-
+  </script>
 </body>
 </html>
