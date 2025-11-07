@@ -22,11 +22,11 @@ async function loginGoogle() {
   console.log("loginGoogle() chamado");
 
   await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: window.location.origin + "/index.html"
-    }
-  });
+  provider: "google",
+  options: {
+    redirectTo: "https://marciordcosta.github.io/fitness/index.html"
+  }
+});
 }
 </script>
 
