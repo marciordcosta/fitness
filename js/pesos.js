@@ -65,11 +65,25 @@ async function salvarFoto() {
   if (!data || !file) return alert("Selecione a data e a foto.");
 
   const nome = `${Date.now()}-${file.name}`;
-  const { error: upErr } = await supabase.storage.from("fotos").upload(nome, file);
-  if (upErr) return alert("Erro ao enviar imagem.");
 
-  const url = supabase.storage.from("fotos").getPublicUrl(nome).data.publicUrl;
+  // Envia para o bucket
+  const { error: upErr } = await supabase.storage
+    .from("fotos")
+    .upload(nome, file);
 
+  if (upErr) {
+    console.error(upErr);
+    return alert("Erro ao enviar imagem.");
+  }
+
+  // Gera URL pública correta
+  const { data: publicInfo } = supabase.storage
+    .from("fotos")
+    .getPublicUrl(nome);
+
+  const url = publicInfo.publicUrl;
+
+  // Salva no banco
   await supabase.from("fotos").insert({
     data_foto: data,
     url
