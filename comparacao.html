@@ -78,5 +78,18 @@
 
 </div>
 
+<!-- MODAL DE CONFIRMAÇÃO DE EXCLUSÃO -->
+<div id="modalExcluirFoto" class="modal" aria-hidden="true">
+  <div class="modal-backdrop" onclick="fecharModalExcluir()"></div>
+  <div class="modal-box">
+    <h3>Excluir foto?</h3>
+    <p>Esta ação não pode ser desfeita.</p>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="fecharModalExcluir()">Cancelar</button>
+      <button class="btn-danger" onclick="confirmarExclusaoFoto()">Excluir</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
