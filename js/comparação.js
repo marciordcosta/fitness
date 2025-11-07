@@ -42,7 +42,7 @@ function renderColuna(id, lista, lado) {
     wrap.style.marginBottom = "10px";
 
     const img = document.createElement("img");
-    img.src = f.url + "?t=" + Date.now();
+    img.src = f.url + "?v=" + Date.now();
     img.className = "foto-item";
     img.onclick = () => selecionar(f, lado, img);
 
@@ -116,4 +116,5 @@ function mostrarComparacaoFinal() {
     </html>
   `);
 }
+
 
