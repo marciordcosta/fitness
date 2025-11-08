@@ -33,19 +33,26 @@
     font-weight:600;
   }
 
-  .btn-multi {
+  .top-actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn-top {
     padding: 8px 14px;
     font-size: 14px;
     border-radius: 10px;
-    background: #ff3b30;
     border: none;
-    color: white;
     cursor: pointer;
-    display: none; /* aparece só quando tiver seleção */
+    display: none;
+    color: white;
   }
 
-  /* DATA */
+  .btn-delete { background: #ff3b30; }
+  .btn-compare { background: #007aff; }
+
   .data-bloco { margin-top: 16px; }
+
   .data-titulo {
     font-size: 15px;
     font-weight: 600;
@@ -112,7 +119,6 @@
     opacity:0.7;
   }
 
-  /* Botões EDITAR e EXCLUIR individuais */
   .foto-acoes {
     display: flex;
     justify-content: space-between;
@@ -135,8 +141,14 @@
 <body>
 
 <div class="galeria-header">
+
   <span class="voltar" onclick="window.location='index.html'">← Voltar</span>
-  <button id="btnExcluirVarios" class="btn-multi" onclick="excluirSelecionados()">Excluir</button>
+
+  <div class="top-actions">
+    <button id="btnComparar" class="btn-top btn-compare" onclick="compararSelecionadas()">Comparar</button>
+    <button id="btnExcluirVarios" class="btn-top btn-delete" onclick="excluirSelecionados()">Excluir</button>
+  </div>
+
 </div>
 
 <div id="conteudoGaleria"></div>
@@ -147,7 +159,7 @@ let selecionadas = new Set();
 /* ==================== CARREGAR GALERIA ==================== */
 async function carregarGaleria() {
   selecionadas.clear();
-  atualizarBotaoExcluir();
+  atualizarTopo();
 
   const { data } = await supabase
     .from("fotos")
@@ -171,20 +183,15 @@ async function carregarGaleria() {
         <div class="grid">
           ${grupos[data].map(f => `
             <div class="foto-bloco" id="foto-${f.id}">
-              
-              <!-- CHECK -->
               <div class="check">✓</div>
 
-              <!-- FOTO -->
               <img src="${f.url}?v=${Date.now()}" class="foto-galeria"
-                   onclick="toggleSelecao(${f.id}, '${f.url}')">
+                   onclick="toggleSelecao(${f.id})">
 
-              <!-- AÇÕES -->
               <div class="foto-acoes">
                 <button onclick="editarFoto('${f.id}', '${f.url}', '${f.data_foto}')">Editar</button>
                 <button onclick="excluirFotoGaleria('${f.id}', '${f.url}')">Excluir</button>
               </div>
-
             </div>
           `).join("")}
         </div>
@@ -205,12 +212,30 @@ function toggleSelecao(id) {
     bloco.classList.add("selecionado");
   }
 
-  atualizarBotaoExcluir();
+  atualizarTopo();
 }
 
-function atualizarBotaoExcluir() {
-  const btn = document.getElementById("btnExcluirVarios");
-  btn.style.display = selecionadas.size > 0 ? "block" : "none";
+function atualizarTopo() {
+  const btnDel = document.getElementById("btnExcluirVarios");
+  const btnComp = document.getElementById("btnComparar");
+
+  // Excluir aparece com 1 ou mais
+  btnDel.style.display = selecionadas.size > 0 ? "block" : "none";
+
+  // Comparar somente quando selecionar 2 fotos
+  btnComp.style.display = selecionadas.size === 2 ? "block" : "none";
+}
+
+/* ==================== COMPARAR ==================== */
+function compararSelecionadas() {
+  if (selecionadas.size !== 2) return;
+
+  const ids = Array.from(selecionadas);
+
+  localStorage.setItem("comparar_id1", ids[0]);
+  localStorage.setItem("comparar_id2", ids[1]);
+
+  window.location.href = "comparacao.html";
 }
 
 /* ==================== EXCLUIR VARIAS ==================== */
@@ -218,10 +243,8 @@ async function excluirSelecionados() {
   if (!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
 
   for (let id of selecionadas) {
-    const foto = document.getElementById(`foto-${id}`);
-
-    // pegar URL pelo atributo <img>
-    const img = foto.querySelector("img").src.split("?")[0];
+    const bloco = document.getElementById(`foto-${id}`);
+    const img = bloco.querySelector("img").src.split("?")[0];
     const arquivo = img.split("/").pop();
 
     await supabase.storage.from("fotos").remove([arquivo]);
@@ -229,6 +252,15 @@ async function excluirSelecionados() {
   }
 
   selecionadas.clear();
+  carregarGaleria();
+}
+
+/* ==================== EDITAR ==================== */
+async function editarFoto(id, url, data_foto) {
+  const nova = prompt("Nova data (AAAA-MM-DD):", data_foto);
+  if (!nova) return;
+
+  await supabase.from("fotos").update({ data_foto: nova }).eq("id", id);
   carregarGaleria();
 }
 
@@ -244,20 +276,7 @@ async function excluirFotoGaleria(id, url) {
   carregarGaleria();
 }
 
-/* ==================== EDITAR FOTO ==================== */
-async function editarFoto(id, url, data_foto) {
-  const novaData = prompt("Nova data da foto (AAAA-MM-DD):", data_foto);
-  if (!novaData) return;
-
-  await supabase
-    .from("fotos")
-    .update({ data_foto: novaData })
-    .eq("id", id);
-
-  carregarGaleria();
-}
-
-/* ======================== START ======================== */
+/* START */
 carregarGaleria();
 </script>
 
