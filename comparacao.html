@@ -5,17 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Comparação</title>
 
-<link rel="stylesheet" href="style.css" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="js/supabase.js"></script>
 
 <style>
   body {
     margin:0;
-    background:#000; /* fundo escuro padrão */
-    height:100vh;
-    overflow:auto;
+    background:#000;
     color:#fff;
+    overflow:auto;
   }
 
   .compare-container {
@@ -24,48 +22,70 @@
     padding:20px;
   }
 
-  /* =====================================================
-     GRID DAS IMAGENS
-  ====================================================== */
+  /* GRID DAS IMAGENS */
   #grid {
     display:grid;
-    gap:20px;
+    gap:22px;
   }
-
-  #grid.lado {
-    grid-template-columns:1fr 1fr;
-  }
-
-  #grid.baixo {
-    grid-template-columns:1fr;
-  }
+  #grid.lado { grid-template-columns:1fr 1fr; }
+  #grid.baixo { grid-template-columns:1fr; }
 
   .img-wrap {
     background:#000;
     border-radius:12px;
     overflow:hidden;
     position:relative;
-    touch-action:pinch-zoom;
+    touch-action:none; /* necessário para pan no celular */
+    height:400px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
   }
 
   .compare-img {
     width:100%;
     object-fit:contain;
-    transition:transform 0.15s ease-out;
+    transition:transform .15s ease-out;
+    user-select:none;
+    pointer-events:none; /* impede clique interferir no arrasto */
   }
 
-  /* =====================================================
-     PAINEL DE BOTÕES LATERAL
-  ====================================================== */
-  .sidebar {
+  /* CONTROLES DE ZOOM EMBAIXO DE CADA IMAGEM */
+  .controls {
+    text-align:center;
+    margin-top:10px;
+    display:flex;
+    justify-content:center;
+    gap:10px;
+  }
+
+  .btn {
+    background:#1c1c1e;
+    color:#fff;
+    border:none;
+    padding:10px 14px;
+    border-radius:10px;
+    cursor:pointer;
+    font-size:14px;
+  }
+
+  .btn-back {
+    background:#007aff;
+    font-weight:600;
+    margin-top:20px;
+    width:100%;
+  }
+
+  /* BOTÕES LATERAIS (somente os gerais) */
+  .side-bar {
     position:fixed;
-    top:50%;
     right:10px;
+    top:50%;
     transform:translateY(-50%);
     display:flex;
     flex-direction:column;
     gap:10px;
-    z-index:1000;
+    z-index:999;
   }
 
   .btn-side {
@@ -74,64 +94,68 @@
     border:none;
     padding:10px 12px;
     border-radius:10px;
-    font-size:14px;
     cursor:pointer;
-    min-width:60px;
   }
 
-  /* botão maior para voltar */
-  .btn-back {
-    background:#007aff;
-    font-weight:700;
-  }
-
-  /* no celular, reduz largura para caber melhor */
   @media(max-width:600px) {
-    .sidebar {
-      right:6px;
-    }
-    .btn-side {
-      padding:8px 10px;
-      font-size:12px;
-    }
+    .img-wrap { height:300px; }
   }
 </style>
 </head>
 <body>
 
-<div class="sidebar">
-  <button class="btn-side" onclick="zoomIn(1)">🔍➕</button>
-  <button class="btn-side" onclick="zoomOut(1)">🔍➖</button>
-
-  <button class="btn-side" onclick="zoomIn(2)">🔍➕</button>
-  <button class="btn-side" onclick="zoomOut(2)">🔍➖</button>
-
+<!-- BOTÕES GERAIS (fixos na lateral) -->
+<div class="side-bar">
   <button class="btn-side" onclick="trocarPosicao()">⇆</button>
   <button class="btn-side" onclick="toggleModo()">↕/↔</button>
-
   <button class="btn-side btn-back" onclick="window.location='galeria.html'">←</button>
 </div>
 
 <div class="compare-container">
 
-  <div id="grid" class="lado"> 
-    <div class="img-wrap"><img id="img1" class="compare-img"></div>
-    <div class="img-wrap"><img id="img2" class="compare-img"></div>
+  <div id="grid" class="lado">
+
+    <!-- IMAGEM 1 -->
+    <div>
+      <div class="img-wrap" id="wrap1">
+        <img id="img1" class="compare-img">
+      </div>
+
+      <div class="controls">
+        <button class="btn" onclick="zoomIn(1)">➕</button>
+        <button class="btn" onclick="zoomOut(1)">➖</button>
+        <button class="btn" onclick="resetZoom(1)">⭯ Reset</button>
+      </div>
+    </div>
+
+    <!-- IMAGEM 2 -->
+    <div>
+      <div class="img-wrap" id="wrap2">
+        <img id="img2" class="compare-img">
+      </div>
+
+      <div class="controls">
+        <button class="btn" onclick="zoomIn(2)">➕</button>
+        <button class="btn" onclick="zoomOut(2)">➖</button>
+        <button class="btn" onclick="resetZoom(2)">⭯ Reset</button>
+      </div>
+    </div>
+
   </div>
 
 </div>
 
 <script>
-/* =====================================================
+/* ============================================================
    CARREGAR IMAGENS
-====================================================== */
+============================================================ */
 async function carregarComparacao() {
   const id1 = localStorage.getItem("comparar_id1");
   const id2 = localStorage.getItem("comparar_id2");
 
   if (!id1 || !id2) {
     alert("Selecione 2 fotos na galeria.");
-    window.location = "galeria.html";
+    window.location="galeria.html";
     return;
   }
 
@@ -140,74 +164,105 @@ async function carregarComparacao() {
     .select("id, url")
     .in("id", [id1, id2]);
 
-  if (!data || data.length < 2) {
-    alert("Erro ao carregar imagens.");
-    window.location = "galeria.html";
-    return;
-  }
+  if (!data || data.length !== 2) return;
 
-  const img1 = data.find(f => f.id == id1);
-  const img2 = data.find(f => f.id == id2);
-
-  document.getElementById("img1").src = img1.url + "?v=" + Date.now();
-  document.getElementById("img2").src = img2.url + "?v=" + Date.now();
+  document.getElementById("img1").src = data.find(f => f.id == id1).url;
+  document.getElementById("img2").src = data.find(f => f.id == id2).url;
 }
 
 carregarComparacao();
 
-/* =====================================================
-   ZOOM INDEPENDENTE
-====================================================== */
+/* ============================================================
+   ZOOM + PAN INDEPENDENTE
+============================================================ */
 
-let scale1 = 1, scale2 = 1;
+let transform = {
+  1: { scale:1, x:0, y:0 },
+  2: { scale:1, x:0, y:0 }
+};
 
-function aplicarZoom() {
-  document.getElementById("img1").style.transform = `scale(${scale1})`;
-  document.getElementById("img2").style.transform = `scale(${scale2})`;
+function aplicar(num) {
+  const img = document.getElementById(`img${num}`);
+  const t = transform[num];
+  img.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.scale})`;
 }
 
 function zoomIn(num) {
-  if (num === 1) scale1 = Math.min(scale1 + 0.2, 4);
-  if (num === 2) scale2 = Math.min(scale2 + 0.2, 4);
-  aplicarZoom();
+  transform[num].scale = Math.min(transform[num].scale + 0.2, 4);
+  aplicar(num);
 }
 
 function zoomOut(num) {
-  if (num === 1) scale1 = Math.max(scale1 - 0.2, 1);
-  if (num === 2) scale2 = Math.max(scale2 - 0.2, 1);
-  aplicarZoom();
+  transform[num].scale = Math.max(transform[num].scale - 0.2, 1);
+  aplicar(num);
 }
 
-/* =====================================================
+function resetZoom(num) {
+  transform[num] = { scale:1, x:0, y:0 };
+  aplicar(num);
+}
+
+/* PAN (arrastar com mouse e dedo) */
+["1", "2"].forEach(n => {
+  const wrap = document.getElementById(`wrap${n}`);
+
+  let dragging = false, lastX = 0, lastY = 0;
+
+  // mouse down
+  wrap.addEventListener("mousedown", e => {
+    dragging = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
+  });
+
+  window.addEventListener("mouseup", () => dragging = false);
+
+  window.addEventListener("mousemove", e => {
+    if (!dragging) return;
+    transform[n].x += e.clientX - lastX;
+    transform[n].y += e.clientY - lastY;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    aplicar(n);
+  });
+
+  // touch
+  wrap.addEventListener("touchstart", e => {
+    lastX = e.touches[0].clientX;
+    lastY = e.touches[0].clientY;
+  });
+
+  wrap.addEventListener("touchmove", e => {
+    const t = e.touches[0];
+    transform[n].x += t.clientX - lastX;
+    transform[n].y += t.clientY - lastY;
+    lastX = t.clientX;
+    lastY = t.clientY;
+    aplicar(n);
+  });
+});
+
+/* ============================================================
    TROCAR POSIÇÃO
-====================================================== */
+============================================================ */
 function trocarPosicao() {
-  const grid = document.getElementById("grid");
-  const wrap1 = document.getElementById("img1").parentElement;
-  const wrap2 = document.getElementById("img2").parentElement;
-  grid.insertBefore(wrap2, wrap1);
+  const g = document.getElementById("grid");
+  const p1 = g.children[0];
+  const p2 = g.children[1];
+  g.insertBefore(p2, p1);
 }
 
-/* =====================================================
-   MODO LADO A LADO / EM CIMA
-====================================================== */
+/* ============================================================
+   MODO LADO LADO / CIMA BAIXO
+============================================================ */
 let modo = "lado";
 
 function toggleModo() {
   const grid = document.getElementById("grid");
-
   modo = (modo === "lado") ? "baixo" : "lado";
 
-  if (modo === "lado") {
-    grid.classList.remove("baixo");
-    grid.classList.add("lado");
-    document.body.style.height = "100vh";  
-    document.body.style.overflow = "auto";
-  } else {
-    grid.classList.remove("lado");
-    grid.classList.add("baixo");
-    document.body.style.height = "auto";  
-  }
+  grid.classList.remove("lado", "baixo");
+  grid.classList.add(modo);
 }
 </script>
 
