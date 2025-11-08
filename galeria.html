@@ -12,6 +12,7 @@
 <style>
   body { background:#f5f5f7; margin:0; }
 
+  /* HEADER */
   .galeria-header {
     padding: 12px 16px;
     font-size: 18px;
@@ -19,19 +20,31 @@
     background: #fff;
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: 20;
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: space-between;
   }
 
-  .galeria-header .voltar {
+  .voltar {
     color:#007aff;
     cursor:pointer;
     font-weight:600;
   }
 
+  .btn-multi {
+    padding: 8px 14px;
+    font-size: 14px;
+    border-radius: 10px;
+    background: #ff3b30;
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: none; /* aparece só quando tiver seleção */
+  }
+
+  /* DATA */
   .data-bloco { margin-top: 16px; }
   .data-titulo {
     font-size: 15px;
@@ -40,20 +53,66 @@
     color:#1c1c1e;
   }
 
+  /* GRID */
   .grid {
     display:grid;
-    grid-template-columns: repeat(4, 1fr); /* 4 colunas */
+    grid-template-columns: repeat(4, 1fr);
     gap:8px;
     padding: 0 10px 10px;
   }
 
-  .foto-bloco { position: relative; }
+  .foto-bloco {
+    position: relative;
+    animation: fadeIn .25s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity:0; transform:scale(0.9);}
+    to { opacity:1; transform:scale(1);}
+  }
 
   .foto-galeria {
     width: 100%;
     border-radius: 12px;
+    cursor: pointer;
+    transition: transform .15s;
   }
 
+  .foto-galeria:active {
+    transform: scale(0.92);
+  }
+
+  /* CHECK (seleção múltipla) */
+  .check {
+    position:absolute;
+    top:6px;
+    right:6px;
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    background:white;
+    border: 2px solid #007aff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    font-size:14px;
+    font-weight:bold;
+    opacity:0;
+    pointer-events:none;
+    transition: opacity .12s;
+  }
+
+  .selecionado .check {
+    background:#007aff;
+    opacity:1;
+  }
+
+  .selecionado .foto-galeria {
+    opacity:0.7;
+  }
+
+  /* Botões EDITAR e EXCLUIR individuais */
   .foto-acoes {
     display: flex;
     justify-content: space-between;
@@ -71,19 +130,25 @@
     background: #eaeaea;
   }
 </style>
+
 </head>
 <body>
 
 <div class="galeria-header">
   <span class="voltar" onclick="window.location='index.html'">← Voltar</span>
-  <div>Galeria</div>
+  <button id="btnExcluirVarios" class="btn-multi" onclick="excluirSelecionados()">Excluir</button>
 </div>
 
 <div id="conteudoGaleria"></div>
 
 <script>
+let selecionadas = new Set();
+
 /* ==================== CARREGAR GALERIA ==================== */
 async function carregarGaleria() {
+  selecionadas.clear();
+  atualizarBotaoExcluir();
+
   const { data } = await supabase
     .from("fotos")
     .select("id, data_foto, url")
@@ -105,13 +170,21 @@ async function carregarGaleria() {
 
         <div class="grid">
           ${grupos[data].map(f => `
-            <div class="foto-bloco">
-              <img src="${f.url}?v=${Date.now()}" class="foto-galeria">
+            <div class="foto-bloco" id="foto-${f.id}">
+              
+              <!-- CHECK -->
+              <div class="check">✓</div>
 
+              <!-- FOTO -->
+              <img src="${f.url}?v=${Date.now()}" class="foto-galeria"
+                   onclick="toggleSelecao(${f.id}, '${f.url}')">
+
+              <!-- AÇÕES -->
               <div class="foto-acoes">
                 <button onclick="editarFoto('${f.id}', '${f.url}', '${f.data_foto}')">Editar</button>
                 <button onclick="excluirFotoGaleria('${f.id}', '${f.url}')">Excluir</button>
               </div>
+
             </div>
           `).join("")}
         </div>
@@ -120,7 +193,46 @@ async function carregarGaleria() {
   });
 }
 
-/* ==================== EXCLUIR IMAGEM ==================== */
+/* ==================== SELEÇÃO MÚLTIPLA ==================== */
+function toggleSelecao(id) {
+  const bloco = document.getElementById(`foto-${id}`);
+
+  if (selecionadas.has(id)) {
+    selecionadas.delete(id);
+    bloco.classList.remove("selecionado");
+  } else {
+    selecionadas.add(id);
+    bloco.classList.add("selecionado");
+  }
+
+  atualizarBotaoExcluir();
+}
+
+function atualizarBotaoExcluir() {
+  const btn = document.getElementById("btnExcluirVarios");
+  btn.style.display = selecionadas.size > 0 ? "block" : "none";
+}
+
+/* ==================== EXCLUIR VARIAS ==================== */
+async function excluirSelecionados() {
+  if (!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
+
+  for (let id of selecionadas) {
+    const foto = document.getElementById(`foto-${id}`);
+
+    // pegar URL pelo atributo <img>
+    const img = foto.querySelector("img").src.split("?")[0];
+    const arquivo = img.split("/").pop();
+
+    await supabase.storage.from("fotos").remove([arquivo]);
+    await supabase.from("fotos").delete().eq("id", id);
+  }
+
+  selecionadas.clear();
+  carregarGaleria();
+}
+
+/* ==================== EXCLUIR INDIVIDUAL ==================== */
 async function excluirFotoGaleria(id, url) {
   if (!confirm("Excluir esta foto?")) return;
 
@@ -132,7 +244,7 @@ async function excluirFotoGaleria(id, url) {
   carregarGaleria();
 }
 
-/* ==================== EDITAR (ALTERAR DATA) ==================== */
+/* ==================== EDITAR FOTO ==================== */
 async function editarFoto(id, url, data_foto) {
   const novaData = prompt("Nova data da foto (AAAA-MM-DD):", data_foto);
   if (!novaData) return;
@@ -145,7 +257,7 @@ async function editarFoto(id, url, data_foto) {
   carregarGaleria();
 }
 
-/* ==================== INICIAR ==================== */
+/* ======================== START ======================== */
 carregarGaleria();
 </script>
 
