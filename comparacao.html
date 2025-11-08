@@ -9,7 +9,7 @@
 <script src="js/supabase.js"></script>
 
 <style>
-    body{
+  body{
     margin:0;
     background:#000;
     color:#fff;
@@ -45,7 +45,7 @@
     cursor:grab;
   }
 
-  /* IMAGEM (GLOBAL - funciona no PC e celular) */
+  /* IMAGEM */
   .compare-img{
     max-width:100%;
     max-height:80vh;
@@ -75,7 +75,7 @@
   }
   .btn:active{ transform:scale(.98); }
 
-  /* Barra lateral */
+  /* Barra lateral (PC) */
   .side-bar{
     position:fixed;
     right:10px;
@@ -99,59 +99,48 @@
     font-weight:600;
   }
 
-  /* cursores ao arrastar */
   .dragging{ cursor:grabbing !important; }
 
-  /* ✅ Ajuste somente para celular */
+  /* ✅ MOBILE */
   @media (max-width: 600px) {
+
     .compare-container {
       padding-top: 80px;
+      padding-bottom: 90px; /* espaço pros botões inferiores */
     }
+
     #grid {
       margin-top: 20px;
     }
+
     .img-wrap {
-      max-height: 65vh;
+      max-height: 70vh;
+      margin-top: 15px;
     }
+
+    /* ✅ move os botões da lateral para baixo */
     .side-bar {
-      right: 6px;
+      position: fixed;
+      right: 0;
+      bottom: 0;
+      top: auto;
+      left: 0;
+      width: 100%;
+      transform: none;
+      flex-direction: row;
+      justify-content: center;
+      padding: 10px 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(6px);
+      gap: 12px;
     }
-      
-/* ✅ MOBILE – move os botões da lateral para base da tela */
-@media (max-width: 600px) {
-  .side-bar {
-    position: fixed;
-    right: 0;
-    bottom: 0;
-    top: auto;
-    transform: none;
-    width: 100%;
-    background: rgba(0,0,0,0.7);
-    backdrop-filter: blur(6px);
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    padding: 10px 0;
-    gap: 12px;
-  }
 
-  .btn-side {
-    padding: 10px 14px;
-    font-size: 14px;
-  }
-
-  /* aumenta espaço das imagens para não ficar “colado” nos botões */
-  .compare-container {
-    padding-bottom: 90px;
+    .btn-side {
+      padding: 10px 14px;
+      font-size: 14px;
+    }
   }
     
-@media (max-width: 600px) {
-  .img-wrap {
-    max-height: 70vh;
-    margin-top: 15px;
-  }   
-}    
-
 </style>
 </head>
 <body>
