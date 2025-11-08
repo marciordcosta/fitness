@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Galeria</title>
+
+<link rel="stylesheet" href="style.css" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="js/supabase.js"></script>
+
+<style>
+  body { background:#f5f5f7; margin:0; }
+  .galeria-header {
+    padding: 12px 16px; font-size: 18px; font-weight: 700;
+    background: #fff; position: sticky; top: 0; z-index: 10;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05); display:flex;align-items:center;gap:12px;
+  }
+  .galeria-header .voltar { color:#007aff; cursor:pointer; font-weight:600; }
+  .data-bloco { margin-top: 16px; }
+  .data-titulo { font-size: 15px; font-weight: 600; margin: 8px 10px; color:#1c1c1e;}
+  .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; padding: 0 10px 10px; }
+  .grid img { width:100%; border-radius:12px; }
+</style>
+</head>
+<body>
+
+<div class="galeria-header">
+  <span class="voltar" onclick="window.location='index.html'">← Voltar</span>
+  <div>Galeria</div>
+</div>
+
+<div id="conteudoGaleria"></div>
+
+<script>
+async function carregarGaleria() {
+  const { data } = await supabase
+    .from("fotos")
+    .select("id, data_foto, url")
+    .order("data_foto", { ascending: false });
+
+  const area = document.getElementById("conteudoGaleria");
+  area.innerHTML = "";
+
+  const grupos = {};
+  (data || []).forEach(f => {
+    if (!grupos[f.data_foto]) grupos[f.data_foto] = [];
+    grupos[f.data_foto].push(f);
+  });
+
+  Object.keys(grupos).forEach(data => {
+    area.innerHTML += `
+      <div class="data-bloco">
+        <div class="data-titulo">${data}</div>
+        <div class="grid">
+          ${grupos[data].map(f => `
+            <img src="${f.url}?v=${Date.now()}" onclick="window.open('${f.url}','_blank')">
+          `).join("")}
+        </div>
+      </div>
+    `;
+  });
+}
+carregarGaleria();
+</script>
+
+</body>
+</html>
