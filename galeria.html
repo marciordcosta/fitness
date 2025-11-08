@@ -12,24 +12,27 @@
 <style>
   body { background:#f5f5f7; margin:0; }
 
-  /* HEADER */
+  /* HEADER FIXO */
   .galeria-header {
-  padding: 12px 16px;
-  font-size: 18px;
-  font-weight: 700;
-  background: #fff;
-  position: fixed;
-  top: 0;
-  left:0;
-  right:0;
-  z-index: 999;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
+    padding: 12px 16px;
+    font-size: 18px;
+    font-weight: 700;
+    background: #fff;
+    position: fixed;
+    top: 0;
+    left:0;
+    right:0;
+    z-index: 999;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 
-/* empurra o conteúdo da galeria pra baixo */
-#conteudoGaleria {
-  margin-top: 80px;
-}
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+  }
+
+  #conteudoGaleria {
+    margin-top: 80px;
+  }
 
   .voltar {
     color:#007aff;
@@ -78,8 +81,8 @@
   }
 
   @keyframes fadeIn {
-    from { opacity:0; transform:scale(0.9);}
-    to { opacity:1; transform:scale(1);}
+    from { opacity:0; transform:scale(0.9); }
+    to { opacity:1; transform:scale(1); }
   }
 
   .foto-galeria {
@@ -93,7 +96,7 @@
     transform: scale(0.92);
   }
 
-  /* CHECK (seleção múltipla) */
+  /* ✅ CHECK DE SELEÇÃO */
   .check {
     position:absolute;
     top:6px;
@@ -123,39 +126,39 @@
     opacity:0.7;
   }
 
-.foto-acoes {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 4px;
-}
+  /* ✅ BOTÕES RESTAURADOS — tamanho normal, pequenos e discretos */
+  .foto-acoes {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+  }
 
-.foto-acoes button {
-  flex: 1;
-  margin: 0 2px;
-  font-size: 11px;
-  padding: 6px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  background: #eaeaea;
-}
+  .foto-acoes button {
+    flex: 1;
+    margin: 0 2px;
+    font-size: 11px;
+    padding: 6px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background: #eaeaea;
+  }
 
-.foto-acoes button:active {
-  transform: scale(0.96);
-}
+  .foto-acoes button:active {
+    transform: scale(0.96);
+  }
+</style>
 
 </head>
 <body>
 
 <div class="galeria-header">
-
   <span class="voltar" onclick="window.location='index.html'">← Voltar</span>
 
   <div class="top-actions">
     <button id="btnComparar" class="btn-top btn-compare" onclick="compararSelecionadas()">Comparar</button>
     <button id="btnExcluirVarios" class="btn-top btn-delete" onclick="excluirSelecionados()">Excluir</button>
   </div>
-
 </div>
 
 <div id="conteudoGaleria"></div>
@@ -188,26 +191,32 @@ async function carregarGaleria() {
         <div class="data-titulo">${data}</div>
 
         <div class="grid">
-          ${grupos[data].map(f => `
+          ${grupos[data].map(f => {
+            const nome = f.url.split("/").pop();
+            const base = "https://kkrbmuwwaxejfdqiczee.supabase.co/storage/v1/object/public/fotos/";
+            const urlPublica = base + nome;
+
+            return `
             <div class="foto-bloco" id="foto-${f.id}">
               <div class="check">✓</div>
 
-              <img src="${f.url}?v=${Date.now()}" class="foto-galeria"
+              <img src="${urlPublica}?v=${Date.now()}" 
+                   class="foto-galeria"
                    onclick="toggleSelecao(${f.id})">
 
               <div class="foto-acoes">
-                <button onclick="editarFoto('${f.id}', '${f.url}', '${f.data_foto}')">Editar</button>
-                <button onclick="excluirFotoGaleria('${f.id}', '${f.url}')">Excluir</button>
+                <button onclick="editarFoto('${f.id}', '${f.data_foto}')">Editar</button>
+                <button onclick="confirmarExcluir(${f.id}, '${nome}')">Excluir</button>
               </div>
-            </div>
-          `).join("")}
+            </div>`;
+          }).join("")}
         </div>
       </div>
     `;
   });
 }
 
-/* ==================== SELEÇÃO MÚLTIPLA ==================== */
+/* ==================== SELEÇÃO ==================== */
 function toggleSelecao(id) {
   const bloco = document.getElementById(`foto-${id}`);
 
@@ -226,10 +235,7 @@ function atualizarTopo() {
   const btnDel = document.getElementById("btnExcluirVarios");
   const btnComp = document.getElementById("btnComparar");
 
-  // Excluir aparece com 1 ou mais
   btnDel.style.display = selecionadas.size > 0 ? "block" : "none";
-
-  // Comparar somente quando selecionar 2 fotos
   btnComp.style.display = selecionadas.size === 2 ? "block" : "none";
 }
 
@@ -245,16 +251,16 @@ function compararSelecionadas() {
   window.location.href = "comparacao.html";
 }
 
-/* ==================== EXCLUIR VARIAS ==================== */
+/* ==================== EXCLUIR VÁRIAS ==================== */
 async function excluirSelecionados() {
   if (!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
 
   for (let id of selecionadas) {
     const bloco = document.getElementById(`foto-${id}`);
     const img = bloco.querySelector("img").src.split("?")[0];
-    const arquivo = img.split("/").pop();
+    const nome = img.split("/").pop();
 
-    await supabase.storage.from("fotos").remove([arquivo]);
+    await supabase.storage.from("fotos").remove([nome]);
     await supabase.from("fotos").delete().eq("id", id);
   }
 
@@ -262,8 +268,18 @@ async function excluirSelecionados() {
   carregarGaleria();
 }
 
+/* ==================== EXCLUIR INDIVIDUAL ==================== */
+async function confirmarExcluir(id, nomeArquivo) {
+  if (!confirm("Excluir esta foto?")) return;
+
+  await supabase.storage.from("fotos").remove([nomeArquivo]);
+  await supabase.from("fotos").delete().eq("id", id);
+
+  carregarGaleria();
+}
+
 /* ==================== EDITAR ==================== */
-async function editarFoto(id, url, data_foto) {
+async function editarFoto(id, data_foto) {
   const nova = prompt("Nova data (AAAA-MM-DD):", data_foto);
   if (!nova) return;
 
@@ -271,23 +287,9 @@ async function editarFoto(id, url, data_foto) {
   carregarGaleria();
 }
 
-/* ==================== EXCLUIR INDIVIDUAL ==================== */
-async function excluirFotoGaleria(id, url) {
-  if (!confirm("Excluir esta foto?")) return;
-
-  const arquivo = url.split("/").pop();
-
-  await supabase.storage.from("fotos").remove([arquivo]);
-  await supabase.from("fotos").delete().eq("id", id);
-
-  carregarGaleria();
-}
-
-/* START */
+/* Start */
 carregarGaleria();
 </script>
 
 </body>
 </html>
-
-
