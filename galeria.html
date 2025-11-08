@@ -6,165 +6,109 @@
 <title>Galeria</title>
 
 <link rel="stylesheet" href="style.css" />
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="js/supabase.js"></script>
 
 <style>
-  body { background:#f5f5f7; margin:0; }
+  body { 
+    margin:0; 
+    background:#f5f5f7;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+  }
 
-  /* HEADER */
+  /* ✅ CABEÇALHO FIXO */
   .galeria-header {
-  padding: 12px 16px;
-  font-size: 18px;
-  font-weight: 700;
-  background: #fff;
-  position: fixed;
-  top: 0;
-  left:0;
-  right:0;
-  z-index: 999;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-/* empurra o conteúdo da galeria pra baixo */
-#conteudoGaleria {
-  margin-top: 80px;
-}
+    position: fixed;
+    top: 0;
+    left:0;
+    right:0;
+    background: #fff;
+    padding: 14px 16px;
+    font-size: 18px;
+    font-weight: 700;
+    z-index: 999;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+  }
 
   .voltar {
     color:#007aff;
-    cursor:pointer;
     font-weight:600;
+    cursor:pointer;
   }
 
-  .top-actions {
-    display: flex;
-    gap: 10px;
+  /* empurra conteúdo */
+  #conteudoGaleria {
+    margin-top: 80px;
   }
 
-  .btn-top {
-    padding: 8px 14px;
-    font-size: 14px;
-    border-radius: 10px;
-    border: none;
-    cursor: pointer;
-    display: none;
-    color: white;
+  /* ✅ BLOCOS POR DATA */
+  .data-bloco { 
+    margin-bottom: 22px;
   }
-
-  .btn-delete { background: #ff3b30; }
-  .btn-compare { background: #007aff; }
-
-  .data-bloco { margin-top: 16px; }
 
   .data-titulo {
+    margin: 8px 12px;
     font-size: 15px;
     font-weight: 600;
-    margin: 8px 10px;
-    color:#1c1c1e;
+    color:#333;
   }
 
-  /* GRID */
+  /* ✅ GRADE DE MINIATURAS */
   .grid {
     display:grid;
     grid-template-columns: repeat(4, 1fr);
-    gap:8px;
-    padding: 0 10px 10px;
+    gap: 6px;
+    padding: 0 12px;
   }
 
   .foto-bloco {
     position: relative;
-    animation: fadeIn .25s ease-out;
-  }
-
-  @keyframes fadeIn {
-    from { opacity:0; transform:scale(0.9);}
-    to { opacity:1; transform:scale(1);}
   }
 
   .foto-galeria {
     width: 100%;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: transform .15s;
+    border-radius: 10px;
+    display:block;
   }
 
-  .foto-galeria:active {
-    transform: scale(0.92);
-  }
-
-  /* CHECK (seleção múltipla) */
-  .check {
-    position:absolute;
-    top:6px;
-    right:6px;
-    width:22px;
-    height:22px;
-    border-radius:50%;
-    background:white;
-    border: 2px solid #007aff;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:white;
-    font-size:14px;
-    font-weight:bold;
-    opacity:0;
-    pointer-events:none;
-    transition: opacity .12s;
-  }
-
-  .selecionado .check {
-    background:#007aff;
-    opacity:1;
-  }
-
-  .selecionado .foto-galeria {
-    opacity:0.7;
-  }
-
+  /* ✅ BOTÕES EXCLUIR E COMPARAR (pequenos e discretos, como antes) */
   .foto-acoes {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 4px;
+    margin-top: 6px;
+    display:flex;
+    gap:4px;
   }
 
   .foto-acoes button {
-    flex: 1;
-    margin: 0 2px;
-    font-size: 11px;
-    padding: 6px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    background: #eaeaea;
+    flex:1;
+    padding:6px;
+    font-size:11px;
+    border:none;
+    border-radius:6px;
+    background:#e5e5ea;
+    cursor:pointer;
+  }
+
+  .foto-acoes button:active {
+    transform: scale(0.95);
   }
 </style>
-
 </head>
+
 <body>
 
 <div class="galeria-header">
-
   <span class="voltar" onclick="window.location='index.html'">← Voltar</span>
-
-  <div class="top-actions">
-    <button id="btnComparar" class="btn-top btn-compare" onclick="compararSelecionadas()">Comparar</button>
-    <button id="btnExcluirVarios" class="btn-top btn-delete" onclick="excluirSelecionados()">Excluir</button>
-  </div>
-
+  <div>Galeria</div>
 </div>
 
 <div id="conteudoGaleria"></div>
 
 <script>
-let selecionadas = new Set();
-
-/* ==================== CARREGAR GALERIA ==================== */
-async function carregarGaleria() {
-  selecionadas.clear();
-  atualizarTopo();
-
+async function carregarGaleria(){
   const { data } = await supabase
     .from("fotos")
     .select("id, data_foto, url")
@@ -179,111 +123,65 @@ async function carregarGaleria() {
     grupos[f.data_foto].push(f);
   });
 
+  const base = "https://kkrbmuwwaxejfdqiczee.supabase.co/storage/v1/object/public/fotos/";
+
   Object.keys(grupos).forEach(data => {
-    area.innerHTML += `
+    let html = `
       <div class="data-bloco">
         <div class="data-titulo">${data}</div>
-
         <div class="grid">
-          ${grupos[data].map(f => `
-            <div class="foto-bloco" id="foto-${f.id}">
-              <div class="check">✓</div>
-
-              <img src="${f.url}?v=${Date.now()}" class="foto-galeria"
-                   onclick="toggleSelecao(${f.id})">
-
-              <div class="foto-acoes">
-                <button onclick="editarFoto('${f.id}', '${f.url}', '${f.data_foto}')">Editar</button>
-                <button onclick="excluirFotoGaleria('${f.id}', '${f.url}')">Excluir</button>
-              </div>
-            </div>
-          `).join("")}
-        </div>
-      </div>
     `;
+
+    grupos[data].forEach(f => {
+      const nome = f.url.split("/").pop();
+      const urlPublica = base + nome;
+
+      html += `
+        <div class="foto-bloco">
+          <img src="${urlPublica}?v=${Date.now()}" class="foto-galeria">
+
+          <div class="foto-acoes">
+            <button onclick="excluirFoto(${f.id}, '${nome}')">Excluir</button>
+            <button onclick="prepararComparacao(${f.id})">Comparar</button>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `</div></div>`;
+    area.innerHTML += html;
   });
 }
 
-/* ==================== SELEÇÃO MÚLTIPLA ==================== */
-function toggleSelecao(id) {
-  const bloco = document.getElementById(`foto-${id}`);
+carregarGaleria();
 
-  if (selecionadas.has(id)) {
-    selecionadas.delete(id);
-    bloco.classList.remove("selecionado");
-  } else {
-    selecionadas.add(id);
-    bloco.classList.add("selecionado");
-  }
-
-  atualizarTopo();
-}
-
-function atualizarTopo() {
-  const btnDel = document.getElementById("btnExcluirVarios");
-  const btnComp = document.getElementById("btnComparar");
-
-  // Excluir aparece com 1 ou mais
-  btnDel.style.display = selecionadas.size > 0 ? "block" : "none";
-
-  // Comparar somente quando selecionar 2 fotos
-  btnComp.style.display = selecionadas.size === 2 ? "block" : "none";
-}
-
-/* ==================== COMPARAR ==================== */
-function compararSelecionadas() {
-  if (selecionadas.size !== 2) return;
-
-  const ids = Array.from(selecionadas);
-
-  localStorage.setItem("comparar_id1", ids[0]);
-  localStorage.setItem("comparar_id2", ids[1]);
-
-  window.location.href = "comparacao.html";
-}
-
-/* ==================== EXCLUIR VARIAS ==================== */
-async function excluirSelecionados() {
-  if (!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
-
-  for (let id of selecionadas) {
-    const bloco = document.getElementById(`foto-${id}`);
-    const img = bloco.querySelector("img").src.split("?")[0];
-    const arquivo = img.split("/").pop();
-
-    await supabase.storage.from("fotos").remove([arquivo]);
-    await supabase.from("fotos").delete().eq("id", id);
-  }
-
-  selecionadas.clear();
-  carregarGaleria();
-}
-
-/* ==================== EDITAR ==================== */
-async function editarFoto(id, url, data_foto) {
-  const nova = prompt("Nova data (AAAA-MM-DD):", data_foto);
-  if (!nova) return;
-
-  await supabase.from("fotos").update({ data_foto: nova }).eq("id", id);
-  carregarGaleria();
-}
-
-/* ==================== EXCLUIR INDIVIDUAL ==================== */
-async function excluirFotoGaleria(id, url) {
+/* ✅ Função Excluir */
+async function excluirFoto(id, nomeArquivo){
   if (!confirm("Excluir esta foto?")) return;
 
-  const arquivo = url.split("/").pop();
-
-  await supabase.storage.from("fotos").remove([arquivo]);
+  await supabase.storage.from("fotos").remove([nomeArquivo]);
   await supabase.from("fotos").delete().eq("id", id);
 
   carregarGaleria();
 }
 
-/* START */
-carregarGaleria();
+/* ✅ Seleção de comparação */
+let primeira = null;
+
+function prepararComparacao(id){
+  if (primeira === null){
+    primeira = id;
+    alert("Agora selecione a segunda foto.");
+    return;
+  }
+
+  localStorage.setItem("comparar_id1", primeira);
+  localStorage.setItem("comparar_id2", id);
+
+  primeira = null;
+  window.location = "comparacao.html";
+}
 </script>
 
 </body>
 </html>
-
