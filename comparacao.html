@@ -30,6 +30,15 @@
     animation:fadeUp .25s ease-out;
   }
 
+ .img-wrap {
+    overflow: hidden;
+    position: relative;
+  }
+ .compare-img {
+   will-change: transform;
+   transition: transform 0.15s ease-out;
+  }
+
   @keyframes fadeUp {
     from {opacity:0; transform:translateY(12px);}
     to {opacity:1; transform:translateY(0);}
