@@ -36,7 +36,8 @@
     overflow:hidden;
     position:relative;
     touch-action:none; /* necessário para pan no celular */
-    height:400px;
+    height:auto;
+    max-height:80vh;
     display:flex;
     align-items:center;
     justify-content:center;
@@ -44,7 +45,9 @@
 
   .compare-img {
     width:100%;
+    max-height:80vh;
     object-fit:contain;
+    transform:none !important;
     transition:transform .15s ease-out;
     user-select:none;
     pointer-events:none; /* impede clique interferir no arrasto */
@@ -180,6 +183,9 @@ let transform = {
   1: { scale:1, x:0, y:0 },
   2: { scale:1, x:0, y:0 }
 };
+
+aplicar(1);
+aplicar(2); 
 
 function aplicar(num) {
   const img = document.getElementById(`img${num}`);
