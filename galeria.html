@@ -49,21 +49,31 @@ async function carregarGaleria() {
   });
 
   Object.keys(grupos).forEach(data => {
-    area.innerHTML += `
-      <div class="data-bloco">
-        <div class="data-titulo">${data}</div>
-        <div class="grid">
-          ${grupos[data].map(f => `
-            <img src="${f.url}?v=${Date.now()}" onclick="window.open('${f.url}','_blank')">
-          `).join("")}
-        </div>
+  area.innerHTML += `
+    <div class="data-bloco">
+      <div class="data-titulo">${data}</div>
+
+      <div class="grid">
+        ${grupos[data].map(f => `
+          <div class="foto-bloco">
+            <img src="${f.url}?v=${Date.now()}" class="foto-galeria">
+
+            <div class="foto-acoes">
+              <button onclick="editarFoto('${f.id}', '${f.url}', '${f.data_foto}')">Editar</button>
+              <button onclick="excluirFotoGaleria('${f.id}', '${f.url}')">Excluir</button>
+            </div>
+          </div>
+        `).join("")}
       </div>
-    `;
-  });
-}
+
+    </div>
+  `;
+});
+ 
 carregarGaleria();
 </script>
 
 </body>
 </html>
+
 
