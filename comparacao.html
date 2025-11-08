@@ -9,7 +9,7 @@
 <script src="js/supabase.js"></script>
 
 <style>
-  body{
+    body{
     margin:0;
     background:#000;
     color:#fff;
@@ -36,23 +36,24 @@
     border-radius:12px;
     overflow:hidden;
     position:relative;
-    touch-action:none; /* permite pan no mobile */
-    /* altura fluida para evitar “zoom inicial” */
+    touch-action:none;
     height:auto;
     max-height:80vh;
     display:flex;
     align-items:center;
     justify-content:center;
+    cursor:grab;
   }
 
+  /* IMAGEM (GLOBAL - funciona no PC e celular) */
   .compare-img{
     max-width:100%;
     max-height:80vh;
     object-fit:contain;
     transition:transform .15s ease-out;
     user-select:none;
-    pointer-events:none; /* clique/arrasto no wrap */
-    transform-origin:center center; /* zoom a partir do centro */
+    pointer-events:none;
+    transform-origin:center center;
   }
 
   /* Controles sob cada imagem */
@@ -74,7 +75,7 @@
   }
   .btn:active{ transform:scale(.98); }
 
-  /* Barra lateral com ações gerais */
+  /* Barra lateral */
   .side-bar{
     position:fixed;
     right:10px;
@@ -100,11 +101,23 @@
 
   /* cursores ao arrastar */
   .dragging{ cursor:grabbing !important; }
-  .img-wrap{ cursor:grab; }
 
-  @media(max-width:600px){
-    .side-bar{ right:6px; }
+  /* ✅ Ajuste somente para celular */
+  @media (max-width: 600px) {
+    .compare-container {
+      padding-top: 80px;
+    }
+    #grid {
+      margin-top: 20px;
+    }
+    .img-wrap {
+      max-height: 65vh;
+    }
+    .side-bar {
+      right: 6px;
+    }
   }
+
 </style>
 </head>
 <body>
