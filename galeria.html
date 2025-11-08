@@ -11,16 +11,65 @@
 
 <style>
   body { background:#f5f5f7; margin:0; }
+
   .galeria-header {
-    padding: 12px 16px; font-size: 18px; font-weight: 700;
-    background: #fff; position: sticky; top: 0; z-index: 10;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05); display:flex;align-items:center;gap:12px;
+    padding: 12px 16px;
+    font-size: 18px;
+    font-weight: 700;
+    background: #fff;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
-  .galeria-header .voltar { color:#007aff; cursor:pointer; font-weight:600; }
+
+  .galeria-header .voltar {
+    color:#007aff;
+    cursor:pointer;
+    font-weight:600;
+  }
+
   .data-bloco { margin-top: 16px; }
-  .data-titulo { font-size: 15px; font-weight: 600; margin: 8px 10px; color:#1c1c1e;}
-  .grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; padding: 0 10px 10px; }
-  .grid img { width:100%; border-radius:12px; }
+  .data-titulo {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 8px 10px;
+    color:#1c1c1e;
+  }
+
+  .grid {
+    display:grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 colunas */
+    gap:8px;
+    padding: 0 10px 10px;
+  }
+
+  .foto-bloco { position: relative; }
+
+  .foto-galeria {
+    width: 100%;
+    border-radius: 12px;
+  }
+
+  .foto-acoes {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+  }
+
+  .foto-acoes button {
+    flex: 1;
+    margin: 0 2px;
+    font-size: 11px;
+    padding: 6px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background: #eaeaea;
+  }
 </style>
 </head>
 <body>
@@ -33,6 +82,7 @@
 <div id="conteudoGaleria"></div>
 
 <script>
+/* ==================== CARREGAR GALERIA ==================== */
 async function carregarGaleria() {
   const { data } = await supabase
     .from("fotos")
@@ -49,31 +99,28 @@ async function carregarGaleria() {
   });
 
   Object.keys(grupos).forEach(data => {
-  area.innerHTML += `
-    <div class="data-bloco">
-      <div class="data-titulo">${data}</div>
+    area.innerHTML += `
+      <div class="data-bloco">
+        <div class="data-titulo">${data}</div>
 
-      <div class="grid">
-        ${grupos[data].map(f => `
-          <div class="foto-bloco">
-            <img src="${f.url}?v=${Date.now()}" class="foto-galeria">
+        <div class="grid">
+          ${grupos[data].map(f => `
+            <div class="foto-bloco">
+              <img src="${f.url}?v=${Date.now()}" class="foto-galeria">
 
-            <div class="foto-acoes">
-              <button onclick="editarFoto('${f.id}', '${f.url}', '${f.data_foto}')">Editar</button>
-              <button onclick="excluirFotoGaleria('${f.id}', '${f.url}')">Excluir</button>
+              <div class="foto-acoes">
+                <button onclick="editarFoto('${f.id}', '${f.url}', '${f.data_foto}')">Editar</button>
+                <button onclick="excluirFotoGaleria('${f.id}', '${f.url}')">Excluir</button>
+              </div>
             </div>
-          </div>
-        `).join("")}
+          `).join("")}
+        </div>
       </div>
+    `;
+  });
+}
 
-    </div>
-  `;
-});
- 
-carregarGaleria();
-</script>
-
-<script>
+/* ==================== EXCLUIR IMAGEM ==================== */
 async function excluirFotoGaleria(id, url) {
   if (!confirm("Excluir esta foto?")) return;
 
@@ -85,51 +132,22 @@ async function excluirFotoGaleria(id, url) {
   carregarGaleria();
 }
 
-function editarFoto(id, url, data_foto) {
+/* ==================== EDITAR (ALTERAR DATA) ==================== */
+async function editarFoto(id, url, data_foto) {
   const novaData = prompt("Nova data da foto (AAAA-MM-DD):", data_foto);
   if (!novaData) return;
 
-  supabase
+  await supabase
     .from("fotos")
     .update({ data_foto: novaData })
-    .eq("id", id)
-    .then(() => carregarGaleria());
+    .eq("id", id);
+
+  carregarGaleria();
 }
-</script>  
+
+/* ==================== INICIAR ==================== */
+carregarGaleria();
+</script>
 
 </body>
 </html>
-
-<style>
-.foto-bloco {
-  position: relative;
-}
-
-.foto-galeria {
-  width: 100%;
-  border-radius: 12px;
-}
-
-/* botões pequenos abaixo da foto */
-.foto-acoes {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 4px;
-}
-
-.foto-acoes button {
-  flex: 1;
-  margin: 0 2px;
-  font-size: 11px;
-  padding: 6px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  background: #eaeaea;
-}
-</style>
-
-
-
-
-
