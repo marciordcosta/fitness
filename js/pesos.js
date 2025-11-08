@@ -38,6 +38,18 @@ function abrirPeriodo() {
   document.getElementById("modalPeriodo").setAttribute("aria-hidden", "false");
 }
 
+/** Abrir modal de foto já preenchendo a data a partir de um input existente */
+function abrirFotoComDataDe(idInputData) {
+  try {
+    const valor = document.getElementById(idInputData).value || hojeISO();
+    fecharModals();
+    document.getElementById("dataFoto").value = valor;
+    document.getElementById("modalFoto").setAttribute("aria-hidden", "false");
+  } catch (_) {
+    abrirAddFoto();
+  }
+}
+
 /* ===================== LOAD ===================== */
 window.addEventListener("load", () => {
   carregarPesos(true);
@@ -66,28 +78,17 @@ async function salvarFoto() {
 
   const nome = `${Date.now()}-${file.name}`;
 
-  // Envia para o bucket
-  const { error: upErr } = await supabase.storage
-    .from("fotos")
-    .upload(nome, file);
-
+  const { error: upErr } = await supabase.storage.from("fotos").upload(nome, file);
   if (upErr) {
     console.error(upErr);
     return alert("Erro ao enviar imagem.");
   }
 
-  // Gera URL pública correta
-  const { data: publicInfo } = supabase.storage
-    .from("fotos")
-    .getPublicUrl(nome);
-
+  // URL pública correta
+  const { data: publicInfo } = supabase.storage.from("fotos").getPublicUrl(nome);
   const url = publicInfo.publicUrl;
 
-  // Salva no banco
-  await supabase.from("fotos").insert({
-    data_foto: data,
-    url
-  });
+  await supabase.from("fotos").insert({ data_foto: data, url });
 
   fecharModals();
 }
@@ -115,9 +116,7 @@ async function carregarPesos(filtrar = false) {
 function aplicarPeriodo() {
   const hoje = new Date();
   const limite = new Date(hoje.getTime() - periodoAtual * 86400000);
-
   const filtrado = dadosPesos.filter(p => new Date(p.data) >= limite);
-
   montarGrafico(filtrado);
   renderHistorico(filtrado);
 }
@@ -140,16 +139,28 @@ function renderHistorico(lista) {
     div.className = "item";
 
     div.innerHTML = `
-      <div class="item-title">${item.peso.toFixed(1)} kg</div>
-      <div class="item-sub">${item.data}</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="item-title">${item.peso.toFixed(1)} kg</div>
+        <div class="item-sub">${item.data}</div>
+      </div>
+      <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
+        onclick="abrirEditarDireto(${item.id})">Opções</button>
     `;
 
-    div.onclick = () => abrirEditar(item);
     el.appendChild(div);
   });
 }
 
-/* ===================== EDITAR PESO ===================== */
+/** Abre modal de edição com dados do item (e mantém botão 'Carregar Foto') */
+async function abrirEditarDireto(id) {
+  const achou = dadosPesos.find(p => p.id === id);
+  if (!achou) return;
+  idEditar = id;
+  document.getElementById("dataEditar").value = achou.data;
+  document.getElementById("pesoEditar").value = achou.peso;
+  document.getElementById("modalEditar").setAttribute("aria-hidden", "false");
+}
+
 function abrirEditar(item) {
   idEditar = item.id;
   document.getElementById("dataEditar").value = item.data;
@@ -186,7 +197,11 @@ function montarGrafico(lista) {
       labels,
       datasets: [{ data: pesos, borderWidth: 3, tension: 0.25 }]
     },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } }
+    }
   });
 }
 
@@ -194,14 +209,17 @@ function montarGrafico(lista) {
 function calcularMedias() {
   const hoje = new Date();
 
+  // segunda da semana atual
   const segundaAtual = new Date(hoje);
-  segundaAtual.setDate(segundaAtual.getDate() - segundaAtual.getDay() + 1);
+  segundaAtual.setDate(segundaAtual.getDate() - ((segundaAtual.getDay() + 6) % 7)); // seg=0
+  segundaAtual.setHours(0,0,0,0);
 
+  // semana anterior
   const segundaAnterior = new Date(segundaAtual);
   segundaAnterior.setDate(segundaAnterior.getDate() - 7);
-
   const domingoAnterior = new Date(segundaAtual);
   domingoAnterior.setDate(domingoAnterior.getDate() - 1);
+  domingoAnterior.setHours(23,59,59,999);
 
   const atual = dadosPesos.filter(p => new Date(p.data) >= segundaAtual);
   const anterior = dadosPesos.filter(p => {
@@ -221,11 +239,10 @@ function calcularMedias() {
   }
 
   const variacao = ((mediaAtual - mediaAnterior) / mediaAnterior) * 100;
-  document.getElementById("mediaProgressoValor").innerText =
-    variacao.toFixed(1) + "%";
+  document.getElementById("mediaProgressoValor").innerText = variacao.toFixed(1) + "%";
 }
 
-/* ===================== GALERIA ===================== */
+/* ===================== GALERIA (modal legado) ===================== */
 async function abrirGaleria() {
   fecharModals();
   document.getElementById("modalGaleria").setAttribute("aria-hidden", "false");
@@ -238,14 +255,13 @@ async function abrirGaleria() {
   const area = document.getElementById("listaFotosGaleria");
   area.innerHTML = "";
 
-  data.forEach(f => {
+  (data || []).forEach(f => {
     area.innerHTML += `
       <div style="margin-bottom:15px;">
-        <img src="${f.url}?v=${Date.now()}" 
-          style="width:100%;border-radius:12px;margin-bottom:6px;">
-        <div style="display:flex;justify-content:space-between;">
+        <img src="${f.url}?v=${Date.now()}" style="width:100%;border-radius:12px;margin-bottom:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
           <small>${f.data_foto}</small>
-          <button class="btn-mini" onclick="editarFoto(${f.id}, '${f.url}', '${f.data_foto}')">Editar</button>
+          <button class="btn-mini btn-danger" onclick="editarFoto(${f.id}, '${f.url}', '${f.data_foto}')">Editar</button>
         </div>
       </div>
     `;
@@ -256,7 +272,7 @@ let fotoEditando = null;
 
 function editarFoto(id, url, dataFoto) {
   fotoEditando = { id, url };
-  document.getElementById("fotoEditarPreview").src = url;
+  document.getElementById("fotoEditarPreview").src = url + "?v=" + Date.now();
   document.getElementById("fotoEditarData").value = dataFoto;
 
   fecharModals();
@@ -291,7 +307,7 @@ async function carregarDatasComFoto() {
     .select("data_foto")
     .order("data_foto");
 
-  const unicas = [...new Set(data.map(x => x.data_foto))];
+  const unicas = [...new Set((data || []).map(x => x.data_foto))];
 
   const s1 = document.getElementById("compData1");
   const s2 = document.getElementById("compData2");
