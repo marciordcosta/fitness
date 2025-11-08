@@ -9,145 +9,124 @@
 <script src="js/supabase.js"></script>
 
 <style>
-  body {
-    margin: 0;
-    background: #000;
-    color: #fff;
-    overflow: hidden;
+  body{
+    margin:0;
+    background:#000;
+    color:#fff;
+    overflow:auto;
   }
 
-  .compare-container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 20px;
-    padding-bottom: 120px; /* espaço para a barra fixa */
+  .compare-container{
+    max-width:900px;
+    margin:0 auto;
+    padding:20px;
   }
 
   /* GRID */
-  #grid {
-    display: grid;
-    gap: 22px;
+  #grid{
+    display:grid;
+    gap:22px;
   }
-  #grid.lado { grid-template-columns: 1fr 1fr; }
-  #grid.baixo { grid-template-columns: 1fr; }
+  #grid.lado{ grid-template-columns:1fr 1fr; }
+  #grid.baixo{ grid-template-columns:1fr; }
 
-  /* Área da imagem */
-  .img-wrap {
-    background: #000;
-    border-radius: 12px;
-    overflow: hidden;
-    position: relative;
-    touch-action: none;
-    height: auto;
-    max-height: 70vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: grab;
-  }
-
-  .compare-img {
-    max-width: 100%;
-    max-height: 70vh;
-    object-fit: contain;
-    transition: transform .15s ease-out;
-    user-select: none;
-    pointer-events: none;
-    transform-origin: center center;
+  /* Área de cada imagem */
+  .img-wrap{
+    background:#000;
+    border-radius:12px;
+    overflow:hidden;
+    position:relative;
+    touch-action:none; /* permite pan no mobile */
+    /* altura fluida para evitar “zoom inicial” */
+    height:auto;
+    max-height:80vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
   }
 
-  /* Controles individuais */
-  .controls {
-    text-align: center;
-    margin-top: 10px;
-    display: flex;
-    justify-content: center;
-    gap: 10px;
+  .compare-img{
+    max-width:100%;
+    max-height:80vh;
+    object-fit:contain;
+    transition:transform .15s ease-out;
+    user-select:none;
+    pointer-events:none; /* clique/arrasto no wrap */
+    transform-origin:center center; /* zoom a partir do centro */
   }
 
-  .btn {
-    background: #1c1c1e;
-    color: #fff;
-    border: none;
-    padding: 10px 14px;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 14px;
+  /* Controles sob cada imagem */
+  .controls{
+    text-align:center;
+    margin-top:10px;
+    display:flex;
+    justify-content:center;
+    gap:10px;
+  }
+  .btn{
+    background:#1c1c1e;
+    color:#fff;
+    border:none;
+    padding:10px 14px;
+    border-radius:10px;
+    cursor:pointer;
+    font-size:14px;
+  }
+  .btn:active{ transform:scale(.98); }
+
+  /* Barra lateral com ações gerais */
+  .side-bar{
+    position:fixed;
+    right:10px;
+    top:50%;
+    transform:translateY(-50%);
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    z-index:999;
+  }
+  .btn-side{
+    background:#1c1c1e;
+    color:#fff;
+    border:none;
+    padding:10px 12px;
+    border-radius:10px;
+    cursor:pointer;
+  }
+  .btn-back{
+    background:#007aff;
+    font-weight:600;
   }
 
-  .dragging { cursor: grabbing !important; }
+  /* cursores ao arrastar */
+  .dragging{ cursor:grabbing !important; }
+  .img-wrap{ cursor:grab; }
 
-  /* ✅ BARRA FIXA NA PARTE DE BAIXO */
-  .bottom-bar {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.85);
-    padding: 12px;
-    display: flex;
-    justify-content: center;
-    gap: 14px;
-    z-index: 999;
-    backdrop-filter: blur(6px);
-  }
-
-  .btn-bottom {
-    background: #1c1c1e;
-    color: #fff;
-    border: none;
-    padding: 12px 16px;
-    border-radius: 12px;
-    cursor: pointer;
-    font-size: 15px;
-    font-weight: 600;
-  }
-
-  /* ✅ MOBILE */
-  @media (max-width: 600px) {
-    .compare-container {
-      padding-bottom: 120px;
-      padding-top: 20px;
-    }
-
-    .img-wrap {
-      max-height: 65vh;
-      margin-top: 10px;
-    }
-
-    .bottom-bar {
-      padding: 14px 10px;
-      gap: 10px;
-    }
-
-    .btn-bottom {
-      padding: 12px 14px;
-      font-size: 14px;
-    }
+  @media(max-width:600px){
+    .side-bar{ right:6px; }
   }
 </style>
 </head>
 <body>
 
-<!-- ✅ Botões fixos -->
-<div class="bottom-bar">
-  <button class="btn-bottom" onclick="trocarPosicao()">⇆</button>
-  <button class="btn-bottom" onclick="toggleModo()">↕/↔</button>
-  <button class="btn-bottom" onclick="window.location='galeria.html'">←</button>
+<!-- Ações gerais -->
+<div class="side-bar">
+  <button class="btn-side" onclick="trocarPosicao()">⇆</button>
+  <button class="btn-side" onclick="toggleModo()">↕/↔</button>
+  <button class="btn-side btn-back" onclick="window.location='galeria.html'">←</button>
 </div>
 
 <div class="compare-container">
   <div id="grid" class="lado">
-
     <!-- Imagem 1 -->
     <div>
       <div class="img-wrap" id="wrap1">
         <img id="img1" class="compare-img">
       </div>
       <div class="controls">
-        <button class="btn" onclick="zoomIn(1)">+</button>
-        <button class="btn" onclick="zoomOut(1)">−</button>
-        <button class="btn" onclick="resetZoom(1)">Reset</button>
+        <button class="btn" onclick="zoomIn(1)">➕</button>
+        <button class="btn" onclick="zoomOut(1)">➖</button>
+        <button class="btn" onclick="resetZoom(1)">⭯ Reset</button>
       </div>
     </div>
 
@@ -157,151 +136,134 @@
         <img id="img2" class="compare-img">
       </div>
       <div class="controls">
-        <button class="btn" onclick="zoomIn(2)">+</button>
-        <button class="btn" onclick="zoomOut(2)">−</button>
-        <button class="btn" onclick="resetZoom(2)">Reset</button>
+        <button class="btn" onclick="zoomIn(2)">➕</button>
+        <button class="btn" onclick="zoomOut(2)">➖</button>
+        <button class="btn" onclick="resetZoom(2)">⭯ Reset</button>
       </div>
     </div>
-
   </div>
 </div>
 
-
 <script>
 /* ================== Carregar imagens ================== */
-async function carregarComparacao() {
+async function carregarComparacao(){
   const id1 = localStorage.getItem("comparar_id1");
   const id2 = localStorage.getItem("comparar_id2");
-
-  if (!id1 || !id2) {
+  if(!id1 || !id2){
     alert("Selecione 2 fotos na galeria.");
-    window.location = "galeria.html";
+    window.location="galeria.html";
     return;
   }
 
-  const { data } = await supabase
+  const {data} = await supabase
     .from("fotos")
-    .select("id, url")
-    .in("id", [id1, id2]);
+    .select("id,url")
+    .in("id",[id1,id2]);
 
-  const foto1 = data.find(f => f.id == id1);
-  const foto2 = data.find(f => f.id == id2);
+  if(!data || data.length<2){
+    alert("Erro ao carregar imagens.");
+    window.location="galeria.html";
+    return;
+  }
 
-  const nome1 = foto1.url.split("/").pop();
-  const nome2 = foto2.url.split("/").pop();
+  document.getElementById("img1").src = (data.find(f=>f.id==id1).url) + "?v=" + Date.now();
+  document.getElementById("img2").src = (data.find(f=>f.id==id2).url) + "?v=" + Date.now();
 
-  const base = "https://kkrbmuwwaxejfdqiczee.supabase.co/storage/v1/object/public/fotos/";
-
-  document.getElementById("img1").src = base + nome1 + "?v=" + Date.now();
-  document.getElementById("img2").src = base + nome2 + "?v=" + Date.now();
-
-  aplicar(1);
-  aplicar(2);
+  // inicia sem zoom
+  aplicar(1); aplicar(2);
 }
-
 carregarComparacao();
 
-
-/* ================== Zoom + Pan ================== */
+/* ================== Zoom + Pan independente ================== */
 const transform = {
-  1: { scale: 1, x: 0, y: 0 },
-  2: { scale: 1, x: 0, y: 0 }
+  1:{ scale:1, x:0, y:0 },
+  2:{ scale:1, x:0, y:0 }
 };
 
-function aplicar(n) {
-  const img = document.getElementById("img" + n);
+function aplicar(n){
+  const img = document.getElementById(`img${n}`);
   const t = transform[n];
   img.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.scale})`;
 }
 
-function zoomIn(n) {
+function zoomIn(n){
   transform[n].scale = Math.min(transform[n].scale + 0.2, 4);
   aplicar(n);
 }
-
-function zoomOut(n) {
+function zoomOut(n){
   transform[n].scale = Math.max(transform[n].scale - 0.2, 1);
-  if (transform[n].scale === 1) {
-    transform[n].x = 0;
-    transform[n].y = 0;
-  }
+  // se voltou ao 1, centraliza
+  if(transform[n].scale === 1){ transform[n].x = 0; transform[n].y = 0; }
+  aplicar(n);
+}
+function resetZoom(n){
+  transform[n] = { scale:1, x:0, y:0 };
   aplicar(n);
 }
 
-function resetZoom(n) {
-  transform[n] = { scale: 1, x: 0, y: 0 };
-  aplicar(n);
-}
+/* Pan (mouse e toque) */
+["1","2"].forEach(n=>{
+  const wrap = document.getElementById(`wrap${n}`);
+  let dragging=false, lastX=0, lastY=0;
 
-/* Pan */
-["1", "2"].forEach(n => {
-  const wrap = document.getElementById("wrap" + n);
-  let dragging = false, lastX = 0, lastY = 0;
-
-  wrap.addEventListener("mousedown", e => {
-    dragging = true;
-    lastX = e.clientX;
-    lastY = e.clientY;
+  // mouse
+  wrap.addEventListener("mousedown", e=>{
+    dragging=true; lastX=e.clientX; lastY=e.clientY;
     wrap.classList.add("dragging");
   });
-
-  window.addEventListener("mouseup", () => {
-    dragging = false;
-    wrap.classList.remove("dragging");
+  window.addEventListener("mouseup", ()=>{
+    dragging=false; wrap.classList.remove("dragging");
   });
-
-  window.addEventListener("mousemove", e => {
-    if (!dragging) return;
-    if (transform[n].scale <= 1) return;
-
+  window.addEventListener("mousemove", e=>{
+    if(!dragging) return;
+    // só permitir pan quando estiver com zoom > 1
+    if(transform[n].scale<=1) return;
     transform[n].x += (e.clientX - lastX);
     transform[n].y += (e.clientY - lastY);
-
-    lastX = e.clientX;
-    lastY = e.clientY;
-
+    lastX=e.clientX; lastY=e.clientY;
     aplicar(n);
   });
 
-  /* Pan via touch */
-  wrap.addEventListener("touchstart", e => {
-    if (e.touches.length !== 1) return;
-    lastX = e.touches[0].clientX;
-    lastY = e.touches[0].clientY;
-  }, { passive: false });
+  // touch
+  wrap.addEventListener("touchstart", e=>{
+    if(e.touches.length!==1) return;
+    lastX=e.touches[0].clientX;
+    lastY=e.touches[0].clientY;
+    wrap.classList.add("dragging");
+  }, {passive:false});
 
-  wrap.addEventListener("touchmove", e => {
-    if (e.touches.length !== 1) return;
-    if (transform[n].scale <= 1) return;
-
+  wrap.addEventListener("touchmove", e=>{
+    if(e.touches.length!==1) return;
+    // só pan com zoom > 1
+    if(transform[n].scale<=1) return;
     const t = e.touches[0];
     transform[n].x += (t.clientX - lastX);
     transform[n].y += (t.clientY - lastY);
-
-    lastX = t.clientX;
-    lastY = t.clientY;
-
+    lastX=t.clientX; lastY=t.clientY;
     aplicar(n);
-    e.preventDefault();
-  }, { passive: false });
+    e.preventDefault(); // evita scroll da página enquanto arrasta
+  }, {passive:false});
 
+  wrap.addEventListener("touchend", ()=>{
+    wrap.classList.remove("dragging");
+  });
 });
 
-
-/* Trocar posição */
-function trocarPosicao() {
-  const grid = document.getElementById("grid");
-  const p1 = grid.children[0];
-  const p2 = grid.children[1];
-  grid.insertBefore(p2, p1);
+/* ================== Trocar posição ================== */
+function trocarPosicao(){
+  const g = document.getElementById("grid");
+  const p1 = g.children[0];
+  const p2 = g.children[1];
+  g.insertBefore(p2, p1);
 }
 
-/* Modo lado / baixo */
-let modo = "lado";
-function toggleModo() {
+/* ================== Modo lado / embaixo ================== */
+let modo="lado";
+function toggleModo(){
   const grid = document.getElementById("grid");
-  modo = modo === "lado" ? "baixo" : "lado";
-  grid.className = modo;
+  modo = (modo==="lado") ? "baixo" : "lado";
+  grid.classList.remove("lado","baixo");
+  grid.classList.add(modo);
 }
 </script>
 
