@@ -171,6 +171,7 @@ function aplicarTransform() {
   const imgs = document.querySelectorAll(".compare-img");
   imgs.forEach(img => {
     img.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
+    img.style.transformOrigin = "center center";
   });
 }
 
