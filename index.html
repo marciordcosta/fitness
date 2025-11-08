@@ -6,167 +6,137 @@
   <title>Controle de Peso</title>
 
   <link rel="stylesheet" href="style.css" />
-
-  <!-- libs -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
-  <!-- app -->
-  <script src="js/supabase.js?v=3"></script>
-  <script src="js/pesos.js?v=3"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/pesos.js"></script>
 </head>
 <body>
 
-  <!-- Header LIMPO: só ícones [+] e [Calendário] -->
-  <header class="app-header" style="display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:12px 16px;">
-    <!-- Botão "+" -->
-    <button onclick="abrirMenuAdicionar()" aria-label="Adicionar"
-      style="width:40px;height:40px;border:none;border-radius:12px;background:#fff;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;">
-      <!-- ícone plus (SVG) -->
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <path d="M12 5v14M5 12h14" stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-    </button>
+<header class="app-header" style="display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:12px 16px;">
 
-    <!-- Botão Calendário -->
-    <button onclick="abrirPeriodo()" aria-label="Período"
-      style="width:40px;height:40px;border:none;border-radius:12px;background:#fff;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;">
-      <!-- ícone calendar (SVG) -->
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <rect x="3" y="5" width="18" height="16" rx="2" stroke="#1c1c1e" stroke-width="2"/>
-        <path d="M8 3v4M16 3v4M3 10h18" stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-    </button>
-  </header>
+  <!-- Botão "+" = apenas adicionar peso -->
+  <button class="header-btn" onclick="abrirAddPeso()" aria-label="Adicionar Peso">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path d="M12 5v14M5 12h14" stroke="#1c1c1e" stroke-width="2.4" stroke-linecap="round"/>
+    </svg>
+  </button>
 
-  <div class="container">
+  <!-- Botão Galeria -->
+  <button class="header-btn" onclick="window.location='galeria.html'" aria-label="Galeria">
+    <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="18" height="18" rx="4" stroke="#1c1c1e" stroke-width="2.2"/>
+      <circle cx="12" cy="12" r="4" stroke="#1c1c1e" stroke-width="2.2"/>
+    </svg>
+  </button>
 
-    <!-- Gráfico -->
-    <div class="card">
-      <canvas id="graficoPeso"></canvas>
-    </div>
+  <!-- Botão Período -->
+  <button class="header-btn" onclick="abrirPeriodo()" aria-label="Período">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="5" width="18" height="16" rx="3" stroke="#1c1c1e" stroke-width="2.2"/>
+      <path d="M8 3v4M16 3v4M3 10h18" stroke="#1c1c1e" stroke-width="2.2" stroke-linecap="round"/>
+    </svg>
+  </button>
 
-    <!-- Médias (entre gráfico e histórico) -->
-    <div class="card medias-container">
-      <div class="media-bloco">
-        <h3>Média semanal</h3>
-        <div id="mediaSemanalValor">--</div>
-      </div>
-      <div class="media-bloco">
-        <h3>Progressão (%)</h3>
-        <div id="mediaProgressoValor">--</div>
-      </div>
-    </div>
+</header>
 
-    <!-- Histórico -->
-    <div class="card">
-      <h2>Histórico</h2>
-      <div id="listaPesos"></div>
-    </div>
+<div class="container">
 
+  <div class="card">
+    <canvas id="graficoPeso"></canvas>
   </div>
 
-  <!-- ===== Modais ===== -->
-
-  <!-- Menu Adicionar (abre pelo +) -->
-  <div id="modalMenu" class="modal" aria-hidden="true">
-    <div class="modal-backdrop" onclick="fecharModals()"></div>
-    <div class="modal-box">
-      <button class="btn-primary" onclick="abrirAddPeso()">Peso</button>
-      <button class="btn-secondary" onclick="abrirComparacao()">Comparar</button>
+  <div class="card medias-container">
+    <div class="media-bloco">
+      <h3>Média semanal</h3>
+      <div id="mediaSemanalValor">--</div>
+    </div>
+    <div class="media-bloco">
+      <h3>Progressão (%)</h3>
+      <div id="mediaProgressoValor">--</div>
     </div>
   </div>
 
-  <!-- Adicionar Peso (com 'Carregar Foto' dentro) -->
-  <div id="modalPeso" class="modal" aria-hidden="true">
-    <div class="modal-backdrop" onclick="fecharModals()"></div>
-    <div class="modal-box">
-      <h3>Novo Peso</h3>
-      <label>Data</label>
-      <input type="date" id="dataNovoPeso" />
-      <label>Peso (kg)</label>
-      <input type="number" id="valorNovoPeso" step="0.1" />
-      <button class="btn-primary" onclick="salvarPesoNovo()">Salvar</button>
-
-      <!-- Botão extra: Carregar Foto dentro do mesmo modal -->
-      <button class="btn-secondary" onclick="abrirFotoComDataDe('dataNovoPeso')">Carregar Foto</button>
-    </div>
+  <div class="card">
+    <h2>Histórico</h2>
+    <div id="listaPesos"></div>
   </div>
 
-  <!-- Editar Peso (agora com 'Carregar Foto' também) -->
-  <div id="modalEditar" class="modal" aria-hidden="true">
-    <div class="modal-backdrop" onclick="fecharModals()"></div>
-    <div class="modal-box">
-      <h3>Editar Peso</h3>
-      <label>Data</label>
-      <input type="date" id="dataEditar" />
-      <label>Peso (kg)</label>
-      <input type="number" id="pesoEditar" step="0.1" />
-      <div class="modal-actions">
-        <button class="btn-danger" onclick="excluirPeso()">Excluir</button>
-        <button class="btn-primary" onclick="salvarEdicao()">Salvar</button>
-      </div>
+</div>
 
-      <!-- Botão extra: Carregar Foto com a data do histórico -->
-      <button class="btn-secondary" onclick="abrirFotoComDataDe('dataEditar')">Carregar Foto</button>
-    </div>
+<!-- Modal Adicionar Peso -->
+<div id="modalPeso" class="modal" aria-hidden="true">
+  <div class="modal-backdrop" onclick="fecharModals()"></div>
+  <div class="modal-box">
+    <h3>Novo Peso</h3>
+
+    <label>Data</label>
+    <input type="date" id="dataNovoPeso" />
+
+    <label>Peso (kg)</label>
+    <input type="number" id="valorNovoPeso" step="0.1" />
+
+    <button class="btn-primary" onclick="salvarPesoNovo()">Salvar</button>
+    <button class="btn-secondary" onclick="abrirFotoComDataDe('dataNovoPeso')">Carregar Foto</button>
   </div>
+</div>
 
-  <!-- Adicionar Foto -->
-  <div id="modalFoto" class="modal" aria-hidden="true">
-    <div class="modal-backdrop" onclick="fecharModals()"></div>
-    <div class="modal-box">
-      <h3>Carregar Foto</h3>
-      <label>Data da Foto</label>
-      <input type="date" id="dataFoto" />
-      <label>Arquivo</label>
-      <input type="file" id="arquivoFoto" accept="image/*" />
-      <button class="btn-primary" onclick="salvarFoto()">Enviar</button>
-      <button class="btn-secondary" onclick="window.location='galeria.html'">Abrir Galeria</button>
+<!-- Modal Editar Peso -->
+<div id="modalEditar" class="modal" aria-hidden="true">
+  <div class="modal-backdrop" onclick="fecharModals()"></div>
+  <div class="modal-box">
+    <h3>Editar Peso</h3>
+
+    <label>Data</label>
+    <input type="date" id="dataEditar" />
+
+    <label>Peso (kg)</label>
+    <input type="number" id="pesoEditar" step="0.1" />
+
+    <div class="modal-actions">
+      <button class="btn-danger" onclick="excluirPeso()">Excluir</button>
+      <button class="btn-primary" onclick="salvarEdicao()">Salvar</button>
     </div>
+
+    <button class="btn-secondary" onclick="abrirFotoComDataDe('dataEditar')">Carregar Foto</button>
   </div>
+</div>
 
-  <!-- Galeria (modal antigo mantido — não abre mais pelo +, mas fica disponível) -->
-  <div id="modalGaleria" class="modal" aria-hidden="true">
-    <div class="modal-backdrop" onclick="fecharModals()"></div>
-    <div class="modal-box" style="max-height:80vh;overflow-y:auto;">
-      <h3>Galeria</h3>
-      <div id="listaFotosGaleria"></div>
-    </div>
+<!-- Modal Foto -->
+<div id="modalFoto" class="modal" aria-hidden="true">
+  <div class="modal-backdrop" onclick="fecharModals()"></div>
+  <div class="modal-box">
+    <h3>Carregar Foto</h3>
+
+    <label>Data da Foto</label>
+    <input type="date" id="dataFoto" />
+
+    <label>Arquivo</label>
+    <input type="file" id="arquivoFoto" accept="image/*" />
+
+    <button class="btn-primary" onclick="salvarFoto()">Enviar</button>
+    <button class="btn-secondary" onclick="window.location='galeria.html'">Abrir Galeria</button>
   </div>
+</div>
 
-  <!-- Comparação (seleção das datas) -->
-  <div id="modalComparacao" class="modal" aria-hidden="true">
-    <div class="modal-backdrop" onclick="fecharModals()"></div>
-    <div class="modal-box">
-      <h3>Comparar Fotos</h3>
-      <label>Data 1</label>
-      <select id="compData1"></select>
-      <label>Data 2</label>
-      <select id="compData2"></select>
-
-      <button class="btn-primary" onclick="abrirTelaComparacao()">Avançar</button>
-      <button class="btn-secondary" onclick="window.location='galeria.html'">Abrir Galeria</button>
-    </div>
+<!-- Modal Período -->
+<div id="modalPeriodo" class="modal" aria-hidden="true">
+  <div class="modal-backdrop" onclick="fecharModals()"></div>
+  <div class="modal-box">
+    <h3>Período</h3>
+    <button onclick="filtroPeriodo(7)">1 semana</button>
+    <button onclick="filtroPeriodo(30)">1 mês</button>
+    <button onclick="filtroPeriodo(180)">6 meses</button>
+    <button onclick="filtroPeriodo(365)">1 ano</button>
   </div>
+</div>
 
-  <!-- Período (abre pelo ícone de calendário) -->
-  <div id="modalPeriodo" class="modal" aria-hidden="true">
-    <div class="modal-backdrop" onclick="fecharModals()"></div>
-    <div class="modal-box">
-      <h3>Período</h3>
-      <button onclick="filtroPeriodo(7)">1 semana</button>
-      <button onclick="filtroPeriodo(30)">1 mês</button>
-      <button onclick="filtroPeriodo(180)">6 meses</button>
-      <button onclick="filtroPeriodo(365)">1 ano</button>
-    </div>
-  </div>
+<script>
+supabase.auth.getUser().then(({ data }) => {
+  if (!data.user) window.location.href = "login.html";
+});
+</script>
 
-  <!-- Guard de sessão -->
-  <script>
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) window.location.href = "login.html";
-    });
-  </script>
 </body>
 </html>
