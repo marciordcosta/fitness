@@ -73,6 +73,30 @@ async function carregarGaleria() {
 carregarGaleria();
 </script>
 
+<script>
+async function excluirFotoGaleria(id, url) {
+  if (!confirm("Excluir esta foto?")) return;
+
+  const arquivo = url.split("/").pop();
+
+  await supabase.storage.from("fotos").remove([arquivo]);
+  await supabase.from("fotos").delete().eq("id", id);
+
+  carregarGaleria();
+}
+
+function editarFoto(id, url, data_foto) {
+  const novaData = prompt("Nova data da foto (AAAA-MM-DD):", data_foto);
+  if (!novaData) return;
+
+  supabase
+    .from("fotos")
+    .update({ data_foto: novaData })
+    .eq("id", id)
+    .then(() => carregarGaleria());
+}
+</script>  
+
 </body>
 </html>
 
@@ -104,6 +128,7 @@ carregarGaleria();
   background: #eaeaea;
 }
 </style>
+
 
 
 
