@@ -12,7 +12,6 @@
 <style>
   body { background:#f5f5f7; margin:0; }
 
-  /* HEADER FIXO */
   .galeria-header {
     padding: 12px 16px;
     font-size: 18px;
@@ -24,7 +23,6 @@
     right:0;
     z-index: 999;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-
     display:flex;
     justify-content: space-between;
     align-items:center;
@@ -41,30 +39,29 @@
   }
 
   .top-actions {
-    display: flex;
-    gap: 10px;
+    display:flex;
+    gap:10px;
   }
 
   .btn-top {
-    padding: 8px 14px;
-    font-size: 14px;
-    border-radius: 10px;
-    border: none;
-    cursor: pointer;
-    display: none;
-    color: white;
+    padding:8px 14px;
+    font-size:14px;
+    border-radius:10px;
+    border:none;
+    cursor:pointer;
+    display:none;
+    color:white;
   }
 
-  .btn-delete { background: #ff3b30; }
-  .btn-compare { background: #007aff; }
-  .btn-upload { background: #34c759; display:block !important; }
+  .btn-delete { background:#ff3b30; }
+  .btn-compare { background:#007aff; }
 
-  .data-bloco { margin-top: 16px; }
+  .data-bloco { margin-top:16px; }
 
   .data-titulo {
-    font-size: 15px;
-    font-weight: 600;
-    margin: 8px 10px;
+    font-size:15px;
+    font-weight:600;
+    margin:8px 10px;
     color:#1c1c1e;
   }
 
@@ -75,28 +72,14 @@
     padding: 0 10px 10px;
   }
 
-  .foto-bloco {
-    position: relative;
-    animation: fadeIn .25s ease-out;
-  }
-
-  @keyframes fadeIn {
-    from { opacity:0; transform:scale(0.9); }
-    to { opacity:1; transform:scale(1); }
-  }
+  .foto-bloco { position:relative; }
 
   .foto-galeria {
-    width: 100%;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: transform .15s;
+    width:100%;
+    border-radius:12px;
+    cursor:pointer;
   }
 
-  .foto-galeria:active {
-    transform: scale(0.92);
-  }
-
-  /* SELEÇÃO */
   .check {
     position:absolute;
     top:6px;
@@ -105,117 +88,106 @@
     height:22px;
     border-radius:50%;
     background:white;
-    border: 2px solid #007aff;
+    border:2px solid #007aff;
     display:flex;
     align-items:center;
     justify-content:center;
     color:white;
     font-size:14px;
-    font-weight:bold;
     opacity:0;
     pointer-events:none;
-    transition: opacity .12s;
   }
 
   .selecionado .check {
-    background:#007aff;
     opacity:1;
+    background:#007aff;
   }
 
-  .selecionado .foto-galeria {
-    opacity:0.7;
-  }
+  .selecionado .foto-galeria { opacity:0.7; }
 
-  /* Botões por imagem */
   .foto-acoes {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 4px;
+    display:flex;
+    justify-content:space-between;
+    margin-top:4px;
   }
 
   .foto-acoes button {
-    flex: 1;
-    margin: 0 2px;
-    font-size: 11px;
-    padding: 6px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    background: #eaeaea;
+    flex:1;
+    margin:0 2px;
+    font-size:11px;
+    padding:6px;
+    border-radius:8px;
+    border:none;
+    background:#eaeaea;
+    cursor:pointer;
   }
+
 </style>
+
 </head>
 <body>
 
-<!-- ✅ HEADER SUPERIOR -->
 <div class="galeria-header">
   <span class="voltar" onclick="window.location='index.html'">← Voltar</span>
 
   <div class="top-actions">
-
-    <!-- ✅ Upload múltiplo -->
-    <button class="btn-top btn-upload" onclick="abrirUpload()">Carregar Fotos</button>
-
     <button id="btnComparar" class="btn-top btn-compare" onclick="compararSelecionadas()">Comparar</button>
     <button id="btnExcluirVarios" class="btn-top btn-delete" onclick="excluirSelecionados()">Excluir</button>
+
+    <!-- ✅ NOVO botão para upload múltiplo -->
+    <button class="btn-top btn-compare" style="display:block;background:#5e5ce6"
+            onclick="abrirUpload()">Carregar Fotos</button>
   </div>
 </div>
 
-<!-- ✅ GALERIA -->
 <div id="conteudoGaleria"></div>
 
 <!-- ✅ MODAL UPLOAD MÚLTIPLO -->
 <div id="modalUpload" class="modal" aria-hidden="true">
   <div class="modal-backdrop" onclick="fecharUpload()"></div>
-
   <div class="modal-box">
-    <h3>Carregar Fotos</h3>
+    <h3>Enviar Fotos</h3>
 
     <label>Data das Fotos</label>
     <input type="date" id="uploadData" />
 
-    <label>Escolher Arquivos</label>
+    <label>Arquivos</label>
     <input type="file" id="uploadArquivos" accept="image/*" multiple />
 
-    <button class="btn-primary" onclick="enviarFotos()">Enviar</button>
-    <button class="btn-secondary" onclick="fecharUpload()">Cancelar</button>
+    <button class="btn-primary" onclick="enviarMultiplas()">Enviar</button>
   </div>
 </div>
 
 <script>
 let selecionadas = new Set();
 
-/* ==================== MODAL UPLOAD ==================== */
-function abrirUpload() {
-  document.getElementById("uploadData").value = new Date().toISOString().split("T")[0];
+/* ============ UPLOAD MÚLTIPLO ============ */
+function abrirUpload(){
+  document.getElementById("uploadData").value = new Date().toISOString().slice(0,10);
   document.getElementById("modalUpload").setAttribute("aria-hidden","false");
 }
-
-function fecharUpload() {
+function fecharUpload(){
   document.getElementById("modalUpload").setAttribute("aria-hidden","true");
 }
 
-/* ==================== ENVIAR FOTOS MÚLTIPLAS ==================== */
-async function enviarFotos() {
+async function enviarMultiplas(){
   const data = document.getElementById("uploadData").value;
-  const files = document.getElementById("uploadArquivos").files;
+  const arquivos = document.getElementById("uploadArquivos").files;
 
-  if (!data || !files.length) return alert("Selecione data e fotos.");
+  if(!data || arquivos.length === 0){
+    alert("Selecione a data e ao menos uma foto.");
+    return;
+  }
 
-  for (let file of files) {
+  for(let file of arquivos){
     const nome = `${Date.now()}-${file.name}`;
+    await supabase.storage.from("fotos").upload(nome, file);
 
-    // Upload
-    let up = await supabase.storage.from("fotos").upload(nome, file);
-    if (up.error) continue;
+    const { data:pub } = supabase.storage.from("fotos").getPublicUrl(nome);
 
-    // URL
-    let pub = supabase.storage.from("fotos").getPublicUrl(nome).data.publicUrl;
-
-    // Banco
     await supabase.from("fotos").insert({
-      data_foto: data,
-      url: pub
+      data_foto:data,
+      url:pub.publicUrl
     });
   }
 
@@ -223,7 +195,7 @@ async function enviarFotos() {
   carregarGaleria();
 }
 
-/* ==================== GALERIA ==================== */
+/* ============ CARREGAR GALERIA ============ */
 async function carregarGaleria() {
   selecionadas.clear();
   atualizarTopo();
@@ -231,108 +203,101 @@ async function carregarGaleria() {
   const { data } = await supabase
     .from("fotos")
     .select("id, data_foto, url")
-    .order("data_foto", { ascending: false });
+    .order("data_foto", { ascending:false });
 
   const area = document.getElementById("conteudoGaleria");
   area.innerHTML = "";
 
   const grupos = {};
-  (data || []).forEach(f => {
-    if (!grupos[f.data_foto]) grupos[f.data_foto] = [];
+  (data || []).forEach(f=>{
+    if(!grupos[f.data_foto]) grupos[f.data_foto]=[];
     grupos[f.data_foto].push(f);
   });
 
-  Object.keys(grupos).forEach(data => {
+  Object.keys(grupos).forEach(data=>{
     area.innerHTML += `
       <div class="data-bloco">
         <div class="data-titulo">${data}</div>
 
         <div class="grid">
-          ${grupos[data].map(f => `
-            <div class="foto-bloco" id="foto-${f.id}">
-              <div class="check">✓</div>
+          ${grupos[data].map(f=>{
+            const nome = f.url.split("/").pop();
+            return `
+              <div class="foto-bloco" id="foto-${f.id}">
+                <div class="check">✓</div>
 
-              <img src="${f.url}?v=${Date.now()}" 
-                class="foto-galeria"
-                onclick="toggleSelecao(${f.id})">
+                <img src="${f.url}?v=${Date.now()}"
+                     class="foto-galeria"
+                     onclick="toggleSelecao(${f.id})">
 
-              <div class="foto-acoes">
-                <button onclick="editarFoto('${f.id}', '${f.data_foto}')">Editar</button>
-                <button onclick="confirmarExcluir(${f.id}, '${f.url.split("/").pop()}')">Excluir</button>
+                <div class="foto-acoes">
+                  <button onclick="editarFoto(${f.id}, '${data}')">Editar</button>
+                  <button onclick="confirmarExcluir(${f.id}, '${nome}')">Excluir</button>
+                </div>
               </div>
-            </div>
-          `).join("")}
+            `;
+          }).join("")}
         </div>
       </div>
     `;
   });
 }
 
-/* ==================== SELEÇÃO ==================== */
-function toggleSelecao(id) {
+function toggleSelecao(id){
   const bloco = document.getElementById(`foto-${id}`);
-
-  if (selecionadas.has(id)) {
+  if(selecionadas.has(id)){
     selecionadas.delete(id);
     bloco.classList.remove("selecionado");
   } else {
     selecionadas.add(id);
     bloco.classList.add("selecionado");
   }
-
   atualizarTopo();
 }
 
-function atualizarTopo() {
-  document.getElementById("btnExcluirVarios").style.display =
-    selecionadas.size > 0 ? "block" : "none";
+function atualizarTopo(){
+  const btnDel = document.getElementById("btnExcluirVarios");
+  const btnComp = document.getElementById("btnComparar");
 
-  document.getElementById("btnComparar").style.display =
-    selecionadas.size === 2 ? "block" : "none";
+  btnDel.style.display = selecionadas.size>0 ? "block" : "none";
+  btnComp.style.display = selecionadas.size===2 ? "block" : "none";
 }
 
-/* ==================== COMPARAR ==================== */
-function compararSelecionadas() {
+/* ============ COMPARAR ============ */
+function compararSelecionadas(){
+  if(selecionadas.size !== 2) return;
   const ids = Array.from(selecionadas);
-  if (ids.length !== 2) return;
-
   localStorage.setItem("comparar_id1", ids[0]);
   localStorage.setItem("comparar_id2", ids[1]);
-
-  window.location.href = "comparacao.html";
+  window.location.href="comparacao.html";
 }
 
-/* ==================== EXCLUIR VÁRIAS ==================== */
-async function excluirSelecionados() {
-  if (!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
+/* ============ EXCLUIR ============ */
+async function confirmarExcluir(id, nome){
+  if(!confirm("Excluir esta foto?")) return;
+  await supabase.storage.from("fotos").remove([nome]);
+  await supabase.from("fotos").delete().eq("id", id);
+  carregarGaleria();
+}
 
-  for (let id of selecionadas) {
-    const nome = document.querySelector(`#foto-${id} img`).src.split("/").pop().split("?")[0];
-
+async function excluirSelecionados(){
+  if(!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
+  for(let id of selecionadas){
+    const bloco = document.getElementById(`foto-${id}`);
+    const img = bloco.querySelector("img").src.split("?")[0];
+    const nome = img.split("/").pop();
     await supabase.storage.from("fotos").remove([nome]);
     await supabase.from("fotos").delete().eq("id", id);
   }
-
   selecionadas.clear();
   carregarGaleria();
 }
 
-/* ==================== EXCLUIR INDIVIDUAL ==================== */
-async function confirmarExcluir(id, nomeArquivo) {
-  if (!confirm("Excluir esta foto?")) return;
-
-  await supabase.storage.from("fotos").remove([nomeArquivo]);
-  await supabase.from("fotos").delete().eq("id", id);
-
-  carregarGaleria();
-}
-
-/* ==================== EDITAR ==================== */
-async function editarFoto(id, data_foto) {
-  const nova = prompt("Nova data (AAAA-MM-DD):", data_foto);
-  if (!nova) return;
-
-  await supabase.from("fotos").update({ data_foto: nova }).eq("id", id);
+/* ============ EDITAR ============ */
+async function editarFoto(id, dataAtual){
+  const nova = prompt("Nova data (AAAA-MM-DD):", dataAtual);
+  if(!nova) return;
+  await supabase.from("fotos").update({data_foto:nova}).eq("id", id);
   carregarGaleria();
 }
 
