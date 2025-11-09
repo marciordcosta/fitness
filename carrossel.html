@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Carrossel</title>
+
+<style>
+  html, body {
+    margin:0; height:100%; background:#000; color:#fff; overflow:hidden;
+    touch-action:none; /* vamos gerenciar gestos manualmente */
+    -webkit-user-select:none; user-select:none;
+  }
+  .stage {
+    position:fixed; inset:0; background:#000; display:flex; align-items:center; justify-content:center;
+  }
+  .img-wrap {
+    position:relative; max-width:100%; max-height:100%;
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+  }
+  .img {
+    max-width:100%; max-height:100%;
+    transform-origin:center center;
+    transition: transform .05s linear;
+    pointer-events:none;
+  }
+
+  /* Top bar */
+  .topbar {
+    position:fixed; top:0; left:0; right:0; height:48px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:6px 10px; background: rgba(0,0,0,0.35);
+    z-index:10;
+  }
+  .btn {
+    background:#1c1c1e; border:none; color:#fff; border-radius:8px; padding:8px 12px; cursor:pointer;
+  }
+  .btn:active { transform: scale(0.98); }
+
+  /* Desktop arrows */
+  .arrow {
+    position:fixed; top:50%; transform:translateY(-50%);
+    width:46px; height:46px; border-radius:50%;
+    background: rgba(255,255,255,0.1);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; cursor:pointer; z-index:10; user-select:none;
+  }
+  .arrow.left { left:12px; }
+  .arrow.right { right:12px; }
+
+  /* Desktop zoom controls */
+  .zoombar {
+    position:fixed; bottom:12px; left:50%; transform:translateX(-50%);
+    display:flex; gap:10px; z-index:10;
+  }
+
+  /* Mobile: escondemos setas e zoom bar, o X permanece */
+  @media (pointer: coarse) {
+    .arrow, .zoombar { display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="btn" onclick="fechar()">✕</button>
+  <div id="indicator" style="opacity:.8;font-size:14px;"></div>
+  <div style="width:48px"></div>
+</div>
+
+<div class="arrow left" onclick="prev()">‹</div>
+<div class="arrow right" onclick="next()">›</div>
+
+<div class="stage" id="stage">
+  <div class="img-wrap" id="wrap">
+    <img id="img" class="img" alt="">
+  </div>
+</div>
+
+<div class="zoombar">
+  <button class="btn" onclick="zoomStep(1.2)">+</button>
+  <button class="btn" onclick="zoomStep(1/1.2)">−</button>
+  <button class="btn" onclick="resetView()">Reset</button>
+</div>
+
+<script>
+let items = [];
+let idx = 0;
+
+/* ====== Carregar lista e índice ====== */
+(function init(){
+  try {
+    items = JSON.parse(localStorage.getItem("carousel_items") || "[]");
+    idx = parseInt(localStorage.getItem("carousel_index") || "0", 10);
+  } catch(e) { items = []; idx = 0; }
+  if(!items.length) { fechar(); return; }
+  idx = Math.max(0, Math.min(idx, items.length-1));
+  loadCurrent();
+})();
+
+const img = document.getElementById('img');
+const indicator = document.getElementById('indicator');
+
+function loadCurrent(){
+  const cur = items[idx];
+  img.src = cur.url + "?v=" + Date.now();
+  resetView(true);
+  indicator.textContent = `${idx+1} / ${items.length}`;
+}
+
+/* ====== Navegação ====== */
+function next(){ if(idx < items.length-1){ idx++; loadCurrent(); } }
+function prev(){ if(idx > 0){ idx--; loadCurrent(); } }
+function fechar(){ window.location = "galeria.html"; }
+
+/* Teclado (desktop) */
+window.addEventListener('keydown', (e)=>{
+  if(e.key === 'ArrowRight') next();
+  else if(e.key === 'ArrowLeft') prev();
+  else if(e.key === 'Escape') fechar();
+});
+
+/* ====== Transform (zoom / pan) ====== */
+let scale = 1, tx = 0, ty = 0;
+const wrap = document.getElementById('wrap');
+const stage = document.getElementById('stage');
+
+function apply(){
+  img.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+}
+function resetView(noAnim){
+  scale = 1; tx = 0; ty = 0;
+  if(noAnim) img.style.transition = 'none';
+  apply();
+  if(noAnim) requestAnimationFrame(()=> img.style.transition = 'transform .05s linear');
+}
+
+/* Mouse wheel zoom (desktop) */
+stage.addEventListener('wheel', (e)=>{
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? (1/1.1) : 1.1;
+  zoomAtPointer(delta, e.clientX, e.clientY);
+}, {passive:false});
+
+function zoomStep(factor){
+  // centralizado
+  scale = clamp(scale * factor, 1, 6);
+  if(scale===1){ tx=0; ty=0; }
+  apply();
+}
+
+function zoomAtPointer(factor, px, py){
+  const rect = img.getBoundingClientRect();
+  const cx = rect.left + rect.width/2;
+  const cy = rect.top + rect.height/2;
+  const dx = px - cx;
+  const dy = py - cy;
+
+  const newScale = clamp(scale * factor, 1, 6);
+  const k = newScale / scale;
+  tx = dx - k * (dx - tx);
+  ty = dy - k * (dy - ty);
+  scale = newScale;
+
+  if(scale===1){ tx=0; ty=0; }
+  apply();
+}
+
+function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+/* Pan desktop (mouse) */
+let dragging=false, lastX=0, lastY=0;
+stage.addEventListener('mousedown', (e)=>{
+  dragging = true; lastX=e.clientX; lastY=e.clientY;
+});
+window.addEventListener('mouseup', ()=> dragging=false );
+window.addEventListener('mousemove', (e)=>{
+  if(!dragging || scale<=1) return;
+  tx += (e.clientX-lastX);
+  ty += (e.clientY-lastY);
+  lastX=e.clientX; lastY=e.clientY;
+  apply();
+});
+
+/* ====== Mobile: pinch-zoom + pan + swipe ====== */
+let touchState = { mode:'none', startDist:0, startScale:1, startX:0, startY:0, lastX:0, lastY:0, swipeStartX:0, swipeActive:false };
+
+stage.addEventListener('touchstart', (e)=>{
+  if(e.touches.length===1){
+    // possível swipe ou pan
+    const t = e.touches[0];
+    touchState.mode = (scale>1) ? 'pan' : 'swipe';
+    touchState.lastX = t.clientX; touchState.lastY = t.clientY;
+    touchState.swipeStartX = t.clientX;
+  } else if(e.touches.length===2){
+    // pinch
+    touchState.mode = 'pinch';
+    touchState.startDist = dist(e.touches[0], e.touches[1]);
+    touchState.startScale = scale;
+  }
+}, {passive:true});
+
+stage.addEventListener('touchmove', (e)=>{
+  if(touchState.mode==='pinch' && e.touches.length===2){
+    const d = dist(e.touches[0], e.touches[1]);
+    const factor = d / touchState.startDist;
+    scale = clamp(touchState.startScale * factor, 1, 6);
+    if(scale===1){ tx=0; ty=0; }
+    apply();
+  } else if(touchState.mode==='pan' && e.touches.length===1){
+    const t = e.touches[0];
+    tx += (t.clientX - touchState.lastX);
+    ty += (t.clientY - touchState.lastY);
+    touchState.lastX = t.clientX; touchState.lastY = t.clientY;
+    apply();
+  } else if(touchState.mode==='swipe' && e.touches.length===1){
+    const t = e.touches[0];
+    const dx = t.clientX - touchState.swipeStartX;
+    // não fazemos translate do container para simplificar; ao soltar decide
+    // poderia exibir uma leve resistência se quiser.
+  }
+}, {passive:true});
+
+stage.addEventListener('touchend', (e)=>{
+  if(touchState.mode==='swipe'){
+    const endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : touchState.lastX;
+    const dx = endX - touchState.swipeStartX;
+    if(Math.abs(dx) > 40){ dx<0 ? next() : prev(); }
+  }
+  touchState.mode='none';
+}, {passive:true});
+
+function dist(a,b){ const dx=a.clientX-b.clientX, dy=a.clientY-b.clientY; return Math.hypot(dx,dy); }
+</script>
+</body>
+</html>
