@@ -15,150 +15,154 @@
   /* HEADER FIXO */
   .galeria-header {
     padding: 12px 16px;
-    font-size: 18px;
-    font-weight: 700;
-    background: #fff;
-    position: fixed;
-    top: 0; left:0; right:0;
-    z-index: 999;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    display:flex; justify-content: space-between; align-items:center;
+    background:#fff;
+    position:fixed; top:0; left:0; right:0;
+    z-index:999;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    box-shadow:0 2px 10px rgba(0,0,0,0.1);
   }
 
-  #conteudoGaleria { margin-top: 80px; }
+  #conteudoGaleria { margin-top:80px; }
 
-  .voltar { color:#007aff; cursor:pointer; font-weight:600; }
+  .header-icon {
+    width:40px; height:40px;
+    background:#fff;
+    border-radius:12px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.08);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  .header-icon svg { width:22px; height:22px; }
 
-  .top-actions { display:flex; gap:10px; }
+  .top-actions {
+    display:flex; align-items:center; gap:10px;
+  }
 
   .btn-top {
-    padding:8px 14px;
-    font-size:14px;
-    border-radius:10px;
-    border:none;
-    cursor:pointer;
     display:none;
-    color:white;
+    border:none;
+    padding:8px 12px;
+    border-radius:10px;
+    font-size:14px;
+    font-weight:600;
+    color:#fff;
+    cursor:pointer;
   }
 
   .btn-delete { background:#ff3b30; }
   .btn-compare { background:#007aff; }
   .btn-upload { background:#5e5ce6; display:block !important; }
 
-  /* BLOCO DE DATA */
+  /* Datas */
   .data-bloco { margin-top:16px; }
-
   .data-titulo {
     font-size:15px;
     font-weight:600;
-    margin: 12px 10px 6px 10px;
-    padding-left:4px;
-    color:#1c1c1e;
+    margin:10px 12px 6px;
     border-left:4px solid #007aff;
+    padding-left:8px;
   }
 
-  /* ===== MINIATURAS ===== */
+  /* GRID */
   .grid {
     display:grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns:repeat(4,1fr);
     gap:6px;
-    padding: 0 10px 10px;
+    padding:0 10px 10px;
   }
-
   @media(max-width:640px){
-    .grid { grid-template-columns: repeat(3, 1fr); }
+    .grid { grid-template-columns:repeat(3,1fr); }
   }
 
-  .foto-bloco {
-    position:relative;
-  }
+  .foto-bloco { position:relative; }
 
-  .foto-galeria {
-    width:100%;
-    height:95px;                   /* ✅ MINIATURA MENOR */
-    object-fit:cover;              /* ✅ Cobre a área, elegante */
+  .foto-galeria{
+    width:100%; height:95px;
     border-radius:10px;
+    object-fit:cover;
     cursor:pointer;
-    background:#e5e5e5;
+    background:#ddd;
   }
 
-  /* SELEÇÃO */
-  .check {
-    position:absolute;
-    top:6px; right:6px;
+  .check{
+    position:absolute; top:6px; right:6px;
     width:22px; height:22px;
     border-radius:50%;
     background:white;
     border:2px solid #007aff;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:white;
-    font-size:14px;
-    font-weight:bold;
+    display:flex; align-items:center; justify-content:center;
+    color:white; font-size:13px;
     opacity:0;
     pointer-events:none;
-    transition: opacity .12s;
   }
+  .selecionado .check{ opacity:1; background:#007aff; }
+  .selecionado .foto-galeria{ opacity:0.65; }
 
-  .selecionado .check {
-    opacity:1;
-    background:#007aff;
-  }
-
-  .selecionado .foto-galeria {
-    opacity:0.68;
-    filter:brightness(0.8);
-  }
-
-  /* AÇÕES */
-  .foto-acoes {
+  .foto-acoes{
     display:flex;
     justify-content:space-between;
     margin-top:4px;
   }
 
-  .foto-acoes button {
+  .icon-btn{
     flex:1;
-    margin:0 2px;
-    font-size:11px;
     padding:6px;
-    border-radius:8px;
     border:none;
+    border-radius:10px;
     background:#eaeaea;
     cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
   }
+  .icon-btn svg{ width:16px; height:16px; }
 
-  /* BOTÃO SAIR DO MODO SELEÇÃO (MOBILE) */
+  /* BOTÃO FLUTUANTE MOBILE */
   .float-exit{
     position:fixed;
-    top:12px;
-    right:12px;
-    z-index:1000;
+    top:12px; right:12px;
     background:#ff3b30;
-    color:#fff;
-    border:none;
+    padding:10px 16px;
+    color:white;
     border-radius:999px;
-    padding:10px 14px;
-    font-weight:700;
+    border:none;
     display:none;
-    box-shadow:0 4px 14px rgba(0,0,0,0.25);
+    font-weight:700;
+    z-index:1200;
   }
 </style>
 </head>
 <body>
 
+<!-- HEADER -->
 <div class="galeria-header">
-  <span class="voltar" onclick="window.location='index.html'">← Voltar</span>
 
+  <!-- Voltar -->
+  <div class="header-icon" onclick="window.location='index.html'">
+    <svg fill="none" stroke="#1c1c1e" stroke-width="2.4" viewBox="0 0 24 24">
+      <path d="M15 18l-6-6 6-6"/>
+    </svg>
+  </div>
+
+  <!-- Ações -->
   <div class="top-actions">
+    <!-- Comparar -->
     <button id="btnComparar" class="btn-top btn-compare" onclick="compararSelecionadas()">Comparar</button>
+
+    <!-- Excluir -->
     <button id="btnExcluirVarios" class="btn-top btn-delete" onclick="excluirSelecionados()">Excluir</button>
-    <button class="btn-top btn-upload" onclick="abrirUpload()">Carregar Fotos</button>
+
+    <!-- Upload -->
+    <div class="header-icon" onclick="abrirUpload()">
+      <svg fill="none" stroke="#1c1c1e" stroke-width="2.4" viewBox="0 0 24 24">
+        <path d="M12 16V4M12 4l4 4M12 4L8 8M4 16h16v4H4z"/>
+      </svg>
+    </div>
   </div>
 </div>
 
-<!-- Modo seleção mobile -->
 <button id="btnSairSelecao" class="float-exit" onclick="sairModoSelecao()">Sair</button>
 
 <div id="conteudoGaleria"></div>
@@ -169,27 +173,27 @@
   <div class="modal-box">
     <h3>Enviar Fotos</h3>
 
-    <label>Data das Fotos</label>
+    <label>Data</label>
     <input type="date" id="uploadData" />
 
     <label>Arquivos</label>
-    <input type="file" id="uploadArquivos" accept="image/*" multiple />
+    <input type="file" id="uploadArquivos" multiple accept="image/*"/>
 
     <button class="btn-primary" onclick="enviarMultiplas()">Enviar</button>
   </div>
 </div>
 
 <script>
-/* =========================================================
-   LÓGICA DA GALERIA — NADA FOI ALTERADO AQUI
-   (apenas miniaturas menores no CSS acima)
-========================================================= */
-
+/* ====================================================
+   VARIÁVEIS
+==================================================== */
 let selecionadas = new Set();
 const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 let selectionModeMobile = false;
 
-/* ========== UPLOAD MULTIPLO ========== */
+/* ====================================================
+   UPLOAD MÚLTIPLO
+==================================================== */
 function abrirUpload(){
   document.getElementById("uploadData").value = new Date().toISOString().slice(0,10);
   document.getElementById("modalUpload").setAttribute("aria-hidden","false");
@@ -197,127 +201,152 @@ function abrirUpload(){
 function fecharUpload(){
   document.getElementById("modalUpload").setAttribute("aria-hidden","true");
 }
+
 async function enviarMultiplas(){
   const data = document.getElementById("uploadData").value;
-  const arquivos = document.getElementById("uploadArquivos").files;
-  if(!data || arquivos.length === 0){
-    alert("Selecione a data e ao menos uma foto.");
+  const files = document.getElementById("uploadArquivos").files;
+
+  if(!data || files.length === 0){
+    alert("Selecione a data e pelo menos 1 foto.");
     return;
   }
-  for(let file of arquivos){
+
+  for(let file of files){
     const nome = `${Date.now()}-${file.name}`;
     await supabase.storage.from("fotos").upload(nome, file);
     const { data:pub } = supabase.storage.from("fotos").getPublicUrl(nome);
     await supabase.from("fotos").insert({ data_foto:data, url:pub.publicUrl });
   }
+
   fecharUpload();
   carregarGaleria();
 }
 
-/* ========== CARREGAR GALERIA ========== */
-async function carregarGaleria() {
+/* ====================================================
+   CARREGAR GALERIA
+==================================================== */
+async function carregarGaleria(){
   selecionadas.clear();
   atualizarTopo();
+
   const { data } = await supabase
     .from("fotos")
-    .select("id, data_foto, url")
-    .order("data_foto", { ascending:false });
+    .select("id,data_foto,url")
+    .order("data_foto",{ ascending:false });
 
   const area = document.getElementById("conteudoGaleria");
   area.innerHTML = "";
 
   const grupos = {};
-  (data || []).forEach(f => {
-    if (!grupos[f.data_foto]) grupos[f.data_foto] = [];
+  (data||[]).forEach(f=>{
+    if(!grupos[f.data_foto]) grupos[f.data_foto] = [];
     grupos[f.data_foto].push(f);
   });
 
-  Object.keys(grupos).forEach(dia => {
+  Object.keys(grupos).forEach(dia=>{
     area.innerHTML += `
       <div class="data-bloco">
         <div class="data-titulo">${dia}</div>
         <div class="grid" id="grid-${dia}"></div>
       </div>
     `;
+
     const grid = document.getElementById(`grid-${dia}`);
-    grid.innerHTML = grupos[dia].map(f => {
-      const nome = f.url.split("/").pop();
+    grid.innerHTML = grupos[dia].map(f=>{
+      const name = f.url.split("/").pop();
       return `
         <div class="foto-bloco" id="foto-${f.id}" data-dia="${dia}">
           <div class="check">✓</div>
-          <img src="${f.url}?v=${Date.now()}" class="foto-galeria"
+
+          <img src="${f.url}?v=${Date.now()}" 
+               class="foto-galeria"
                data-id="${f.id}" data-dia="${dia}">
+
           <div class="foto-acoes">
-            <button onclick="editarFoto(${f.id}, '${dia}')">Editar</button>
-            <button onclick="confirmarExcluir(${f.id}, '${nome}')">Excluir</button>
+            <button class="icon-btn" onclick="editarFoto(${f.id}, '${dia}')">
+              <svg fill="none" stroke="#444" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M12 20h9"/>
+                <path d="M16.5 3.5l4 4L7 21l-4 1 1-4L16.5 3.5z"/>
+              </svg>
+            </button>
+
+            <button class="icon-btn" onclick="confirmarExcluir(${f.id}, '${name}')">
+              <svg fill="none" stroke="#444" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M3 6h18M8 6V4h8v2m-2 14H10a2 2 0 01-2-2V6h12v12a2 2 0 01-2 2z"/>
+              </svg>
+            </button>
           </div>
         </div>
       `;
     }).join("");
   });
 
-  anexarHandlersInteracao();
+  anexarHandlers();
 }
 
-/* ========== INTERAÇÃO ========== */
-function anexarHandlersInteracao(){
-  document.querySelectorAll(".foto-galeria").forEach(imgEl => {
-    const id = Number(imgEl.dataset.id);
-    const dia = imgEl.dataset.dia;
+/* ====================================================
+   INTERAÇÃO (clique / toque)
+==================================================== */
+function anexarHandlers(){
+  document.querySelectorAll(".foto-galeria").forEach(img=>{
+    const id = Number(img.dataset.id);
+    const dia = img.dataset.dia;
 
-    if (!isMobile) {
-      /* Desktop */
-      imgEl.addEventListener("click", (e)=>{
-        if (imgEl._clickTimer) return;
-        imgEl._clickTimer = setTimeout(()=>{
-          toggleSelecao(id);
-          imgEl._clickTimer=null;
-        },200);
+    if(!isMobile){
+      /* DESKTOP */
+      img.addEventListener("click", ()=>{
+        toggleSelecao(id);
       });
 
-      imgEl.addEventListener("dblclick", ()=>{
-        if(imgEl._clickTimer){ clearTimeout(imgEl._clickTimer); imgEl._clickTimer=null; }
+      img.addEventListener("dblclick", ()=>{
         abrirCarrosselDia(id, dia);
       });
 
     } else {
-      /* Mobile */
-      let pressTimer=null, moved=false;
+      /* MOBILE */
+      let pressTimer=null;
 
-      imgEl.addEventListener("touchstart", ()=>{
-        moved=false;
+      img.addEventListener("touchstart", ()=>{
         pressTimer=setTimeout(()=>{
-          selectionModeMobile = true;
+          selectionModeMobile=true;
           document.getElementById("btnSairSelecao").style.display="block";
           toggleSelecao(id);
-        },600);
-      },{passive:true});
+        },500);
+      });
 
-      imgEl.addEventListener("touchmove", ()=> moved = true, {passive:true});
-
-      imgEl.addEventListener("touchend", ()=>{
-        if (pressTimer){ clearTimeout(pressTimer); pressTimer=null; }
-        if (moved) return;
+      img.addEventListener("touchend", ()=>{
+        if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; }
 
         if(selectionModeMobile){
           toggleSelecao(id);
         } else {
           abrirCarrosselDia(id, dia);
         }
-      },{passive:true});
+      });
     }
   });
 }
 
+/* ====================================================
+   SAIR DO MODO SELEÇÃO
+==================================================== */
 function sairModoSelecao(){
-  selectionModeMobile = false;
+  selectionModeMobile=false;
   document.getElementById("btnSairSelecao").style.display="none";
+  selecionadas.clear();
+
+  document.querySelectorAll(".selecionado")
+    .forEach(b=>b.classList.remove("selecionado"));
+
   atualizarTopo();
 }
 
-/* ========== SELEÇÃO ========== */
+/* ====================================================
+   SELEÇÃO
+==================================================== */
 function toggleSelecao(id){
   const bloco = document.getElementById(`foto-${id}`);
+
   if(selecionadas.has(id)){
     selecionadas.delete(id);
     bloco.classList.remove("selecionado");
@@ -325,6 +354,7 @@ function toggleSelecao(id){
     selecionadas.add(id);
     bloco.classList.add("selecionado");
   }
+
   atualizarTopo();
 }
 
@@ -336,30 +366,52 @@ function atualizarTopo(){
     selecionadas.size === 2 ? "block" : "none";
 }
 
-/* ========== CARROSSEL ========== */
-async function abrirCarrosselDia(idClicado, dia){
+/* ====================================================
+   COMPARAR
+==================================================== */
+function compararSelecionadas(){
+  if(selecionadas.size !== 2){
+    alert("Selecione exatamente 2 fotos.");
+    return;
+  }
+
+  const ids = Array.from(selecionadas);
+  localStorage.setItem("comparar_id1", ids[0]);
+  localStorage.setItem("comparar_id2", ids[1]);
+
+  window.location="comparacao.html";
+}
+
+/* ====================================================
+   CARROSSEL
+==================================================== */
+async function abrirCarrosselDia(idClicado,dia){
   const { data } = await supabase
     .from("fotos")
     .select("id,url")
     .eq("data_foto", dia)
     .order("id");
 
-  if (!data || !data.length) return;
+  if(!data || !data.length) return;
 
-  const items = data.map(r => ({ id:r.id, url:r.url }));
-  const index = items.findIndex(it => it.id===idClicado);
+  const items = data.map(r=>({ id:r.id, url:r.url }));
+  const idx = items.findIndex(x=>x.id===idClicado);
 
   localStorage.setItem("carousel_items", JSON.stringify(items));
-  localStorage.setItem("carousel_index", String(index));
+  localStorage.setItem("carousel_index", String(idx));
 
-  window.location.href="carrossel.html";
+  window.location="carrossel.html";
 }
 
-/* ========== EXCLUIR ========== */
+/* ====================================================
+   EXCLUSÃO
+==================================================== */
 async function confirmarExcluir(id, nome){
   if(!confirm("Excluir esta foto?")) return;
+
   await supabase.storage.from("fotos").remove([nome]);
   await supabase.from("fotos").delete().eq("id", id);
+
   carregarGaleria();
 }
 
@@ -367,9 +419,10 @@ async function excluirSelecionados(){
   if(!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
 
   for(let id of selecionadas){
-    const bloco = document.getElementById(`foto-${id}`);
-    const img = bloco.querySelector("img").src.split("?")[0];
-    const nome = img.split("/").pop();
+    const bloco=document.getElementById(`foto-${id}`);
+    const img=bloco.querySelector("img").src.split("?")[0];
+    const nome=img.split("/").pop();
+
     await supabase.storage.from("fotos").remove([nome]);
     await supabase.from("fotos").delete().eq("id", id);
   }
@@ -378,8 +431,10 @@ async function excluirSelecionados(){
   carregarGaleria();
 }
 
-/* ========== EDITAR ========== */
-async function editarFoto(id, dataAtual){
+/* ====================================================
+   EDITAR DATA
+==================================================== */
+async function editarFoto(id,dataAtual){
   const nova = prompt("Nova data (AAAA-MM-DD):", dataAtual);
   if(!nova) return;
 
