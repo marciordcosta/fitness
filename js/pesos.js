@@ -15,11 +15,6 @@ function fecharModals() {
   document.querySelectorAll(".modal").forEach(m => m.setAttribute("aria-hidden", "true"));
 }
 
-function abrirMenuAdicionar() {
-  fecharModals();
-  document.getElementById("modalMenu").setAttribute("aria-hidden", "false");
-}
-
 function abrirAddPeso() {
   fecharModals();
   document.getElementById("dataNovoPeso").value = hojeISO();
@@ -27,27 +22,16 @@ function abrirAddPeso() {
   document.getElementById("modalPeso").setAttribute("aria-hidden", "false");
 }
 
-function abrirAddFoto() {
+function abrirFotoComDataDe(idInputData) {
+  const v = document.getElementById(idInputData).value || hojeISO();
   fecharModals();
-  document.getElementById("dataFoto").value = hojeISO();
+  document.getElementById("dataFoto").value = v;
   document.getElementById("modalFoto").setAttribute("aria-hidden", "false");
 }
 
 function abrirPeriodo() {
   fecharModals();
   document.getElementById("modalPeriodo").setAttribute("aria-hidden", "false");
-}
-
-/** Abrir modal de foto já preenchendo a data a partir de um input existente */
-function abrirFotoComDataDe(idInputData) {
-  try {
-    const valor = document.getElementById(idInputData).value || hojeISO();
-    fecharModals();
-    document.getElementById("dataFoto").value = valor;
-    document.getElementById("modalFoto").setAttribute("aria-hidden", "false");
-  } catch (_) {
-    abrirAddFoto();
-  }
 }
 
 /* ===================== LOAD ===================== */
@@ -62,8 +46,7 @@ async function salvarPesoNovo() {
 
   if (!data || isNaN(peso)) return alert("Preencha todos os campos.");
 
-  const { error } = await supabase.from("pesos").insert({ data, peso });
-  if (error) return alert("Erro ao salvar peso.");
+  await supabase.from("pesos").insert({ data, peso });
 
   fecharModals();
   carregarPesos(true);
@@ -72,33 +55,33 @@ async function salvarPesoNovo() {
 /* ===================== SALVAR FOTO ===================== */
 async function salvarFoto() {
   const data = document.getElementById("dataFoto").value;
-  const file = document.getElementById("arquivoFoto").files[0];
+  const files = document.getElementById("arquivoFoto").files;
 
-  if (!data || !file) return alert("Selecione a data e a foto.");
+  if (!data || !files.length) return alert("Selecione foto(s).");
 
-  const nome = `${Date.now()}-${file.name}`;
+  for (let file of files) {
+    const nome = `${Date.now()}-${file.name}`;
 
-  const { error: upErr } = await supabase.storage.from("fotos").upload(nome, file);
-  if (upErr) {
-    console.error(upErr);
-    return alert("Erro ao enviar imagem.");
+    const { error: upErr } = await supabase.storage.from("fotos").upload(nome, file);
+    if (upErr) {
+      console.error(upErr);
+      alert("Erro ao enviar imagem.");
+      continue;
+    }
+
+    const { data: pub } = supabase.storage.from("fotos").getPublicUrl(nome);
+    await supabase.from("fotos").insert({ data_foto: data, url: pub.publicUrl });
   }
-
-  // URL pública correta
-  const { data: publicInfo } = supabase.storage.from("fotos").getPublicUrl(nome);
-  const url = publicInfo.publicUrl;
-
-  await supabase.from("fotos").insert({ data_foto: data, url });
 
   fecharModals();
 }
 
-/* ===================== CARREGAR E FILTRAR ===================== */
+/* ===================== CARREGAR PESOS ===================== */
 async function carregarPesos(filtrar = false) {
   const { data, error } = await supabase
     .from("pesos")
     .select("id, data, peso")
-    .order("data", { ascending: true });
+    .order("data", { ascending: false });   // ✅ ORDEM DECRESCENTE
 
   if (error) return console.error(error);
 
@@ -116,7 +99,9 @@ async function carregarPesos(filtrar = false) {
 function aplicarPeriodo() {
   const hoje = new Date();
   const limite = new Date(hoje.getTime() - periodoAtual * 86400000);
+
   const filtrado = dadosPesos.filter(p => new Date(p.data) >= limite);
+
   montarGrafico(filtrado);
   renderHistorico(filtrado);
 }
@@ -130,7 +115,7 @@ function filtroPeriodo(dias) {
 /* ===================== HISTÓRICO ===================== */
 function renderHistorico(lista) {
   const el = document.getElementById("listaPesos");
-  if (!lista.length) return (el.innerHTML = "Nenhum registro.");
+  if (!lista.length) return el.innerHTML = "Nenhum registro.";
 
   el.innerHTML = "";
 
@@ -143,6 +128,7 @@ function renderHistorico(lista) {
         <div class="item-title">${item.peso.toFixed(1)} kg</div>
         <div class="item-sub">${item.data}</div>
       </div>
+
       <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
         onclick="abrirEditarDireto(${item.id})">Opções</button>
     `;
@@ -151,20 +137,15 @@ function renderHistorico(lista) {
   });
 }
 
-/** Abre modal de edição com dados do item (e mantém botão 'Carregar Foto') */
+/* ===================== EDITAR PESO ===================== */
 async function abrirEditarDireto(id) {
   const achou = dadosPesos.find(p => p.id === id);
   if (!achou) return;
+
   idEditar = id;
   document.getElementById("dataEditar").value = achou.data;
   document.getElementById("pesoEditar").value = achou.peso;
-  document.getElementById("modalEditar").setAttribute("aria-hidden", "false");
-}
 
-function abrirEditar(item) {
-  idEditar = item.id;
-  document.getElementById("dataEditar").value = item.data;
-  document.getElementById("pesoEditar").value = item.peso;
   document.getElementById("modalEditar").setAttribute("aria-hidden", "false");
 }
 
@@ -209,14 +190,13 @@ function montarGrafico(lista) {
 function calcularMedias() {
   const hoje = new Date();
 
-  // segunda da semana atual
   const segundaAtual = new Date(hoje);
-  segundaAtual.setDate(segundaAtual.getDate() - ((segundaAtual.getDay() + 6) % 7)); // seg=0
+  segundaAtual.setDate(segundaAtual.getDate() - ((segundaAtual.getDay() + 6) % 7));
   segundaAtual.setHours(0,0,0,0);
 
-  // semana anterior
   const segundaAnterior = new Date(segundaAtual);
   segundaAnterior.setDate(segundaAnterior.getDate() - 7);
+
   const domingoAnterior = new Date(segundaAtual);
   domingoAnterior.setDate(domingoAnterior.getDate() - 1);
   domingoAnterior.setHours(23,59,59,999);
@@ -233,106 +213,9 @@ function calcularMedias() {
   document.getElementById("mediaSemanalValor").innerText =
     mediaAtual ? mediaAtual.toFixed(1) + " kg" : "--";
 
-  if (!mediaAtual || !mediaAnterior) {
-    document.getElementById("mediaProgressoValor").innerText = "--";
-    return;
-  }
+  if (!mediaAtual || !mediaAnterior)
+    return document.getElementById("mediaProgressoValor").innerText = "--";
 
   const variacao = ((mediaAtual - mediaAnterior) / mediaAnterior) * 100;
   document.getElementById("mediaProgressoValor").innerText = variacao.toFixed(1) + "%";
-}
-
-/* ===================== GALERIA (modal legado) ===================== */
-async function abrirGaleria() {
-  fecharModals();
-  document.getElementById("modalGaleria").setAttribute("aria-hidden", "false");
-
-  const { data } = await supabase
-    .from("fotos")
-    .select("id, data_foto, url")
-    .order("data_foto", { ascending: false });
-
-  const area = document.getElementById("listaFotosGaleria");
-  area.innerHTML = "";
-
-  (data || []).forEach(f => {
-    area.innerHTML += `
-      <div style="margin-bottom:15px;">
-        <img src="${f.url}?v=${Date.now()}" style="width:100%;border-radius:12px;margin-bottom:6px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <small>${f.data_foto}</small>
-          <button class="btn-mini btn-danger" onclick="editarFoto(${f.id}, '${f.url}', '${f.data_foto}')">Editar</button>
-        </div>
-      </div>
-    `;
-  });
-}
-
-let fotoEditando = null;
-
-function editarFoto(id, url, dataFoto) {
-  fotoEditando = { id, url };
-  document.getElementById("fotoEditarPreview").src = url + "?v=" + Date.now();
-  document.getElementById("fotoEditarData").value = dataFoto;
-
-  fecharModals();
-  document.getElementById("modalFotoEditar").setAttribute("aria-hidden", "false");
-}
-
-async function salvarEdicaoFoto() {
-  const novaData = document.getElementById("fotoEditarData").value;
-
-  await supabase.from("fotos")
-    .update({ data_foto: novaData })
-    .eq("id", fotoEditando.id);
-
-  fecharModals();
-  abrirGaleria();
-}
-
-async function excluirFotoSelecionada() {
-  const caminho = fotoEditando.url.split("/").pop();
-
-  await supabase.storage.from("fotos").remove([caminho]);
-  await supabase.from("fotos").delete().eq("id", fotoEditando.id);
-
-  fecharModals();
-  abrirGaleria();
-}
-
-/* ===================== COMPARAÇÃO ===================== */
-async function carregarDatasComFoto() {
-  const { data } = await supabase
-    .from("fotos")
-    .select("data_foto")
-    .order("data_foto");
-
-  const unicas = [...new Set((data || []).map(x => x.data_foto))];
-
-  const s1 = document.getElementById("compData1");
-  const s2 = document.getElementById("compData2");
-
-  s1.innerHTML = "";
-  s2.innerHTML = "";
-
-  unicas.forEach(d => {
-    s1.innerHTML += `<option value="${d}">${d}</option>`;
-    s2.innerHTML += `<option value="${d}">${d}</option>`;
-  });
-}
-
-function abrirComparacao() {
-  fecharModals();
-  carregarDatasComFoto();
-  document.getElementById("modalComparacao").setAttribute("aria-hidden", "false");
-}
-
-function abrirTelaComparacao() {
-  const d1 = document.getElementById("compData1").value;
-  const d2 = document.getElementById("compData2").value;
-
-  localStorage.setItem("comp_data1", d1);
-  localStorage.setItem("comp_data2", d2);
-
-  window.location.href = "comparacao.html";
 }
