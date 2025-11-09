@@ -57,6 +57,7 @@
 
   .btn-delete { background: #ff3b30; }
   .btn-compare { background: #007aff; }
+  .btn-upload { background: #34c759; display:block !important; }
 
   .data-bloco { margin-top: 16px; }
 
@@ -67,7 +68,6 @@
     color:#1c1c1e;
   }
 
-  /* GRID */
   .grid {
     display:grid;
     grid-template-columns: repeat(4, 1fr);
@@ -96,7 +96,7 @@
     transform: scale(0.92);
   }
 
-  /* ✅ CHECK DE SELEÇÃO */
+  /* SELEÇÃO */
   .check {
     position:absolute;
     top:6px;
@@ -126,7 +126,7 @@
     opacity:0.7;
   }
 
-  /* ✅ BOTÕES RESTAURADOS — tamanho normal, pequenos e discretos */
+  /* Botões por imagem */
   .foto-acoes {
     display: flex;
     justify-content: space-between;
@@ -143,30 +143,87 @@
     cursor: pointer;
     background: #eaeaea;
   }
-
-  .foto-acoes button:active {
-    transform: scale(0.96);
-  }
 </style>
-
 </head>
 <body>
 
+<!-- ✅ HEADER SUPERIOR -->
 <div class="galeria-header">
   <span class="voltar" onclick="window.location='index.html'">← Voltar</span>
 
   <div class="top-actions">
+
+    <!-- ✅ Upload múltiplo -->
+    <button class="btn-top btn-upload" onclick="abrirUpload()">Carregar Fotos</button>
+
     <button id="btnComparar" class="btn-top btn-compare" onclick="compararSelecionadas()">Comparar</button>
     <button id="btnExcluirVarios" class="btn-top btn-delete" onclick="excluirSelecionados()">Excluir</button>
   </div>
 </div>
 
+<!-- ✅ GALERIA -->
 <div id="conteudoGaleria"></div>
+
+<!-- ✅ MODAL UPLOAD MÚLTIPLO -->
+<div id="modalUpload" class="modal" aria-hidden="true">
+  <div class="modal-backdrop" onclick="fecharUpload()"></div>
+
+  <div class="modal-box">
+    <h3>Carregar Fotos</h3>
+
+    <label>Data das Fotos</label>
+    <input type="date" id="uploadData" />
+
+    <label>Escolher Arquivos</label>
+    <input type="file" id="uploadArquivos" accept="image/*" multiple />
+
+    <button class="btn-primary" onclick="enviarFotos()">Enviar</button>
+    <button class="btn-secondary" onclick="fecharUpload()">Cancelar</button>
+  </div>
+</div>
 
 <script>
 let selecionadas = new Set();
 
-/* ==================== CARREGAR GALERIA ==================== */
+/* ==================== MODAL UPLOAD ==================== */
+function abrirUpload() {
+  document.getElementById("uploadData").value = new Date().toISOString().split("T")[0];
+  document.getElementById("modalUpload").setAttribute("aria-hidden","false");
+}
+
+function fecharUpload() {
+  document.getElementById("modalUpload").setAttribute("aria-hidden","true");
+}
+
+/* ==================== ENVIAR FOTOS MÚLTIPLAS ==================== */
+async function enviarFotos() {
+  const data = document.getElementById("uploadData").value;
+  const files = document.getElementById("uploadArquivos").files;
+
+  if (!data || !files.length) return alert("Selecione data e fotos.");
+
+  for (let file of files) {
+    const nome = `${Date.now()}-${file.name}`;
+
+    // Upload
+    let up = await supabase.storage.from("fotos").upload(nome, file);
+    if (up.error) continue;
+
+    // URL
+    let pub = supabase.storage.from("fotos").getPublicUrl(nome).data.publicUrl;
+
+    // Banco
+    await supabase.from("fotos").insert({
+      data_foto: data,
+      url: pub
+    });
+  }
+
+  fecharUpload();
+  carregarGaleria();
+}
+
+/* ==================== GALERIA ==================== */
 async function carregarGaleria() {
   selecionadas.clear();
   atualizarTopo();
@@ -191,25 +248,20 @@ async function carregarGaleria() {
         <div class="data-titulo">${data}</div>
 
         <div class="grid">
-          ${grupos[data].map(f => {
-            const nome = f.url.split("/").pop();
-            const base = "https://kkrbmuwwaxejfdqiczee.supabase.co/storage/v1/object/public/fotos/";
-            const urlPublica = base + nome;
-
-            return `
+          ${grupos[data].map(f => `
             <div class="foto-bloco" id="foto-${f.id}">
               <div class="check">✓</div>
 
-              <img src="${urlPublica}?v=${Date.now()}" 
-                   class="foto-galeria"
-                   onclick="toggleSelecao(${f.id})">
+              <img src="${f.url}?v=${Date.now()}" 
+                class="foto-galeria"
+                onclick="toggleSelecao(${f.id})">
 
               <div class="foto-acoes">
                 <button onclick="editarFoto('${f.id}', '${f.data_foto}')">Editar</button>
-                <button onclick="confirmarExcluir(${f.id}, '${nome}')">Excluir</button>
+                <button onclick="confirmarExcluir(${f.id}, '${f.url.split("/").pop()}')">Excluir</button>
               </div>
-            </div>`;
-          }).join("")}
+            </div>
+          `).join("")}
         </div>
       </div>
     `;
@@ -232,18 +284,17 @@ function toggleSelecao(id) {
 }
 
 function atualizarTopo() {
-  const btnDel = document.getElementById("btnExcluirVarios");
-  const btnComp = document.getElementById("btnComparar");
+  document.getElementById("btnExcluirVarios").style.display =
+    selecionadas.size > 0 ? "block" : "none";
 
-  btnDel.style.display = selecionadas.size > 0 ? "block" : "none";
-  btnComp.style.display = selecionadas.size === 2 ? "block" : "none";
+  document.getElementById("btnComparar").style.display =
+    selecionadas.size === 2 ? "block" : "none";
 }
 
 /* ==================== COMPARAR ==================== */
 function compararSelecionadas() {
-  if (selecionadas.size !== 2) return;
-
   const ids = Array.from(selecionadas);
+  if (ids.length !== 2) return;
 
   localStorage.setItem("comparar_id1", ids[0]);
   localStorage.setItem("comparar_id2", ids[1]);
@@ -256,9 +307,7 @@ async function excluirSelecionados() {
   if (!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
 
   for (let id of selecionadas) {
-    const bloco = document.getElementById(`foto-${id}`);
-    const img = bloco.querySelector("img").src.split("?")[0];
-    const nome = img.split("/").pop();
+    const nome = document.querySelector(`#foto-${id} img`).src.split("/").pop().split("?")[0];
 
     await supabase.storage.from("fotos").remove([nome]);
     await supabase.from("fotos").delete().eq("id", id);
@@ -287,7 +336,6 @@ async function editarFoto(id, data_foto) {
   carregarGaleria();
 }
 
-/* Start */
 carregarGaleria();
 </script>
 
