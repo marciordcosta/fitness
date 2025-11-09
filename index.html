@@ -14,6 +14,7 @@
 </head>
 <body>
 
+<!-- HEADER -->
 <header class="app-header" style="display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:12px 16px;">
 
   <!-- Botão "+" = apenas adicionar peso -->
@@ -41,6 +42,7 @@
 
 </header>
 
+<!-- CONTAINER -->
 <div class="container">
 
   <div class="card">
@@ -52,6 +54,7 @@
       <h3>Média semanal</h3>
       <div id="mediaSemanalValor">--</div>
     </div>
+
     <div class="media-bloco">
       <h3>Progressão (%)</h3>
       <div id="mediaProgressoValor">--</div>
@@ -78,13 +81,13 @@
     <input type="number" id="valorNovoPeso" step="0.1" />
 
     <button class="btn-primary" onclick="salvarPesoNovo()">Salvar</button>
-    <button class="btn-secondary" onclick="abrirFotoComDataDe('dataNovoPeso')">Carregar Foto</button>
   </div>
 </div>
 
 <!-- Modal Editar Peso -->
 <div id="modalEditar" class="modal" aria-hidden="true">
   <div class="modal-backdrop" onclick="fecharModals()"></div>
+
   <div class="modal-box">
     <h3>Editar Peso</h3>
 
@@ -98,12 +101,10 @@
       <button class="btn-danger" onclick="excluirPeso()">Excluir</button>
       <button class="btn-primary" onclick="salvarEdicao()">Salvar</button>
     </div>
-
-    <button class="btn-secondary" onclick="abrirFotoComDataDe('dataEditar')">Carregar Foto</button>
   </div>
 </div>
 
-<!-- Modal Foto -->
+<!-- Modal Foto (mantido, mas não chamado pelo index) -->
 <div id="modalFoto" class="modal" aria-hidden="true">
   <div class="modal-backdrop" onclick="fecharModals()"></div>
   <div class="modal-box">
@@ -123,6 +124,7 @@
 <!-- Modal Período -->
 <div id="modalPeriodo" class="modal" aria-hidden="true">
   <div class="modal-backdrop" onclick="fecharModals()"></div>
+
   <div class="modal-box">
     <h3>Período</h3>
     <button onclick="filtroPeriodo(7)">1 semana</button>
