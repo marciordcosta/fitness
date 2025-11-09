@@ -12,7 +12,7 @@
 <style>
   body { background:#f5f5f7; margin:0; }
 
-  /* HEADER FIXO (inalterado) */
+  /* HEADER FIXO */
   .galeria-header {
     padding: 12px 16px;
     font-size: 18px;
@@ -24,25 +24,35 @@
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     display:flex; justify-content: space-between; align-items:center;
   }
+
   #conteudoGaleria { margin-top: 80px; }
 
   .voltar { color:#007aff; cursor:pointer; font-weight:600; }
 
   .top-actions { display:flex; gap:10px; }
   .btn-top {
-    padding:8px 14px; font-size:14px; border-radius:10px; border:none;
-    cursor:pointer; display:none; color:white;
+    padding:8px 14px;
+    font-size:14px;
+    border-radius:10px;
+    border:none;
+    cursor:pointer;
+    display:none;
+    color:white;
   }
   .btn-delete { background:#ff3b30; }
   .btn-compare { background:#007aff; }
   .btn-upload { background:#5e5ce6; display:block !important; }
 
   .data-bloco { margin-top:16px; }
-  .data-titulo { font-size:15px; font-weight:600; margin:8px 10px; color:#1c1c1e; }
+  .data-titulo {
+    font-size:15px; font-weight:600; margin:8px 10px; color:#1c1c1e;
+  }
 
   .grid {
-    display:grid; grid-template-columns: repeat(4, 1fr);
-    gap:8px; padding: 0 10px 10px;
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap:8px;
+    padding: 0 10px 10px;
   }
 
   .foto-bloco { position:relative; }
@@ -61,21 +71,38 @@
   .selecionado .check { opacity:1; background:#007aff; }
   .selecionado .foto-galeria { opacity:0.7; }
 
-  .foto-acoes { display:flex; justify-content:space-between; margin-top:4px; }
+  .foto-acoes {
+    display:flex; justify-content:space-between; margin-top:4px;
+  }
   .foto-acoes button {
-    flex:1; margin:0 2px; font-size:11px; padding:6px; border-radius:8px;
-    border:none; background:#eaeaea; cursor:pointer;
+    flex:1; margin:0 2px; font-size:11px; padding:6px;
+    border-radius:8px; border:none; background:#eaeaea; cursor:pointer;
   }
 
-  /* Mobile: botão flutuante para sair do modo seleção */
+  /* ✅ BOTÃO SAIR (CORRIGIDO) */
   .float-exit {
-    position:fixed; top:12px; right:12px; z-index:1000;
-    background:#ff3b30; color:#fff; border:none; border-radius:999px;
-    padding:10px 14px; font-weight:700; display:none; box-shadow: var(--shadow);
+    position:fixed;
+    top:90px;        /* abaixo do header */
+    right:12px;
+    z-index:2000;
+    background:#ff3b30;
+    color:#fff;
+    border:none;
+    border-radius:999px;
+    padding:10px 16px;
+    font-weight:700;
+    font-size:14px;
+    display:none;
+    box-shadow:0 4px 10px rgba(0,0,0,0.25);
   }
 
   @media (max-width: 640px) {
     .grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  /* Nunca aparece no desktop */
+  @media (min-width:700px){
+    .float-exit { display:none !important; }
   }
 </style>
 </head>
@@ -87,12 +114,11 @@
   <div class="top-actions">
     <button id="btnComparar" class="btn-top btn-compare" onclick="compararSelecionadas()">Comparar</button>
     <button id="btnExcluirVarios" class="btn-top btn-delete" onclick="excluirSelecionados()">Excluir</button>
-    <!-- Upload múltiplo preservado -->
     <button class="btn-top btn-upload" onclick="abrirUpload()">Carregar Fotos</button>
   </div>
 </div>
 
-<!-- Botão flutuante de sair do modo seleção (somente mobile) -->
+<!-- ✅ Botão flutuante SAIR corrigido -->
 <button id="btnSairSelecao" class="float-exit" onclick="sairModoSelecao()">Sair</button>
 
 <div id="conteudoGaleria"></div>
@@ -116,7 +142,7 @@
 <script>
 let selecionadas = new Set();
 const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-let selectionModeMobile = false; // modo seleção no celular
+let selectionModeMobile = false;
 
 /* ========= Upload múltiplo ========= */
 function abrirUpload(){
@@ -171,7 +197,6 @@ async function carregarGaleria() {
     const grid = document.getElementById(`grid-${dataDia}`);
     grid.innerHTML = grupos[dataDia].map(f => {
       const nome = f.url.split("/").pop();
-      // dataset para saber a data no handler
       return `
         <div class="foto-bloco" id="foto-${f.id}" data-dia="${dataDia}">
           <div class="check">✓</div>
@@ -186,23 +211,17 @@ async function carregarGaleria() {
     }).join("");
   });
 
-  // Anexar handlers de interação
   anexarHandlersInteracao();
 }
 
-/* ========= Interações (desktop vs mobile) ========= */
+/* ========= Interações (desktop e mobile) ========= */
 function anexarHandlersInteracao(){
   document.querySelectorAll(".foto-galeria").forEach(imgEl => {
     const id = Number(imgEl.dataset.id);
     const dia = imgEl.dataset.dia;
 
     if (!isMobile) {
-      // DESKTOP: clique seleciona / duplo clique abre carrossel
       imgEl.addEventListener("click", (e) => {
-        // se foi duplo clique, o dblclick abaixo cuida
-        // clique simples: selecionar
-        // Evitar conflito com dblclick: só selecionar se não vier dblclick
-        // técnica: timeout curto
         if (imgEl._clickTimer) return;
         imgEl._clickTimer = setTimeout(()=>{
           toggleSelecao(id);
@@ -213,10 +232,8 @@ function anexarHandlersInteracao(){
         if (imgEl._clickTimer) { clearTimeout(imgEl._clickTimer); imgEl._clickTimer=null; }
         abrirCarrosselDia(id, dia);
       });
+
     } else {
-      // MOBILE:
-      // 1 toque = abrir carrossel (se NÃO estiver no modo seleção)
-      // toque longo (600ms) = entrar/ativar modo seleção
       let pressTimer = null;
       let moved = false;
 
@@ -225,7 +242,7 @@ function anexarHandlersInteracao(){
         pressTimer = setTimeout(()=>{
           selectionModeMobile = true;
           document.getElementById("btnSairSelecao").style.display = "block";
-          toggleSelecao(id); // já seleciona a primeira
+          toggleSelecao(id);
         }, 600);
       }, {passive:true});
 
@@ -234,12 +251,10 @@ function anexarHandlersInteracao(){
       imgEl.addEventListener("touchend", (e)=>{
         if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
         if (moved) return;
-        // toque curto
+
         if (selectionModeMobile) {
-          // no modo seleção, toque curto só seleciona/desseleciona
           toggleSelecao(id);
         } else {
-          // não está em seleção: abre carrossel
           abrirCarrosselDia(id, dia);
         }
       }, {passive:true});
@@ -247,12 +262,17 @@ function anexarHandlersInteracao(){
   });
 }
 
+/* ✅ CORREÇÃO — SAIR DO MODO SELEÇÃO MOBILE */
 function sairModoSelecao(){
   selectionModeMobile = false;
+
+  selecionadas.clear();
+
+  document.querySelectorAll('.foto-bloco.selecionado')
+    .forEach(b => b.classList.remove('selecionado'));
+
   document.getElementById("btnSairSelecao").style.display = "none";
-  // Não limpa seleção automaticamente; se quiser limpar:
-  // selecionadas.clear();
-  // document.querySelectorAll('.foto-bloco.selecionado').forEach(b=>b.classList.remove('selecionado'));
+
   atualizarTopo();
 }
 
@@ -277,9 +297,8 @@ function atualizarTopo(){
     selecionadas.size === 2 ? "block" : "none";
 }
 
-/* ========= Abrir carrossel (mesmo dia, inicia na foto clicada) ========= */
+/* ========= Carrossel ========= */
 async function abrirCarrosselDia(idClicado, dia){
-  // buscar todas as fotos do mesmo dia
   const { data } = await supabase
     .from("fotos")
     .select("id, url")
