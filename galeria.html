@@ -59,7 +59,8 @@
   .grid{
     display:grid;
     grid-template-columns:repeat(5,1fr);
-    gap:6px;
+    column-gap:6px; /* mantém o espaçamento lateral igual */
+    row-gap:2px;    /* aproxima verticalmente as linhas */
     padding:0 10px 10px;
   }
   @media(max-width:640px){ .grid{ grid-template-columns:repeat(3,1fr); } }
@@ -415,6 +416,7 @@ carregarGaleria();
 
 </body>
 </html>
+
 
 
 
