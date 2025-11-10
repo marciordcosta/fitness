@@ -10,6 +10,11 @@ function hojeISO() {
   return local.toISOString().substring(0, 10);
 }
 
+function toISODate(d) {
+  const z = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return z.toISOString().slice(0, 10);
+}
+
 /* ===================== MODAIS ===================== */
 function fecharModals() {
   document.querySelectorAll(".modal").forEach(m => m.setAttribute("aria-hidden", "true"));
@@ -81,7 +86,7 @@ async function carregarPesos(filtrar = false) {
   const { data, error } = await supabase
     .from("pesos")
     .select("id, data, peso")
-    .order("data", { ascending: false });   // ✅ ORDEM DECRESCENTE
+    .order("data", { ascending: false });   // Histórico em ORDEM DECRESCENTE (mantido)
 
   if (error) return console.error(error);
 
@@ -102,8 +107,8 @@ function aplicarPeriodo() {
 
   const filtrado = dadosPesos.filter(p => new Date(p.data) >= limite);
 
-  montarGrafico(filtrado);
-  renderHistorico(filtrado);
+  montarGrafico(filtrado);      // gráfico em ordem CRESCENTE (ajustado dentro da função)
+  renderHistorico(filtrado);    // histórico permanece na ordem recebida (decrescente)
 }
 
 function filtroPeriodo(dias) {
@@ -167,8 +172,11 @@ async function excluirPeso() {
 
 /* ===================== GRÁFICO ===================== */
 function montarGrafico(lista) {
-  const labels = lista.map(x => x.data);
-  const pesos = lista.map(x => x.peso);
+  // Garantir ordem CRESCENTE SOMENTE no gráfico
+  const asc = [...lista].sort((a, b) => new Date(a.data) - new Date(b.data));
+
+  const labels = asc.map(x => x.data);
+  const pesos = asc.map(x => x.peso);
 
   if (grafico) grafico.destroy();
 
@@ -182,40 +190,92 @@ function montarGrafico(lista) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: { legend: { display: false } }
+      // (não oculto os rótulos do eixo X, conforme seu pedido atual)
     }
   });
 }
 
-/* ===================== MÉDIAS ===================== */
+/* ===================== MÉDIAS (semana TER→SEG) ===================== */
+/*
+  Definição:
+  - Semana começa na TERÇA (2) e termina na SEGUNDA (1).
+  - Média da semana atual: período [terça atual 00:00 ... segunda seguinte 23:59].
+  - Semana anterior: 7 dias imediatamente anteriores.
+  - Progressão (%) = ((média_atual - média_anterior) / média_anterior) * 100.
+*/
 function calcularMedias() {
+  if (!dadosPesos.length) {
+    document.getElementById("mediaSemanalValor").innerText = "--";
+    document.getElementById("mediaProgressoValor").innerText = "--";
+    return;
+  }
+
   const hoje = new Date();
+  hoje.setHours(0,0,0,0);
 
-  const segundaAtual = new Date(hoje);
-  segundaAtual.setDate(segundaAtual.getDate() - ((segundaAtual.getDay() + 6) % 7));
-  segundaAtual.setHours(0,0,0,0);
+  // Encontrar a terça-feira da semana atual (getDay: 0=Dom,1=Seg,2=Ter,...)
+  const day = hoje.getDay();                  // 0..6
+  const deltaAteTerca = ( (day - 2 + 7) % 7 );// dias desde a terça mais recente
+  const tercaAtual = new Date(hoje);
+  tercaAtual.setDate(tercaAtual.getDate() - deltaAteTerca);
+  tercaAtual.setHours(0,0,0,0);
 
-  const segundaAnterior = new Date(segundaAtual);
-  segundaAnterior.setDate(segundaAnterior.getDate() - 7);
+  const segundaAtual = new Date(tercaAtual);
+  segundaAtual.setDate(segundaAtual.getDate() + 6);
+  segundaAtual.setHours(23,59,59,999);
 
-  const domingoAnterior = new Date(segundaAtual);
-  domingoAnterior.setDate(domingoAnterior.getDate() - 1);
-  domingoAnterior.setHours(23,59,59,999);
+  const tercaAnterior = new Date(tercaAtual);
+  tercaAnterior.setDate(tercaAnterior.getDate() - 7);
+  tercaAnterior.setHours(0,0,0,0);
 
-  const atual = dadosPesos.filter(p => new Date(p.data) >= segundaAtual);
-  const anterior = dadosPesos.filter(p => {
-    const d = new Date(p.data);
-    return d >= segundaAnterior && d <= domingoAnterior;
-  });
+  const segundaAnterior = new Date(tercaAtual);
+  segundaAnterior.setDate(segundaAnterior.getDate() - 1);
+  segundaAnterior.setHours(23,59,59,999);
 
-  const mediaAtual = atual.length ? atual.reduce((a,b)=>a+b.peso,0)/atual.length : null;
-  const mediaAnterior = anterior.length ? anterior.reduce((a,b)=>a+b.peso,0)/anterior.length : null;
+  // Mapa de último peso por dia (YYYY-MM-DD) dentro de um período
+  function ultimoPesoPorDiaNoPeriodo(inicio, fim) {
+    const map = new Map(); // dateISO -> peso
+    // dadosPesos está em ordem decrescente; o primeiro visto no dia será o último do dia
+    for (const p of dadosPesos) {
+      const d = new Date(p.data);
+      if (d < inicio || d > fim) continue;
+      const iso = toISODate(d);
+      if (!map.has(iso)) map.set(iso, p.peso); // mantém o 1º encontrado (último do dia)
+    }
+    return map;
+  }
+
+  function mediaSemana(inicio, fim) {
+    const porDia = ultimoPesoPorDiaNoPeriodo(inicio, fim);
+    let soma = 0;
+    let cont = 0;
+
+    // percorre exatamente os 7 dias (TER, QUA, QUI, SEX, SAB, DOM, SEG)
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(inicio);
+      d.setDate(inicio.getDate() + i);
+      d.setHours(0,0,0,0);
+      const iso = toISODate(d);
+      if (porDia.has(iso)) {
+        soma += porDia.get(iso);
+        cont += 1;
+      }
+    }
+
+    if (cont === 0) return null;
+    return soma / cont; // média dos dias em que houve registro
+  }
+
+  const mediaAtual = mediaSemana(tercaAtual, segundaAtual);
+  const mediaAnterior = mediaSemana(tercaAnterior, segundaAnterior);
 
   document.getElementById("mediaSemanalValor").innerText =
-    mediaAtual ? mediaAtual.toFixed(1) + " kg" : "--";
+    mediaAtual != null ? mediaAtual.toFixed(1) + " kg" : "--";
 
-  if (!mediaAtual || !mediaAnterior)
-    return document.getElementById("mediaProgressoValor").innerText = "--";
-
-  const variacao = ((mediaAtual - mediaAnterior) / mediaAnterior) * 100;
-  document.getElementById("mediaProgressoValor").innerText = variacao.toFixed(1) + "%";
+  if (mediaAtual == null || mediaAnterior == null || mediaAnterior === 0) {
+    document.getElementById("mediaProgressoValor").innerText = "--";
+  } else {
+    const variacao = ((mediaAtual - mediaAnterior) / mediaAnterior) * 100;
+    document.getElementById("mediaProgressoValor").innerText = variacao.toFixed(1) + "%";
+  }
 }
