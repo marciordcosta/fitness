@@ -1,123 +1,58 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Visualização</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="js/supabase.js"></script>
 
 <style>
-  body{
-    margin:0;
-    background:#000;
-    overflow:hidden;
-    touch-action:none;
-  }
-
-  #btnClose{
-    position:fixed;
-    top:12px;
-    left:12px;
-    z-index:2000;
-    background:#ff3b30;
-    color:#fff;
-    border:none;
-    padding:12px 18px;
-    border-radius:12px;
-    font-size:16px;
-    font-weight:700;
-  }
-
-  #infoBox{
-    position:fixed;
-    top:12px;
-    right:12px;
-    background:rgba(0,0,0,0.55);
-    color:#fff;
-    padding:10px 16px;
-    font-size:15px;
-    border-radius:12px;
-    font-weight:600;
-    z-index:1800;
-  }
-
-  .arrow{
-    position:fixed;
-    top:50%;
-    transform:translateY(-50%);
-    font-size:42px;
-    color:white;
-    padding:14px;
-    cursor:pointer;
-    user-select:none;
-    z-index:1500;
-  }
-  #leftArrow{ left:10px; }
-  #rightArrow{ right:10px; }
-
-  #viewer{
-    width:100vw;
-    height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    overflow:hidden;
-    position:relative;
-  }
-
-  #imgView{
-    max-width:100%;
-    max-height:100%;
-    object-fit:contain;
-    transition:transform .15s ease-out;
-    user-select:none;
-    transform-origin:center center;
-    pointer-events:none;
-  }
-
-  #controlsDesktop{
-    position:fixed;
-    bottom:12px;
-    left:50%;
-    transform:translateX(-50%);
-    display:flex;
-    gap:10px;
-    z-index:1600;
-  }
-
-  .btn{
-    background:#1c1c1e;
-    color:#fff;
-    padding:10px 14px;
-    border:none;
-    border-radius:10px;
-    cursor:pointer;
-    font-size:14px;
-  }
-
-  @media(max-width:640px){
-    #controlsDesktop{ display:none; }
-  }
-
-  #bottomBar{
-    position:fixed;
-    bottom:12px;
-    right:12px;
-    display:flex;
-    gap:10px;
-    z-index:1600;
-  }
-  #bottomBar .btn{
-    background:#333;
-  }
+body{margin:0;background:#000;overflow:hidden;touch-action:none}
+#btnClose{
+  position:fixed;top:12px;left:12px;z-index:2000;
+  background:#ff3b30;color:#fff;border:none;
+  padding:12px 18px;border-radius:12px;font-size:16px;font-weight:700
+}
+#infoBox{
+  position:fixed;top:12px;right:12px;z-index:1800;
+  background:rgba(0,0,0,.55);padding:10px 16px;
+  border-radius:12px;font-size:15px;font-weight:600;color:#fff
+}
+.arrow{
+  position:fixed;top:50%;transform:translateY(-50%);
+  font-size:42px;color:#fff;padding:14px;cursor:pointer;
+  user-select:none;z-index:1500
+}
+#leftArrow{left:10px}
+#rightArrow{right:10px}
+#viewer{
+  width:100vw;height:100vh;display:flex;align-items:center;
+  justify-content:center;overflow:hidden;position:relative
+}
+#imgView{
+  max-width:100%;max-height:100%;object-fit:contain;
+  transition:transform .1s linear;user-select:none;pointer-events:none
+}
+#controlsDesktop{
+  position:fixed;bottom:12px;left:50%;transform:translateX(-50%);
+  display:flex;gap:10px;z-index:1600
+}
+.btn{
+  background:#1c1c1e;color:#fff;padding:10px 14px;
+  border:none;border-radius:10px;cursor:pointer;font-size:14px
+}
+@media(max-width:640px){#controlsDesktop{display:none}}
+#bottomBar{
+  position:fixed;bottom:12px;right:12px;display:flex;gap:10px;z-index:1600
+}
+#bottomBar .btn{background:#333}
 </style>
 </head>
 <body>
 
 <button id="btnClose" onclick="voltar()">X</button>
-
 <div id="infoBox"></div>
 
 <div id="viewer">
@@ -139,187 +74,188 @@
 </div>
 
 <script>
-let fotos = [];
-let index = 0;
-let preloaded = [];
+/* ==========================================
+   VARIÁVEIS (UNIFICADAS E OTIMIZADAS)
+========================================== */
+let fotos=[],index=0,preloaded=[];
+let t={scale:1,x:0,y:0};
+const imgView = ()=>document.getElementById("imgView");
 
-/* zoom/pan */
-let transform = { scale:1, x:0, y:0 };
-
+/* ==========================================
+   LOAD INICIAL
+========================================== */
 function load(){
-  fotos  = JSON.parse(localStorage.getItem("carousel_items")  || "[]");
-  index  = Number(localStorage.getItem("carousel_index") || 0);
+  fotos=JSON.parse(localStorage.getItem("carousel_items")||"[]");
+  index=Number(localStorage.getItem("carousel_index")||0);
 
-  const dia  = localStorage.getItem("carousel_dia")  || "";
-  const peso = localStorage.getItem("carousel_peso") || "";
+  const dia = localStorage.getItem("carousel_dia")||"";
+  const peso= localStorage.getItem("carousel_peso")||"";
 
-  document.getElementById("infoBox").innerText =
-    peso ? `${dia} — ${peso} kg` : dia;
+  document.getElementById("infoBox").innerText = peso ? `${dia} — ${peso} kg` : dia;
 
   preloadAll();
   mostrar();
 }
 load();
 
-/* PRÉ-CARREGAMENTO */
+/* ==========================================
+   PRÉ-CARREGAMENTO OTIMIZADO
+========================================== */
 function preloadAll(){
   preloaded = fotos.map(f=>{
-    const img = new Image();
-    img.src = f.url;
-    return img;
+    const i=new Image();
+    i.src=f.url;
+    return i;
   });
 }
 
-/* MOSTRAR */
+/* ==========================================
+   MOSTRAR IMAGEM (RENDER MINIMIZADO)
+========================================== */
 function mostrar(){
   if(!fotos.length) return;
-  const img = document.getElementById("imgView");
-  img.src = fotos[index].url;
 
+  imgView().src=fotos[index].url;
   resetZoom();
 
-  if(preloaded[index+1]) preloaded[index+1].src = preloaded[index+1].src;
-  if(preloaded[index-1]) preloaded[index-1].src = preloaded[index-1].src;
+  const next = preloaded[index+1];
+  const prev = preloaded[index-1];
+  if(next) next.src=next.src;
+  if(prev) prev.src=prev.src;
 }
 
-/* NAVEGAÇÃO */
+/* ==========================================
+   NAVEGAÇÃO
+========================================== */
 function next(){
-  if(index < fotos.length-1){
+  if(index<fotos.length-1){
     index++;
-    salvarIndex();
+    localStorage.setItem("carousel_index",index);
     mostrar();
   }
 }
 function prev(){
-  if(index > 0){
+  if(index>0){
     index--;
-    salvarIndex();
+    localStorage.setItem("carousel_index",index);
     mostrar();
   }
 }
-function salvarIndex(){
-  localStorage.setItem("carousel_index", index);
-}
 
-/* TECLADO */
-document.addEventListener("keydown", e=>{
+/* ==========================================
+   KEYBOARD
+========================================== */
+document.addEventListener("keydown",e=>{
   if(e.key==="ArrowRight") next();
-  if(e.key==="ArrowLeft")  prev();
-  if(e.key==="Escape")     voltar();
+  else if(e.key==="ArrowLeft") prev();
+  else if(e.key==="Escape") voltar();
 });
 
-/* REMOVE SWIPE */
-document.addEventListener("touchstart", e=>{}, {passive:false});
-document.addEventListener("touchend",   e=>{}, {passive:false});
+/* ==========================================
+   REMOVE SWIPE (ZERO INTERFERÊNCIA)
+========================================== */
+document.addEventListener("touchstart",()=>{}, {passive:false});
+document.addEventListener("touchend",()=>{}, {passive:false});
 
-/* ZOOM + PAN */
-function aplicar(){
-  document.getElementById("imgView").style.transform =
-    `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`;
+/* ==========================================
+   ZOOM + PAN ULTRA LEVE
+========================================== */
+function apply(){
+  imgView().style.transform=`translate(${t.x}px,${t.y}px) scale(${t.scale})`;
 }
+function zoomIn(){ t.scale=Math.min(t.scale+0.2,4); apply(); }
+function zoomOut(){ t.scale=Math.max(t.scale-0.2,1); if(t.scale===1){t.x=0;t.y=0;} apply(); }
+function resetZoom(){ t={scale:1,x:0,y:0}; apply(); }
 
-function zoomIn(){ transform.scale = Math.min(transform.scale+0.2,4); aplicar(); }
-function zoomOut(){
-  transform.scale = Math.max(transform.scale-0.2,1);
-  if(transform.scale===1){ transform.x=0; transform.y=0; }
-  aplicar();
-}
-function resetZoom(){ transform={scale:1,x:0,y:0}; aplicar(); }
+/* ==========================================
+   TOUCH ZOOM + PAN (MÁXIMA PERFORMANCE)
+========================================== */
+let tx=0,ty=0,td=0;
 
-/* TOUCH ZOOM + PAN */
-let lastTouchX=0,lastTouchY=0,lastTouchDist=0;
-
-viewer.addEventListener("touchstart", e=>{
-  if(e.touches.length===1){
-    lastTouchX=e.touches[0].clientX;
-    lastTouchY=e.touches[0].clientY;
-  }
-  if(e.touches.length===2){
-    const dx=e.touches[0].clientX - e.touches[1].clientX;
-    const dy=e.touches[0].clientY - e.touches[1].clientY;
-    lastTouchDist=Math.hypot(dx,dy);
+viewer.addEventListener("touchstart",e=>{
+  const T=e.touches;
+  if(T.length===1){ tx=T[0].clientX; ty=T[0].clientY; }
+  else if(T.length===2){
+    const dx=T[0].clientX - T[1].clientX;
+    const dy=T[0].clientY - T[1].clientY;
+    td=Math.hypot(dx,dy);
   }
 },{passive:false});
 
-viewer.addEventListener("touchmove", e=>{
-  if(e.touches.length===2){
-    const dx=e.touches[0].clientX - e.touches[1].clientX;
-    const dy=e.touches[0].clientY - e.touches[1].clientY;
-    const dist=Math.hypot(dx,dy);
+viewer.addEventListener("touchmove",e=>{
+  const T=e.touches;
 
-    if(lastTouchDist){
-      const diff = dist - lastTouchDist;
-      transform.scale = Math.min(Math.max(transform.scale + diff/250,1),4);
-      aplicar();
+  if(T.length===2){
+    const dx=T[0].clientX - T[1].clientX;
+    const dy=T[0].clientY - T[1].clientY;
+    const dist=Math.hypot(dx,dy);
+    if(td){
+      t.scale=Math.min(Math.max(t.scale+(dist-td)/250,1),4);
+      apply();
     }
-    lastTouchDist = dist;
+    td=dist;
     return;
   }
 
-  if(e.touches.length===1 && transform.scale>1){
-    const t=e.touches[0];
-    transform.x += t.clientX - lastTouchX;
-    transform.y += t.clientY - lastTouchY;
-    lastTouchX=t.clientX;
-    lastTouchY=t.clientY;
-    aplicar();
+  if(T.length===1 && t.scale>1){
+    const c=T[0];
+    t.x+=c.clientX-tx;
+    t.y+=c.clientY-ty;
+    tx=c.clientX; ty=c.clientY;
+    apply();
   }
 },{passive:false});
 
-/* MOUSE PAN */
-let dragging=false, lastX=0,lastY=0;
+/* ==========================================
+   PAN MOUSE
+========================================== */
+let d=false,lx=0,ly=0;
 
-viewer.addEventListener("mousedown", e=>{
-  dragging=true;
-  lastX=e.clientX;
-  lastY=e.clientY;
+viewer.addEventListener("mousedown",e=>{
+  d=true; lx=e.clientX; ly=e.clientY;
 });
-window.addEventListener("mouseup", ()=> dragging=false);
+window.addEventListener("mouseup",()=>d=false);
 
-window.addEventListener("mousemove", e=>{
-  if(!dragging || transform.scale<=1) return;
-  transform.x += e.clientX - lastX;
-  transform.y += e.clientY - lastY;
-  lastX=e.clientX;
-  lastY=e.clientY;
-  aplicar();
+window.addEventListener("mousemove",e=>{
+  if(!d||t.scale<=1) return;
+  t.x+=e.clientX-lx;
+  t.y+=e.clientY-ly;
+  lx=e.clientX; ly=e.clientY;
+  apply();
 });
 
-/* SAIR */
+/* ==========================================
+   SAIR
+========================================== */
 function voltar(){ window.location="galeria.html"; }
 
-/* EDITAR */
+/* ==========================================
+   EDITAR
+========================================== */
 async function editarFoto(){
-  const nova = prompt("Nova data (AAAA-MM-DD):");
+  const nova=prompt("Nova data (AAAA-MM-DD):");
   if(!nova) return;
-
-  await supabase.from("fotos")
-    .update({ data_foto:nova })
-    .eq("id", fotos[index].id);
-
+  await supabase.from("fotos").update({data_foto:nova}).eq("id",fotos[index].id);
   alert("Data atualizada.");
 }
 
-/* ✅ EXCLUIR — corrigido */
+/* ==========================================
+   ✅ EXCLUIR (CORRIGIDO + OTIMIZADO)
+========================================== */
 async function excluirFoto(){
   if(!confirm("Excluir esta foto?")) return;
 
-  const nomeArquivo = fotos[index].arquivo;   // ✅ agora usa o nome REAL
+  const nome=fotos[index].arquivo;
+  if(nome) await supabase.storage.from("fotos").remove([nome]);
 
-  if(nomeArquivo){
-    await supabase.storage.from("fotos").remove([nomeArquivo]);
-  }
-
-  await supabase.from("fotos").delete().eq("id", fotos[index].id);
+  await supabase.from("fotos").delete().eq("id",fotos[index].id);
 
   fotos.splice(index,1);
+  if(!fotos.length) return voltar();
 
-  if(fotos.length===0) voltar();
-  else {
-    index = Math.max(0,index-1);
-    salvarIndex();
-    mostrar();
-  }
+  index=Math.max(0,index-1);
+  localStorage.setItem("carousel_index",index);
+  mostrar();
 }
 </script>
 
