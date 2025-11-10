@@ -199,7 +199,7 @@ async function enviarMultiplas(){
     await supabase.from("fotos").insert({
       data_foto: data,
       url: pub.publicUrl,
-      arquivo: nome       /* ✅ agora salvando o nome real */
+      arquivo: nome       /* ✅ salva o nome real do arquivo */
     });
   }
 
