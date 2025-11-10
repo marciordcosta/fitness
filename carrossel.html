@@ -30,7 +30,6 @@
     font-weight:700;
   }
 
-  /* Info fixa: data + peso */
   #infoBox{
     position:fixed;
     top:12px;
@@ -87,6 +86,7 @@
     gap:10px;
     z-index:1600;
   }
+
   .btn{
     background:#1c1c1e;
     color:#fff;
@@ -161,7 +161,7 @@ function load(){
 }
 load();
 
-/* ✅ PRÉ-CARREGAMENTO */
+/* PRÉ-CARREGAMENTO */
 function preloadAll(){
   preloaded = fotos.map(f=>{
     const img = new Image();
@@ -208,7 +208,7 @@ document.addEventListener("keydown", e=>{
   if(e.key==="Escape")     voltar();
 });
 
-/* ✅ REMOVE SWIPE – bloqueado completamente */
+/* REMOVE SWIPE */
 document.addEventListener("touchstart", e=>{}, {passive:false});
 document.addEventListener("touchend",   e=>{}, {passive:false});
 
@@ -300,13 +300,16 @@ async function editarFoto(){
   alert("Data atualizada.");
 }
 
-/* EXCLUIR */
+/* ✅ EXCLUIR — corrigido */
 async function excluirFoto(){
   if(!confirm("Excluir esta foto?")) return;
 
-  const nome = fotos[index].url.split("/").pop();
+  const nomeArquivo = fotos[index].arquivo;   // ✅ agora usa o nome REAL
 
-  await supabase.storage.from("fotos").remove([nome]);
+  if(nomeArquivo){
+    await supabase.storage.from("fotos").remove([nomeArquivo]);
+  }
+
   await supabase.from("fotos").delete().eq("id", fotos[index].id);
 
   fotos.splice(index,1);
