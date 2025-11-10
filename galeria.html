@@ -10,167 +10,202 @@
 <script src="js/supabase.js"></script>
 
 <style>
-  /* Fundo preto como o carrossel */
   body { background:#000; margin:0; color:#fff; }
 
-  /* HEADER FIXO (mantido) */
-  .galeria-header {
-    padding: 12px 16px;
-    background:#111;              /* mais escuro pra combinar com fundo preto */
+  /* HEADER FIXO */
+  .galeria-header{
+    padding:12px 16px;
     position:fixed; top:0; left:0; right:0;
     z-index:999;
-    display:flex; justify-content:space-between; align-items:center;
-    box-shadow:0 2px 10px rgba(0,0,0,0.35);
+    background:#000;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border-bottom:1px solid #222;
   }
 
-  #conteudoGaleria { margin-top:80px; padding-bottom: 90px; } /* espaço p/ botão X flutuante */
+  #conteudoGaleria{ margin-top:80px; }
 
-  .header-icon {
+  /* Ícones */
+  .header-icon{
     width:40px; height:40px;
-    background:#1a1a1a;
+    background:#111;
     border-radius:12px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.25);
-    display:flex; align-items:center; justify-content:center;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     cursor:pointer;
+    border:1px solid #222;
   }
-  .header-icon svg { width:22px; height:22px; }
+  .header-icon svg{
+    width:22px; height:22px;
+    stroke:#fff;
+  }
 
-  .top-actions { display:flex; align-items:center; gap:10px; }
-
-  .btn-top {
+  /* Botões de ações no topo */
+  .btn-top{
     display:none;
     border:none;
-    padding:8px 12px;
-    border-radius:10px;
-    font-size:14px;
-    font-weight:600;
-    color:#fff;
+    padding:10px 12px;
+    border-radius:12px;
     cursor:pointer;
+    background:#111;
+    border:1px solid #333;
   }
-  .btn-delete { background:#ff3b30; }
-  .btn-compare { background:#007aff; }
-  .btn-upload { background:#5e5ce6; display:block !important; }
+  .btn-top svg{ width:20px;height:20px; stroke:#fff; }
 
-  .data-bloco { margin-top:16px; }
-  .data-titulo {
+  .top-actions{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+
+  /* Datas */
+  .data-bloco{ margin-top:20px; }
+  .data-titulo{
     font-size:15px;
     font-weight:600;
-    margin:10px 12px 6px;
-    border-left:4px solid #007aff;
+    margin:10px 12px 8px;
     padding-left:8px;
-    color:#eaeaea;
+    border-left:3px solid #007aff;
   }
 
-  .grid {
+  /* GRID */
+  .grid{
     display:grid;
     grid-template-columns:repeat(4,1fr);
     gap:6px;
     padding:0 10px 10px;
   }
-  @media(max-width:640px){ .grid { grid-template-columns:repeat(3,1fr); } }
+  @media(max-width:640px){
+    .grid{ grid-template-columns:repeat(3,1fr); }
+  }
 
-  .foto-bloco { position:relative; }
+  .foto-bloco{ position:relative; }
 
   .foto-galeria{
-    width:100%; height:95px;
+    width:100%;
+    height:95px;
     border-radius:10px;
     object-fit:cover;
-    cursor:pointer;
     background:#222;
   }
 
+  /* Check */
   .check{
-    position:absolute; top:6px; right:6px;
+    position:absolute;
+    top:6px; right:6px;
     width:22px; height:22px;
     border-radius:50%;
-    background:#111;
-    border:2px solid #0a84ff;
-    display:flex; align-items:center; justify-content:center;
-    color:white; font-size:13px;
+    background:#fff;
+    border:2px solid #007aff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:13px;
+    color:#fff;
     opacity:0;
   }
-  .selecionado .check{ opacity:1; background:#0a84ff; }
-  .selecionado .foto-galeria{ opacity:0.7; }
+  .selecionado .check{ opacity:1; background:#007aff; }
+  .selecionado .foto-galeria{ opacity:0.6; }
 
-  /* Sem botões nas miniaturas */
-  .foto-acoes{ display:none; }
-
-  /* Botão X flutuante (modo seleção - mobile) */
+  /* Botão X mobile */
   .float-exit{
     position:fixed;
-    right:14px; bottom:14px;          /* canto inferior direito */
+    top:90px;
+    right:12px;
     background:#ff3b30;
-    padding:12px 16px;
-    color:white;
-    border-radius:999px;
+    color:#fff;
     border:none;
-    display:none;
+    padding:10px 18px;
+    border-radius:999px;
     font-weight:700;
-    z-index:1200;
-    box-shadow:0 8px 20px rgba(0,0,0,0.45);
-  }
-  @media(min-width:641px){
-    /* no desktop, mantemos o mesmo comportamento visual */
-    .float-exit{ right:14px; bottom:14px; }
+    display:none;
+    z-index:2000;
   }
 </style>
 </head>
 <body>
 
+<!-- HEADER -->
 <div class="galeria-header">
+
   <!-- Voltar -->
   <div class="header-icon" onclick="window.location='index.html'">
-    <svg fill="none" stroke="#eaeaea" stroke-width="2.4" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+    <svg fill="none" stroke-width="2.4" viewBox="0 0 24 24">
+      <path d="M15 18l-6-6 6-6"></path>
+    </svg>
   </div>
 
+  <!-- BOTÕES NO TOPO -->
   <div class="top-actions">
-    <button id="btnComparar" class="btn-top btn-compare" onclick="compararSelecionadas()">Comparar</button>
-    <button id="btnExcluirVarios" class="btn-top btn-delete" onclick="excluirSelecionados()">Excluir</button>
 
-    <!-- Upload -->
+    <!-- COMPARAR -->
+    <button id="btnComparar" class="btn-top" onclick="compararSelecionadas()">
+      <svg fill="none" stroke-width="2.3" viewBox="0 0 24 24">
+        <path d="M10 4H6a2 2 0 00-2 2v4h6V4zM20 14h-6v6h4a2 2 0 002-2v-4zM14 4v6h6V6a2 2 0 00-2-2h-4zM4 14v4a2 2 0 002 2h4v-6H4z"></path>
+      </svg>
+    </button>
+
+    <!-- EDITAR -->
+    <button id="btnEditarVarios" class="btn-top" onclick="editarSelecionados()">
+      <svg fill="none" stroke-width="2.3" viewBox="0 0 24 24">
+        <path d="M16.5 3.5l4 4L7 21l-4 1 1-4L16.5 3.5z"></path>
+      </svg>
+    </button>
+
+    <!-- EXCLUIR -->
+    <button id="btnExcluirVarios" class="btn-top" onclick="excluirSelecionados()">
+      <svg fill="none" stroke-width="2.3" viewBox="0 0 24 24">
+        <path d="M3 6h18M8 6V4h8v2m-2 14H10a2 2 0 01-2-2V6h12v12a2 2 0 01-2 2z"></path>
+      </svg>
+    </button>
+
+    <!-- UPLOAD -->
     <div class="header-icon" onclick="abrirUpload()">
-      <svg fill="none" stroke="#eaeaea" stroke-width="2.4" viewBox="0 0 24 24">
-        <path d="M12 16V4M12 4l4 4M12 4L8 8M4 16h16v4H4z"/>
+      <svg fill="none" stroke-width="2.3" viewBox="0 0 24 24">
+        <path d="M12 16V4M12 4l4 4M12 4L8 8M4 16h16v4H4z"></path>
       </svg>
     </div>
+
   </div>
 </div>
 
-<!-- Botão X flutuante (modo seleção) -->
+<!-- BOTÃO SAIR DO MODO SELEÇÃO (MOBILE) -->
 <button id="btnSairSelecao" class="float-exit" onclick="sairModoSelecao()">X</button>
 
 <div id="conteudoGaleria"></div>
 
-<!-- Modal Upload -->
+<!-- MODAL UPLOAD -->
 <div id="modalUpload" class="modal" aria-hidden="true">
   <div class="modal-backdrop" onclick="fecharUpload()"></div>
   <div class="modal-box">
     <h3>Enviar Fotos</h3>
     <label>Data</label>
     <input type="date" id="uploadData" />
-    <label>Arquivos</label>
+    <label>Fotos</label>
     <input type="file" id="uploadArquivos" multiple accept="image/*"/>
     <button class="btn-primary" onclick="enviarMultiplas()">Enviar</button>
   </div>
 </div>
 
 <script>
+/* ============================= VARIÁVEIS ============================= */
 let selecionadas = new Set();
 const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 let selectionModeMobile = false;
 
-/* ================= UPLOAD ================= */
+/* ============================= UPLOAD ============================= */
 function abrirUpload(){
   document.getElementById("uploadData").value = new Date().toISOString().slice(0,10);
   document.getElementById("modalUpload").setAttribute("aria-hidden","false");
 }
-function fecharUpload(){
-  document.getElementById("modalUpload").setAttribute("aria-hidden","true");
-}
+function fecharUpload(){ document.getElementById("modalUpload").setAttribute("aria-hidden","true"); }
+
 async function enviarMultiplas(){
   const data = document.getElementById("uploadData").value;
   const files = document.getElementById("uploadArquivos").files;
-  if(!data || files.length===0){ alert("Selecione a data e pelo menos 1 foto."); return; }
+  if(!data || files.length===0) return alert("Escolha data e ao menos 1 foto.");
 
   for(let file of files){
     const nome = `${Date.now()}-${file.name}`;
@@ -182,39 +217,47 @@ async function enviarMultiplas(){
   carregarGaleria();
 }
 
-/* ================= GALERIA ================= */
+/* ============================= CARREGAR GALERIA ============================= */
 async function carregarGaleria(){
-  selecionadas.clear(); atualizarTopo();
+  selecionadas.clear();
+  atualizarTopo();
 
-  const { data } = await supabase
-    .from("fotos")
-    .select("id,data_foto,url")
-    .order("data_foto",{ascending:false});
+  const { data:pesos } = await supabase.from("pesos").select("data,peso");
+  const mapaPesos = {};
+  (pesos||[]).forEach(p => mapaPesos[p.data] = p.peso);
 
-  const area=document.getElementById("conteudoGaleria");
-  area.innerHTML="";
+  const { data:fotos } = await supabase
+      .from("fotos")
+      .select("id,data_foto,url")
+      .order("data_foto",{ascending:false});
 
-  const grupos={};
-  (data||[]).forEach(f=>{
+  const area = document.getElementById("conteudoGaleria");
+  area.innerHTML = "";
+
+  const grupos = {};
+  (fotos||[]).forEach(f=>{
     if(!grupos[f.data_foto]) grupos[f.data_foto]=[];
     grupos[f.data_foto].push(f);
   });
 
   Object.keys(grupos).forEach(dia=>{
-    area.innerHTML+=`
+    const peso = mapaPesos[dia] ? ` — ${mapaPesos[dia].toFixed(1)} kg` : "";
+
+    area.innerHTML += `
       <div class="data-bloco">
-        <div class="data-titulo">${dia}</div>
+        <div class="data-titulo">${dia}${peso}</div>
         <div class="grid" id="grid-${dia}"></div>
       </div>`;
 
-    const grid=document.getElementById(`grid-${dia}`);
+    const grid = document.getElementById(`grid-${dia}`);
     grid.innerHTML = grupos[dia].map(f=>{
-      const url = f.url; // cache ON (sem ?v=Date.now())
+      const urlCache = f.url;
       return `
         <div class="foto-bloco" id="foto-${f.id}" data-dia="${dia}">
           <div class="check">✓</div>
-          <img src="${url}" loading="lazy" decoding="async" fetchpriority="low"
-               class="foto-galeria" data-id="${f.id}" data-dia="${dia}">
+          <img src="${urlCache}" loading="lazy" decoding="async"
+               class="foto-galeria"
+               data-id="${f.id}" data-dia="${dia}">
         </div>`;
     }).join("");
   });
@@ -222,40 +265,36 @@ async function carregarGaleria(){
   anexarHandlers();
 }
 
-/* ================= HANDLERS (scroll seguro no mobile) ================= */
+/* ============================= HANDLERS ============================= */
 function anexarHandlers(){
   document.querySelectorAll(".foto-galeria").forEach(img=>{
     const id = Number(img.dataset.id);
-    const dia= img.dataset.dia;
+    const dia = img.dataset.dia;
 
+    /* DESKTOP */
     if(!isMobile){
-      // Desktop: clique seleciona; duplo clique abre carrossel
       img.addEventListener("click", ()=> toggleSelecao(id));
-      img.addEventListener("dblclick", ()=> abrirCarrosselDia(id, dia));
+      img.addEventListener("dblclick", ()=> abrirCarrosselDia(id,dia));
       return;
     }
 
-    // Mobile: evitar abrir ao rolar (precisão maior)
-    let pressTimer=null, startY=0, startX=0, movedY=0, movedX=0;
+    /* MOBILE (corrigido scroll + touch) */
+    let pressTimer=null, startY=0, movedY=0;
 
     img.addEventListener("touchstart", e=>{
-      movedY=0; movedX=0;
-      startY = e.touches[0].clientY;
-      startX = e.touches[0].clientX;
+      movedY=0;
+      startY=e.touches[0].clientY;
 
       pressTimer=setTimeout(()=>{
         selectionModeMobile=true;
         document.getElementById("btnSairSelecao").style.display="block";
         toggleSelecao(id);
-      },500);
+      },420);
     },{passive:true});
 
     img.addEventListener("touchmove", e=>{
-      const t = e.touches[0];
-      movedY = Math.abs(t.clientY - startY);
-      movedX = Math.abs(t.clientX - startX);
-      // se deslizar > 20px em qualquer eixo => scrolling; não abre
-      if((movedY>20 || movedX>20) && pressTimer){
+      movedY = Math.abs(e.touches[0].clientY - startY);
+      if(movedY>10 && pressTimer){
         clearTimeout(pressTimer);
         pressTimer=null;
       }
@@ -264,19 +303,15 @@ function anexarHandlers(){
     img.addEventListener("touchend", ()=>{
       if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; }
 
-      // se houve scroll notável, não abre
-      if(movedY>20 || movedX>20) return;
+      if(movedY>10) return;
 
-      if(selectionModeMobile){
-        toggleSelecao(id);
-      } else {
-        abrirCarrosselDia(id,dia);
-      }
+      if(selectionModeMobile) toggleSelecao(id);
+      else abrirCarrosselDia(id,dia);
     },{passive:true});
   });
 }
 
-/* ================= SAIR DO MODO SELEÇÃO (mobile) ================= */
+/* ============================= SAIR SELEÇÃO ============================= */
 function sairModoSelecao(){
   selectionModeMobile=false;
   document.getElementById("btnSairSelecao").style.display="none";
@@ -285,9 +320,9 @@ function sairModoSelecao(){
   atualizarTopo();
 }
 
-/* ================= SELEÇÃO ================= */
+/* ============================= SELEÇÃO ============================= */
 function toggleSelecao(id){
-  const bloco=document.getElementById(`foto-${id}`);
+  const bloco = document.getElementById(`foto-${id}`);
   if(selecionadas.has(id)){
     selecionadas.delete(id);
     bloco.classList.remove("selecionado");
@@ -299,49 +334,55 @@ function toggleSelecao(id){
 }
 
 function atualizarTopo(){
-  document.getElementById("btnExcluirVarios").style.display =
-    selecionadas.size>0?"block":"none";
-  document.getElementById("btnComparar").style.display =
-    selecionadas.size===2?"block":"none";
+  const count = selecionadas.size;
+
+  document.getElementById("btnExcluirVarios").style.display = count>0 ? "block":"none";
+  document.getElementById("btnEditarVarios").style.display = count>0 ? "block":"none";
+  document.getElementById("btnComparar").style.display = count===2 ? "block":"none";
 }
 
-/* ================= COMPARAR ================= */
+/* ============================= EDITAR VÁRIOS ============================= */
+async function editarSelecionados(){
+  if(selecionadas.size === 0) return;
+
+  const nova = prompt("Nova data (AAAA-MM-DD):");
+  if(!nova) return;
+
+  for(let id of selecionadas){
+    await supabase.from("fotos").update({data_foto:nova}).eq("id", id);
+  }
+
+  selecionadas.clear();
+  carregarGaleria();
+}
+
+/* ============================= COMPARAR ============================= */
 function compararSelecionadas(){
-  if(selecionadas.size!==2){ alert("Selecione exatamente 2."); return; }
+  if(selecionadas.size!==2) return;
   const ids=[...selecionadas];
   localStorage.setItem("comparar_id1",ids[0]);
   localStorage.setItem("comparar_id2",ids[1]);
   window.location="comparacao.html";
 }
 
-/* ================= CARROSSEL ================= */
+/* ============================= CARROSSEL ============================= */
 async function abrirCarrosselDia(idClicado,dia){
-  const { data } = await supabase
-    .from("fotos")
-    .select("id,url")
-    .eq("data_foto",dia)
-    .order("id");
-
-  if(!data||!data.length) return;
-
+  const { data } = await supabase.from("fotos").select("id,url").eq("data_foto",dia).order("id");
   const items=data.map(x=>({id:x.id,url:x.url}));
   const idx=items.findIndex(x=>x.id===idClicado);
-
   localStorage.setItem("carousel_items",JSON.stringify(items));
   localStorage.setItem("carousel_index",String(idx));
-
   window.location="carrossel.html";
 }
 
-/* ================= EXCLUSÕES ================= */
+/* ============================= EXCLUIR ============================= */
 async function excluirSelecionados(){
-  if(!confirm(`Excluir ${selecionadas.size} fotos?`)) return;
+  if(!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
 
   for(let id of selecionadas){
     const bloco=document.getElementById(`foto-${id}`);
     const img=bloco.querySelector("img").src.split("?")[0];
     const nome=img.split("/").pop();
-
     await supabase.storage.from("fotos").remove([nome]);
     await supabase.from("fotos").delete().eq("id",id);
   }
@@ -350,22 +391,6 @@ async function excluirSelecionados(){
   carregarGaleria();
 }
 
-async function confirmarExcluir(id,nome){
-  if(!confirm("Excluir?")) return;
-  await supabase.storage.from("fotos").remove([nome]);
-  await supabase.from("fotos").delete().eq("id",id);
-  carregarGaleria();
-}
-
-/* ================= EDITAR DATA ================= */
-async function editarFoto(id,dataAtual){
-  const nova=prompt("Nova data (AAAA-MM-DD):",dataAtual);
-  if(!nova) return;
-  await supabase.from("fotos").update({data_foto:nova}).eq("id",id);
-  carregarGaleria();
-}
-
-/* INIT */
 carregarGaleria();
 </script>
 
