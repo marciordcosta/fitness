@@ -72,6 +72,8 @@
     object-fit:cover;
     background:#222;
     cursor:pointer;
+    -webkit-touch-callout: none;
+    user-select:none;
   }
 
   .check{
@@ -163,6 +165,8 @@
 </div>
 
 <script>
+document.addEventListener("contextmenu", e => e.preventDefault());
+
 let selecionadas = new Set();
 const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 let selectionModeMobile = false;
