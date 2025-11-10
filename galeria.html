@@ -53,7 +53,7 @@
 
   .btn-delete { background:#ff3b30; }
   .btn-compare { background:#007aff; }
-  .btn-upload { background:#5e5ce6; display:block !important; }
+  .btn-edit   { background:#5e5ce6; }
 
   /* Datas */
   .data-bloco { margin-top:16px; }
@@ -100,37 +100,18 @@
   .selecionado .check{ opacity:1; background:#007aff; }
   .selecionado .foto-galeria{ opacity:0.65; }
 
-  .foto-acoes{
-    display:flex;
-    justify-content:space-between;
-    margin-top:4px;
-  }
-
-  .icon-btn{
-    flex:1;
-    padding:6px;
-    border:none;
-    border-radius:10px;
-    background:#eaeaea;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-  }
-  .icon-btn svg{ width:16px; height:16px; }
-
-  /* BOTÃO FLUTUANTE MOBILE */
+  /* Botão sair — agora afastado */
   .float-exit{
     position:fixed;
-    top:12px; right:12px;
+    top:12px; left:12px;
     background:#ff3b30;
-    padding:10px 16px;
+    padding:11px 16px;
     color:white;
-    border-radius:999px;
+    border-radius:12px;
     border:none;
     display:none;
     font-weight:700;
-    z-index:1200;
+    z-index:1300;
   }
 </style>
 </head>
@@ -148,13 +129,17 @@
 
   <!-- Ações -->
   <div class="top-actions">
-    <!-- Comparar -->
+
+    <!-- EDITAR (NOVO) -->
+    <button id="btnEditarVarios" class="btn-top btn-edit" onclick="editarSelecionados()">Editar</button>
+
+    <!-- COMPARAR -->
     <button id="btnComparar" class="btn-top btn-compare" onclick="compararSelecionadas()">Comparar</button>
 
-    <!-- Excluir -->
+    <!-- EXCLUIR -->
     <button id="btnExcluirVarios" class="btn-top btn-delete" onclick="excluirSelecionados()">Excluir</button>
 
-    <!-- Upload -->
+    <!-- UPLOAD -->
     <div class="header-icon" onclick="abrirUpload()">
       <svg fill="none" stroke="#1c1c1e" stroke-width="2.4" viewBox="0 0 24 24">
         <path d="M12 16V4M12 4l4 4M12 4L8 8M4 16h16v4H4z"/>
@@ -163,7 +148,8 @@
   </div>
 </div>
 
-<button id="btnSairSelecao" class="float-exit" onclick="sairModoSelecao()">Sair</button>
+<!-- Botão SAIR (corrigido) -->
+<button id="btnSairSelecao" class="float-exit" onclick="sairModoSelecao()">X</button>
 
 <div id="conteudoGaleria"></div>
 
@@ -183,19 +169,21 @@
   </div>
 </div>
 
+
 <script>
-/* ====================================================
+/* ================================================
    VARIÁVEIS
-==================================================== */
+================================================ */
 let selecionadas = new Set();
 const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 let selectionModeMobile = false;
 
-/* ====================================================
-   UPLOAD MÚLTIPLO
-==================================================== */
+/* ================================================
+   UPLOAD
+================================================ */
 function abrirUpload(){
-  document.getElementById("uploadData").value = new Date().toISOString().slice(0,10);
+  document.getElementById("uploadData").value =
+    new Date().toISOString().slice(0,10);
   document.getElementById("modalUpload").setAttribute("aria-hidden","false");
 }
 function fecharUpload(){
@@ -207,24 +195,28 @@ async function enviarMultiplas(){
   const files = document.getElementById("uploadArquivos").files;
 
   if(!data || files.length === 0){
-    alert("Selecione a data e pelo menos 1 foto.");
+    alert("Selecione a data e pelo menos uma foto.");
     return;
   }
 
-  for(let file of files){
+  for(const file of files){
     const nome = `${Date.now()}-${file.name}`;
     await supabase.storage.from("fotos").upload(nome, file);
     const { data:pub } = supabase.storage.from("fotos").getPublicUrl(nome);
-    await supabase.from("fotos").insert({ data_foto:data, url:pub.publicUrl });
+
+    await supabase.from("fotos").insert({
+      data_foto: data,
+      url: pub.publicUrl
+    });
   }
 
   fecharUpload();
   carregarGaleria();
 }
 
-/* ====================================================
-   CARREGAR GALERIA
-==================================================== */
+/* ================================================
+   CARREGAR GALERIA (rápida / cache)
+================================================ */
 async function carregarGaleria(){
   selecionadas.clear();
   atualizarTopo();
@@ -252,30 +244,15 @@ async function carregarGaleria(){
     `;
 
     const grid = document.getElementById(`grid-${dia}`);
+
     grid.innerHTML = grupos[dia].map(f=>{
-      const name = f.url.split("/").pop();
+      const fileName = f.url.split("/").pop();
+      const urlCache = f.url;  /* ✅ sem ?v=Date.now(), agora usa cache */
+
       return `
         <div class="foto-bloco" id="foto-${f.id}" data-dia="${dia}">
           <div class="check">✓</div>
-
-          <img src="${f.url}?v=${Date.now()}" 
-               class="foto-galeria"
-               data-id="${f.id}" data-dia="${dia}">
-
-          <div class="foto-acoes">
-            <button class="icon-btn" onclick="editarFoto(${f.id}, '${dia}')">
-              <svg fill="none" stroke="#444" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M12 20h9"/>
-                <path d="M16.5 3.5l4 4L7 21l-4 1 1-4L16.5 3.5z"/>
-              </svg>
-            </button>
-
-            <button class="icon-btn" onclick="confirmarExcluir(${f.id}, '${name}')">
-              <svg fill="none" stroke="#444" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M3 6h18M8 6V4h8v2m-2 14H10a2 2 0 01-2-2V6h12v12a2 2 0 01-2 2z"/>
-              </svg>
-            </button>
-          </div>
+          <img src="${urlCache}" class="foto-galeria" data-id="${f.id}" data-dia="${dia}">
         </div>
       `;
     }).join("");
@@ -284,30 +261,22 @@ async function carregarGaleria(){
   anexarHandlers();
 }
 
-/* ====================================================
-   INTERAÇÃO (clique / toque)
-==================================================== */
+/* ================================================
+   INTERAÇÃO
+================================================ */
 function anexarHandlers(){
   document.querySelectorAll(".foto-galeria").forEach(img=>{
     const id = Number(img.dataset.id);
     const dia = img.dataset.dia;
 
     if(!isMobile){
-      /* DESKTOP */
-      img.addEventListener("click", ()=>{
-        toggleSelecao(id);
-      });
-
-      img.addEventListener("dblclick", ()=>{
-        abrirCarrosselDia(id, dia);
-      });
-
+      img.addEventListener("click", ()=> toggleSelecao(id));
+      img.addEventListener("dblclick", ()=> abrirCarrosselDia(id, dia));
     } else {
-      /* MOBILE */
-      let pressTimer=null;
+      let t=null;
 
       img.addEventListener("touchstart", ()=>{
-        pressTimer=setTimeout(()=>{
+        t=setTimeout(()=>{
           selectionModeMobile=true;
           document.getElementById("btnSairSelecao").style.display="block";
           toggleSelecao(id);
@@ -315,8 +284,7 @@ function anexarHandlers(){
       });
 
       img.addEventListener("touchend", ()=>{
-        if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; }
-
+        if(t){ clearTimeout(t); t=null; }
         if(selectionModeMobile){
           toggleSelecao(id);
         } else {
@@ -327,23 +295,9 @@ function anexarHandlers(){
   });
 }
 
-/* ====================================================
-   SAIR DO MODO SELEÇÃO
-==================================================== */
-function sairModoSelecao(){
-  selectionModeMobile=false;
-  document.getElementById("btnSairSelecao").style.display="none";
-  selecionadas.clear();
-
-  document.querySelectorAll(".selecionado")
-    .forEach(b=>b.classList.remove("selecionado"));
-
-  atualizarTopo();
-}
-
-/* ====================================================
+/* ================================================
    SELEÇÃO
-==================================================== */
+================================================ */
 function toggleSelecao(id){
   const bloco = document.getElementById(`foto-${id}`);
 
@@ -358,34 +312,59 @@ function toggleSelecao(id){
   atualizarTopo();
 }
 
+function sairModoSelecao(){
+  selectionModeMobile=false;
+  document.getElementById("btnSairSelecao").style.display="none";
+
+  selecionadas.clear();
+  document.querySelectorAll(".selecionado").forEach(b=>b.classList.remove("selecionado"));
+
+  atualizarTopo();
+}
+
 function atualizarTopo(){
   document.getElementById("btnExcluirVarios").style.display =
+    selecionadas.size > 0 ? "block" : "none";
+
+  document.getElementById("btnEditarVarios").style.display =
     selecionadas.size > 0 ? "block" : "none";
 
   document.getElementById("btnComparar").style.display =
     selecionadas.size === 2 ? "block" : "none";
 }
 
-/* ====================================================
-   COMPARAR
-==================================================== */
-function compararSelecionadas(){
-  if(selecionadas.size !== 2){
-    alert("Selecione exatamente 2 fotos.");
-    return;
+/* ================================================
+   EDITAR EM LOTE
+================================================ */
+async function editarSelecionados(){
+  const nova = prompt("Nova data (AAAA-MM-DD):");
+  if(!nova) return;
+
+  for(const id of selecionadas){
+    await supabase.from("fotos").update({ data_foto: nova }).eq("id", id);
   }
 
-  const ids = Array.from(selecionadas);
+  selecionadas.clear();
+  carregarGaleria();
+}
+
+/* ================================================
+   COMPARAR
+================================================ */
+function compararSelecionadas(){
+  if(selecionadas.size !== 2) return;
+
+  const ids = [...selecionadas];
   localStorage.setItem("comparar_id1", ids[0]);
   localStorage.setItem("comparar_id2", ids[1]);
 
   window.location="comparacao.html";
 }
 
-/* ====================================================
+/* ================================================
    CARROSSEL
-==================================================== */
-async function abrirCarrosselDia(idClicado,dia){
+================================================ */
+async function abrirCarrosselDia(idClicado, dia){
   const { data } = await supabase
     .from("fotos")
     .select("id,url")
@@ -395,50 +374,30 @@ async function abrirCarrosselDia(idClicado,dia){
   if(!data || !data.length) return;
 
   const items = data.map(r=>({ id:r.id, url:r.url }));
-  const idx = items.findIndex(x=>x.id===idClicado);
+  const index = items.findIndex(x=>x.id===idClicado);
 
   localStorage.setItem("carousel_items", JSON.stringify(items));
-  localStorage.setItem("carousel_index", String(idx));
+  localStorage.setItem("carousel_index", index);
 
   window.location="carrossel.html";
 }
 
-/* ====================================================
-   EXCLUSÃO
-==================================================== */
-async function confirmarExcluir(id, nome){
-  if(!confirm("Excluir esta foto?")) return;
-
-  await supabase.storage.from("fotos").remove([nome]);
-  await supabase.from("fotos").delete().eq("id", id);
-
-  carregarGaleria();
-}
-
+/* ================================================
+   EXCLUIR
+================================================ */
 async function excluirSelecionados(){
   if(!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
 
-  for(let id of selecionadas){
-    const bloco=document.getElementById(`foto-${id}`);
-    const img=bloco.querySelector("img").src.split("?")[0];
-    const nome=img.split("/").pop();
+  for(const id of selecionadas){
+    const bloco = document.getElementById(`foto-${id}`);
+    const img = bloco.querySelector("img").src.split("?")[0];
+    const name = img.split("/").pop();
 
-    await supabase.storage.from("fotos").remove([nome]);
+    await supabase.storage.from("fotos").remove([name]);
     await supabase.from("fotos").delete().eq("id", id);
   }
 
   selecionadas.clear();
-  carregarGaleria();
-}
-
-/* ====================================================
-   EDITAR DATA
-==================================================== */
-async function editarFoto(id,dataAtual){
-  const nova = prompt("Nova data (AAAA-MM-DD):", dataAtual);
-  if(!nova) return;
-
-  await supabase.from("fotos").update({data_foto:nova}).eq("id", id);
   carregarGaleria();
 }
 
