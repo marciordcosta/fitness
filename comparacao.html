@@ -182,18 +182,7 @@
 </div>
 
 <script>
-/* ================== INFO FIXA ================== */
-function carregarInfo(){
-  const dia   = localStorage.getItem("carousel_dia")  || "";
-  const peso  = localStorage.getItem("carousel_peso") || "";
-
-  const txt = peso ? `${dia} — ${peso} kg` : dia;
-
-  document.getElementById("info1").textContent = txt;
-  document.getElementById("info2").textContent = txt;
-}
-
-/* ================== CARREGAR FOTOS ================== */
+/* ======================== CARREGAR ======================== */
 async function carregarComparacao(){
   const id1 = localStorage.getItem("comparar_id1");
   const id2 = localStorage.getItem("comparar_id2");
@@ -204,29 +193,51 @@ async function carregarComparacao(){
     return;
   }
 
-  const {data} = await supabase
+  /* ✅ Buscar foto + data */
+  const {data:fotos} = await supabase
     .from("fotos")
-    .select("id,url")
+    .select("id,url,data_foto")
     .in("id",[id1,id2]);
 
-  if(!data || data.length<2){
+  if(!fotos || fotos.length < 2){
     alert("Erro ao carregar.");
     window.location="galeria.html";
     return;
   }
 
-  document.getElementById("img1").src = data.find(f => f.id == id1).url;
-  document.getElementById("img2").src = data.find(f => f.id == id2).url;
+  const f1 = fotos.find(f => f.id == id1);
+  const f2 = fotos.find(f => f.id == id2);
 
-  carregarInfo();
+  document.getElementById("img1").src = f1.url;
+  document.getElementById("img2").src = f2.url;
+
+  /* ✅ Buscar pesos */
+  const {data: pesos} = await supabase
+    .from("pesos")
+    .select("data,peso");
+
+  const mapaPesos = {};
+  (pesos||[]).forEach(p=>{
+    const d = String(p.data).split("T")[0];
+    mapaPesos[d] = p.peso;
+  });
+
+  const d1 = String(f1.data_foto).split("T")[0];
+  const d2 = String(f2.data_foto).split("T")[0];
+
+  const peso1 = mapaPesos[d1] ? `${mapaPesos[d1]} kg` : "";
+  const peso2 = mapaPesos[d2] ? `${mapaPesos[d2]} kg` : "";
+
+  /* ✅ Exibir info correta em cada imagem */
+  document.getElementById("info1").textContent = peso1 ? `${d1} — ${peso1}` : d1;
+  document.getElementById("info2").textContent = peso2 ? `${d2} — ${peso2}` : d2;
 
   aplicar(1);
   aplicar(2);
 }
-carregarComparacao();
 
-/* ================== TRANSFORMAÇÕES ================== */
-const transform={
+/* ======================== TRANSFORM ======================== */
+const transform = {
   1:{ scale:1,x:0,y:0 },
   2:{ scale:1,x:0,y:0 }
 };
@@ -238,20 +249,22 @@ function aplicar(n){
 }
 
 function zoomIn(n){ transform[n].scale=Math.min(transform[n].scale+0.2,4); aplicar(n); }
-function zoomOut(n){
+function zoomOut(n){ 
   transform[n].scale=Math.max(transform[n].scale-0.2,1);
   if(transform[n].scale===1){ transform[n].x=0; transform[n].y=0; }
   aplicar(n);
 }
 function resetZoom(n){ transform[n]={scale:1,x:0,y:0}; aplicar(n); }
 
-/* ================== PAN MOUSE ================== */
+/* ======================== PAN ======================== */
 ["1","2"].forEach(n=>{
   const wrap=document.getElementById(`wrap${n}`);
   let dragging=false,lastX=0,lastY=0;
 
   wrap.addEventListener("mousedown",e=>{
-    dragging=true; lastX=e.clientX; lastY=e.clientY;
+    dragging=true;
+    lastX=e.clientX;
+    lastY=e.clientY;
     wrap.classList.add("dragging");
   });
 
@@ -261,12 +274,13 @@ function resetZoom(n){ transform[n]={scale:1,x:0,y:0}; aplicar(n); }
     if(!dragging || transform[n].scale<=1) return;
     transform[n].x += e.clientX-lastX;
     transform[n].y += e.clientY-lastY;
-    lastX=e.clientX; lastY=e.clientY;
+    lastX=e.clientX;
+    lastY=e.clientY;
     aplicar(n);
   });
 });
 
-/* ================== TOUCH ZOOM+PAN ================== */
+/* ======================== TOUCH ======================== */
 ["1","2"].forEach(n=>{
   const wrap=document.getElementById(`wrap${n}`);
   let lastX=0,lastY=0,pinchStart=0;
@@ -299,14 +313,15 @@ function resetZoom(n){ transform[n]={scale:1,x:0,y:0}; aplicar(n); }
       const t=e.touches[0];
       transform[n].x += t.clientX-lastX;
       transform[n].y += t.clientY-lastY;
-      lastX=t.clientX; lastY=t.clientY;
+      lastX=t.clientX;
+      lastY=t.clientY;
       aplicar(n);
       e.preventDefault();
     }
   },{passive:false});
 });
 
-/* ================== MODO / POSIÇÃO ================== */
+/* ======================== LAYOUT ======================== */
 function trocarPosicao(){
   const g=document.getElementById("grid");
   const p1=g.children[0], p2=g.children[1];
@@ -320,6 +335,8 @@ function toggleModo(){
   grid.classList.remove("lado","baixo");
   grid.classList.add(modo);
 }
+
+carregarComparacao();
 </script>
 
 </body>
