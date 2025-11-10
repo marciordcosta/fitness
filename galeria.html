@@ -179,14 +179,7 @@ function normalizeDate(val){
   return s.slice(0,10);
 }
 
-function abrirUpload(){
-  document.getElementById("uploadData").value = new Date().toISOString().slice(0,10);
-  document.getElementById("modalUpload").setAttribute("aria-hidden","false");
-}
-function fecharUpload(){
-  document.getElementById("modalUpload").setAttribute("aria-hidden","true");
-}
-
+/* ✅ UPLOAD corrigido: salva arquivo no banco */
 async function enviarMultiplas(){
   const data = document.getElementById("uploadData").value;
   const files = document.getElementById("uploadArquivos").files;
@@ -198,12 +191,28 @@ async function enviarMultiplas(){
 
   for(let file of files){
     const nome = `${Date.now()}-${file.name}`;
+
     await supabase.storage.from("fotos").upload(nome, file);
+
     const { data:pub } = supabase.storage.from("fotos").getPublicUrl(nome);
-    await supabase.from("fotos").insert({ data_foto:data, url:pub.publicUrl });
+
+    await supabase.from("fotos").insert({
+      data_foto: data,
+      url: pub.publicUrl,
+      arquivo: nome       /* ✅ agora salvando o nome real */
+    });
   }
+
   fecharUpload();
   carregarGaleria();
+}
+
+function abrirUpload(){
+  document.getElementById("uploadData").value = new Date().toISOString().slice(0,10);
+  document.getElementById("modalUpload").setAttribute("aria-hidden","false");
+}
+function fecharUpload(){
+  document.getElementById("modalUpload").setAttribute("aria-hidden","true");
 }
 
 async function carregarGaleria(){
@@ -376,15 +385,23 @@ async function abrirCarrosselDia(idClicado,dia){
   window.location="carrossel.html";
 }
 
+/* ✅ EXCLUSÃO corrigida: busca arquivo no banco */
 async function excluirSelecionados(){
   if(!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
 
   for(let id of selecionadas){
-    const bloco=document.getElementById(`foto-${id}`);
-    const img = bloco.querySelector("img").src.split("?")[0];
-    const nome=img.split("/").pop();
 
-    await supabase.storage.from("fotos").remove([nome]);
+    /* ✅ pega o nome real no banco */
+    const { data:foto } = await supabase
+      .from("fotos")
+      .select("arquivo")
+      .eq("id",id)
+      .single();
+
+    if(foto?.arquivo){
+      await supabase.storage.from("fotos").remove([foto.arquivo]);
+    }
+
     await supabase.from("fotos").delete().eq("id",id);
   }
 
