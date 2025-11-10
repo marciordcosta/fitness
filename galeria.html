@@ -89,10 +89,10 @@
   .selecionado .check{ opacity:1; background:#007aff; }
   .selecionado .foto-galeria{ opacity:0.6; }
 
-  /* Botão X (mobile) — posicionado abaixo do header, fora dos botões do topo */
+  /* Botão X (mobile) — abaixo do header, fora dos botões do topo */
   .float-exit{
     position:fixed;
-    top:86px; /* abaixo do header */
+    top:86px;
     right:12px;
     background:#ff3b30;
     color:#fff;
@@ -104,7 +104,6 @@
     z-index:2000;
   }
 
-  /* Mobile: encolher levemente os botões de ação do topo */
   @media(max-width:640px){
     .btn-top{ padding:8px 10px; }
     .btn-top svg{ width:18px; height:18px; }
@@ -182,6 +181,19 @@ let selecionadas = new Set();
 const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 let selectionModeMobile = false;
 
+/* ========= Helpers ========= */
+function normalizeDate(val){
+  if(!val) return "";
+  // aceita Date, string "YYYY-MM-DD", "YYYY-MM-DDTHH:mm:ss", etc.
+  if (val instanceof Date){
+    const d = new Date(val.getTime() - val.getTimezoneOffset()*60000);
+    return d.toISOString().slice(0,10);
+  }
+  const s = String(val).trim();
+  if (s.includes("T")) return s.split("T")[0];
+  return s.slice(0,10);
+}
+
 /* ================ UPLOAD ================ */
 function abrirUpload(){
   document.getElementById("uploadData").value = new Date().toISOString().slice(0,10);
@@ -211,13 +223,17 @@ async function carregarGaleria(){
   selecionadas.clear();
   atualizarTopo();
 
-  /* 1) Traz pesos (data -> peso) */
+  /* 1) Traz pesos e normaliza datas */
   const { data: pesos } = await supabase
     .from("pesos")
     .select("data,peso");
 
   const mapaPesos = {};
-  (pesos || []).forEach(p => { mapaPesos[p.data] = p.peso; });
+  (pesos || []).forEach(p => {
+    const key = normalizeDate(p.data);
+    const val = (p && typeof p.peso !== "undefined") ? Number(p.peso) : undefined;
+    if (!isNaN(val)) mapaPesos[key] = val;
+  });
 
   /* 2) Traz fotos (mais recentes primeiro) */
   const { data: fotos } = await supabase
@@ -228,33 +244,35 @@ async function carregarGaleria(){
   const area = document.getElementById("conteudoGaleria");
   area.innerHTML = "";
 
-  /* Agrupar por data_foto */
+  /* Agrupar por data_foto normalizada */
   const grupos = {};
   (fotos || []).forEach(f=>{
-    if(!grupos[f.data_foto]) grupos[f.data_foto] = [];
-    grupos[f.data_foto].push(f);
+    const key = normalizeDate(f.data_foto);
+    if(!grupos[key]) grupos[key] = [];
+    grupos[key].push(f);
   });
 
   /* Render por data */
-  Object.keys(grupos).forEach(dia=>{
-    const peso = mapaPesos[dia];
-    const labelPeso = (typeof peso === "number") ? ` — ${peso.toFixed(1)} kg` : "";
+  Object.keys(grupos).forEach(key=>{
+    const peso = mapaPesos[key];
+    const labelPeso = (typeof peso === "number" && !isNaN(peso)) ? ` — ${peso.toFixed(1)} kg` : "";
+    const diaLabel = key + labelPeso;
 
     area.innerHTML += `
       <div class="data-bloco">
-        <div class="data-titulo">${dia}${labelPeso}</div>
-        <div class="grid" id="grid-${dia}"></div>
+        <div class="data-titulo">${diaLabel}</div>
+        <div class="grid" id="grid-${key}"></div>
       </div>`;
 
-    const grid = document.getElementById(`grid-${dia}`);
-    grid.innerHTML = grupos[dia].map(f=>{
+    const grid = document.getElementById(`grid-${key}`);
+    grid.innerHTML = grupos[key].map(f=>{
       return `
-        <div class="foto-bloco" id="foto-${f.id}" data-dia="${dia}">
+        <div class="foto-bloco" id="foto-${f.id}" data-dia="${key}">
           <div class="check">✓</div>
           <img
             src="${f.url}" loading="lazy" decoding="async"
             class="foto-galeria"
-            data-id="${f.id}" data-dia="${dia}">
+            data-id="${f.id}" data-dia="${key}">
         </div>`;
     }).join("");
   });
@@ -329,7 +347,7 @@ function toggleSelecao(id){
 
 function atualizarTopo(){
   const n = selecionadas.size;
-  document.getElementById("btnComparar").style.display   = (n === 2) ? "block" : "none";
+  document.getElementById("btnComparar").style.display    = (n === 2) ? "block" : "none";
   document.getElementById("btnEditarVarios").style.display= (n > 0)  ? "block" : "none";
   document.getElementById("btnExcluirVarios").style.display= (n > 0) ? "block" : "none";
 }
