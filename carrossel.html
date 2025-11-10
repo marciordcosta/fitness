@@ -16,7 +16,6 @@
     touch-action:none;
   }
 
-  /* Botão de saída */
   #btnClose{
     position:fixed;
     top:12px;
@@ -31,7 +30,6 @@
     font-weight:700;
   }
 
-  /* Setas (PC) */
   .arrow{
     position:fixed;
     top:50%;
@@ -46,7 +44,6 @@
   #leftArrow{ left:10px; }
   #rightArrow{ right:10px; }
 
-  /* Área da imagem */
   #viewer{
     width:100vw;
     height:100vh;
@@ -67,7 +64,6 @@
     pointer-events:none;
   }
 
-  /* Controles PC */
   #controlsDesktop{
     position:fixed;
     bottom:12px;
@@ -87,14 +83,10 @@
     font-size:14px;
   }
 
-  /* Mobile: controles escondidos */
   @media(max-width:640px){
-    #controlsDesktop{
-      display:none;
-    }
+    #controlsDesktop{ display:none; }
   }
 
-  /* Barra inferior - editar/excluir */
   #bottomBar{
     position:fixed;
     bottom:12px;
@@ -119,14 +111,12 @@
 <div id="leftArrow" class="arrow" onclick="prev()">❮</div>
 <div id="rightArrow" class="arrow" onclick="next()">❯</div>
 
-<!-- Zoom Desktop -->
 <div id="controlsDesktop">
   <button class="btn" onclick="zoomIn()">➕</button>
   <button class="btn" onclick="zoomOut()">➖</button>
   <button class="btn" onclick="resetZoom()">Reset</button>
 </div>
 
-<!-- Editar / Excluir -->
 <div id="bottomBar">
   <button class="btn" onclick="editarFoto()">Editar Data</button>
   <button class="btn" onclick="excluirFoto()" style="background:#ff3b30;">Excluir</button>
@@ -135,26 +125,44 @@
 <script>
 let fotos = [];
 let index = 0;
+let preloaded = [];
 
-/* Transform da imagem */
+/* zoom/pan */
 let transform = { scale:1, x:0, y:0 };
 
 function load(){
   fotos = JSON.parse(localStorage.getItem("carousel_items") || "[]");
   index = Number(localStorage.getItem("carousel_index") || 0);
+
+  preloadAll();
   mostrar();
 }
 load();
 
-/* ================= MOSTRAR FOTO ================= */
+/* ✅ PRÉ-CARREGAMENTO */
+function preloadAll(){
+  preloaded = fotos.map(f=>{
+    const img = new Image();
+    img.src = f.url;   // ✅ sem ?v=Date.now()
+    return img;
+  });
+}
+
+/* MOSTRAR */
 function mostrar(){
   if(!fotos.length) return;
   const img = document.getElementById("imgView");
-  img.src = fotos[index].url + "?v=" + Date.now();
+
+  img.src = fotos[index].url;  // ✅ sem ?v=Date.now()
+
   resetZoom();
+
+  /* ✅ pré-carrega foto seguinte e anterior */
+  if(preloaded[index+1]) preloaded[index+1].src = preloaded[index+1].src;
+  if(preloaded[index-1]) preloaded[index-1].src = preloaded[index-1].src;
 }
 
-/* ================= NAVEGAÇÃO ================= */
+/* NAVEGAÇÃO */
 function next(){
   if(index < fotos.length-1){
     index++;
@@ -169,25 +177,26 @@ function prev(){
     mostrar();
   }
 }
+
 function salvarIndex(){
   localStorage.setItem("carousel_index", index);
 }
 
-/* Teclado */
-document.addEventListener("keydown", (e)=>{
-  if(e.key === "ArrowRight") next();
-  if(e.key === "ArrowLeft") prev();
-  if(e.key === "Escape") voltar();
+/* TECLADO */
+document.addEventListener("keydown", e=>{
+  if(e.key==="ArrowRight") next();
+  if(e.key==="ArrowLeft")  prev();
+  if(e.key==="Escape")     voltar();
 });
 
-/* ================= SWIPE MOBILE ================= */
+/* SWIPE MOBILE */
 let startX = 0;
 
 document.addEventListener("touchstart", e=>{
   if(e.touches.length===1){
     startX = e.touches[0].clientX;
   }
-}, {passive:true});
+},{passive:true});
 
 document.addEventListener("touchend", e=>{
   const diff = e.changedTouches[0].clientX - startX;
@@ -195,120 +204,96 @@ document.addEventListener("touchend", e=>{
     if(diff < 0) next();
     else prev();
   }
-}, {passive:true});
+},{passive:true});
 
-/* ================= ZOOM ================= */
+/* ZOOM + PAN */
 function aplicar(){
-  const img = document.getElementById("imgView");
-  img.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`;
+  document.getElementById("imgView").style.transform =
+    `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`;
 }
 
-function zoomIn(){
-  transform.scale = Math.min(transform.scale + 0.2, 4);
-  aplicar();
-}
+function zoomIn(){ transform.scale = Math.min(transform.scale+0.2,4); aplicar(); }
 function zoomOut(){
-  transform.scale = Math.max(transform.scale - 0.2, 1);
-  if(transform.scale === 1){
-    transform.x = 0;
-    transform.y = 0;
-  }
+  transform.scale = Math.max(transform.scale-0.2,1);
+  if(transform.scale===1){ transform.x=0; transform.y=0; }
   aplicar();
 }
-function resetZoom(){
-  transform = { scale:1, x:0, y:0 };
-  aplicar();
-}
+function resetZoom(){ transform={scale:1,x:0,y:0}; aplicar(); }
 
-/* ================== PAN + PINCH ================== */
-let lastTouchX = 0;
-let lastTouchY = 0;
-let lastTouchDist = 0;
+/* TOUCH ZOOM + PAN */
+let lastTouchX=0, lastTouchY=0, lastTouchDist=0;
 
-/* TOUCH START */
 viewer.addEventListener("touchstart", e=>{
-  if(e.touches.length === 1){
-    lastTouchX = e.touches[0].clientX;
-    lastTouchY = e.touches[0].clientY;
+  if(e.touches.length===1){
+    lastTouchX=e.touches[0].clientX;
+    lastTouchY=e.touches[0].clientY;
   }
-  if(e.touches.length === 2){
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    lastTouchDist = Math.sqrt(dx*dx + dy*dy);
+  if(e.touches.length===2){
+    const dx=e.touches[0].clientX - e.touches[1].clientX;
+    const dy=e.touches[0].clientY - e.touches[1].clientY;
+    lastTouchDist=Math.hypot(dx,dy);
   }
-}, {passive:true});
+},{passive:true});
 
-/* TOUCH MOVE */
 viewer.addEventListener("touchmove", e=>{
-  /* ✅ PINCH */
-  if(e.touches.length === 2){
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    const dist = Math.sqrt(dx*dx + dy*dy);
+  if(e.touches.length===2){
+    const dx=e.touches[0].clientX - e.touches[1].clientX;
+    const dy=e.touches[0].clientY - e.touches[1].clientY;
+    const dist=Math.hypot(dx,dy);
 
     if(lastTouchDist){
       const diff = dist - lastTouchDist;
-      transform.scale = Math.min(Math.max(transform.scale + diff/250, 1), 4);
+      transform.scale = Math.min(Math.max(transform.scale + diff/250,1),4);
       aplicar();
     }
     lastTouchDist = dist;
     return;
   }
 
-  /* ✅ PAN */
-  if(e.touches.length === 1 && transform.scale > 1){
-    const t = e.touches[0];
-    const dx = t.clientX - lastTouchX;
-    const dy = t.clientY - lastTouchY;
-
-    transform.x += dx;
-    transform.y += dy;
-
+  if(e.touches.length===1 && transform.scale>1){
+    const t=e.touches[0];
+    transform.x += t.clientX - lastTouchX;
+    transform.y += t.clientY - lastTouchY;
     lastTouchX = t.clientX;
     lastTouchY = t.clientY;
-
     aplicar();
   }
-}, {passive:true});
+},{passive:true});
 
-/* ================= PAN MOUSE ================= */
-let dragging = false, lastX = 0, lastY = 0;
+/* MOUSE PAN */
+let dragging=false, lastX=0, lastY=0;
 
 viewer.addEventListener("mousedown", e=>{
-  dragging = true;
-  lastX = e.clientX;
-  lastY = e.clientY;
+  dragging=true;
+  lastX=e.clientX;
+  lastY=e.clientY;
 });
-
 window.addEventListener("mouseup", ()=> dragging=false);
-
 window.addEventListener("mousemove", e=>{
-  if(!dragging || transform.scale <= 1) return;
-  transform.x += (e.clientX - lastX);
-  transform.y += (e.clientY - lastY);
-  lastX = e.clientX;
-  lastY = e.clientY;
+  if(!dragging || transform.scale<=1) return;
+  transform.x += e.clientX - lastX;
+  transform.y += e.clientY - lastY;
+  lastX=e.clientX;
+  lastY=e.clientY;
   aplicar();
 });
 
-/* ================= SAIR ================= */
-function voltar(){
-  window.location.href = "galeria.html";
-}
+/* SAIR */
+function voltar(){ window.location="galeria.html"; }
 
-/* ================= EDITAR ================= */
+/* EDITAR */
 async function editarFoto(){
   const nova = prompt("Nova data (AAAA-MM-DD):");
   if(!nova) return;
 
   await supabase.from("fotos")
-    .update({ data_foto: nova })
+    .update({ data_foto:nova })
     .eq("id", fotos[index].id);
 
   alert("Data atualizada.");
 }
 
-/* ================= EXCLUIR ================= */
+/* EXCLUIR */
 async function excluirFoto(){
   if(!confirm("Excluir esta foto?")) return;
 
@@ -319,10 +304,9 @@ async function excluirFoto(){
 
   fotos.splice(index,1);
 
-  if(fotos.length === 0){
-    voltar();
-  } else {
-    index = Math.max(0, index-1);
+  if(fotos.length===0) voltar();
+  else {
+    index = Math.max(0,index-1);
     salvarIndex();
     mostrar();
   }
