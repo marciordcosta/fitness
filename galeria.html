@@ -296,11 +296,11 @@ function anexarHandlers(){
 
     img.addEventListener("touchend", ()=>{
       if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; }
-      if(movedY>10) return;
-
+      if(movedY>10) { longPress=false; return; }
+      if(longPress){ longPress=false; return; }
       if(selectionModeMobile) toggleSelecao(id);
       else abrirCarrosselDia(id,dia);
-    },{passive:true});
+    });
   });
 }
 
