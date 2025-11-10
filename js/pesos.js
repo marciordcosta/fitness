@@ -10,9 +10,9 @@ function hojeISO() {
   return local.toISOString().substring(0, 10);
 }
 
-function toISODate(d) {
-  const z = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-  return z.toISOString().slice(0, 10);
+// Parse seguro para "YYYY-MM-DD" como local T00:00
+function parseISODateLocal(iso) {
+  return new Date(iso + "T00:00:00");
 }
 
 /* ===================== MODAIS ===================== */
@@ -86,7 +86,7 @@ async function carregarPesos(filtrar = false) {
   const { data, error } = await supabase
     .from("pesos")
     .select("id, data, peso")
-    .order("data", { ascending: false });   // Histórico decrescente (mantido)
+    .order("data", { ascending: false });   // Histórico decrescente (pedido mantido)
 
   if (error) return console.error(error);
 
@@ -109,16 +109,17 @@ function aplicarPeriodo() {
   }
 
   const hoje = new Date();
+  hoje.setHours(0,0,0,0);
   const limite = new Date(hoje.getTime() - Number(periodoAtual) * 86400000);
 
-  const filtrado = dadosPesos.filter(p => new Date(p.data) >= limite);
+  const filtrado = dadosPesos.filter(p => parseISODateLocal(p.data) >= limite);
 
   montarGrafico(filtrado);
   renderHistorico(filtrado);
 }
 
 function filtroPeriodo(dias) {
-  periodoAtual = dias; // pode ser número ou "all"
+  periodoAtual = dias; // número ou "all"
   fecharModals();
   aplicarPeriodo();
 }
@@ -184,7 +185,7 @@ async function excluirPeso() {
 /* ===================== GRÁFICO ===================== */
 function montarGrafico(lista) {
   // ordem CRESCENTE SOMENTE no gráfico
-  const asc = [...lista].sort((a, b) => new Date(a.data) - new Date(b.data));
+  const asc = [...lista].sort((a, b) => parseISODateLocal(a.data) - parseISODateLocal(b.data));
 
   const labels = asc.map(x => x.data);
   const pesos = asc.map(x => x.peso);
@@ -201,8 +202,9 @@ function montarGrafico(lista) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
+      // Remover completamente o eixo X (sem datas, sem grid, sem linha)
       scales: {
-        x: { ticks: { display: false } } // tirar datas do rodapé
+        x: { display: false }
       }
     }
   });
@@ -228,7 +230,7 @@ function calcularSemanasEMedias() {
 
   const hoje = new Date(); hoje.setHours(0,0,0,0);
 
-  // terça da semana atual
+  // terça da semana atual (mais recente Terça<=hoje)
   const day = hoje.getDay(); // 0=Dom..6=Sáb
   const deltaAteTerca = (day - 2 + 7) % 7;
   const tercaAtual = new Date(hoje);
@@ -241,12 +243,15 @@ function calcularSemanasEMedias() {
 
   const tercaAnterior = new Date(tercaAtual);
   tercaAnterior.setDate(tercaAnterior.getDate() - 7);
-  const segundaAnterior = new Date(segundaAtual);
-  segundaAnterior.setDate(segundaAnterior.getDate() - 7);
+  tercaAnterior.setHours(0,0,0,0);
+
+  const segundaAnterior = new Date(tercaAtual);
+  segundaAnterior.setDate(segundaAnterior.getDate() - 1);
+  segundaAnterior.setHours(23,59,59,999);
 
   function registrosPeriodo(inicio, fim) {
     return dadosPesos.filter(p => {
-      const d = new Date(p.data);
+      const d = parseISODateLocal(p.data);
       return d >= inicio && d <= fim;
     });
   }
@@ -254,7 +259,7 @@ function calcularSemanasEMedias() {
   function media(lista) {
     if (!lista.length) return null;
     const soma = lista.reduce((a,b)=>a + b.peso, 0);
-    return soma / lista.length;
+    return soma / lista.length; // divide pelo nº real de registros
   }
 
   const listaAtual = registrosPeriodo(tercaAtual, segundaAtual);
