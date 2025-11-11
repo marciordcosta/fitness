@@ -1,493 +1,82 @@
+<!-- galeria.html corrigido -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Galeria</title>
-
-<link rel="stylesheet" href="style.css" />
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script src="js/supabase.js"></script>
-
 <style>
-  body { background:#000; margin:0; color:#fff; }
-
-  .galeria-header{
-    padding:12px 16px;
-    position:fixed; top:0; left:0; right:0;
-    z-index:999;
-    background:#000;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    border-bottom:1px solid #222;
-  }
-
-  #conteudoGaleria{ margin-top:80px; }
-
-  .header-icon{
-    width:40px; height:40px;
-    background:#111;
-    border-radius:12px;
-    display:flex; align-items:center; justify-content:center;
-    cursor:pointer;
-    border:1px solid #333;
-  }
-  .header-icon svg{ width:22px; height:22px; stroke:#fff; }
-
-  .top-actions{ display:flex; gap:8px; align-items:center; }
-
-  .btn-top{
-    display:none;
-    border:none;
-    padding:10px 12px;
-    border-radius:12px;
-    cursor:pointer;
-    background:#111;
-    border:1px solid #333;
-  }
-  .btn-top svg{ width:20px; height:20px; stroke:#fff; }
-
-  .data-bloco{ margin-top:20px; }
-  .data-titulo{
-    font-size:15px; font-weight:600;
-    margin:10px 12px 8px;
-    padding-left:8px;
-    border-left:3px solid #007aff;
-  }
-
-  .grid{
-    display:grid;
-    grid-template-columns:repeat(5,1fr);
-    column-gap:6px;
-    row-gap:2px;
-    padding:0 10px 10px;
-  }
-  @media(max-width:640px){ .grid{ grid-template-columns:repeat(3,1fr); } }
-
-  .foto-bloco{ position:relative; }
-
-  .foto-galeria{
-    width:100%;
-    border-radius:5px;
-    object-fit:cover;
-    background:#222;
-    cursor:pointer;
-    -webkit-touch-callout: none;
-    user-select:none;
-    aspect-ratio: 1 / 1;
-  }
-
-  .check{
-    position:absolute; top:6px; right:6px;
-    width:22px; height:22px; border-radius:50%;
-    background:#fff; border:2px solid #007aff;
-    display:flex; align-items:center; justify-content:center;
-    font-size:13px; color:#fff; opacity:0;
-  }
-  .selecionado .check{ opacity:1; background:#007aff; }
-  .selecionado .foto-galeria{ opacity:0.6; }
-
-  .float-exit{
-    position:fixed;
-    top:86px;
-    right:12px;
-    background:#ff3b30;
-    color:#fff;
-    border:none;
-    padding:10px 18px;
-    border-radius:999px;
-    font-weight:700;
-    display:none;
-    z-index:2000;
-  }
+body{margin:0;font-family:sans-serif;background:#000;color:#fff;}
+.data-titulo{font-size:18px;font-weight:bold;margin:20px 0 10px;}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.grid img{width:100%;border-radius:6px;object-fit:cover;}
 </style>
 </head>
 <body>
 
-<div class="galeria-header">
-  <div class="header-icon" onclick="window.location='index.html'">
-    <svg fill="none" stroke-width="2.4" viewBox="0 0 24 24">
-      <path d="M15 18l-6-6 6-6"></path>
-    </svg>
-  </div>
-
-  <div class="top-actions">
-    <button id="btnComparar" class="btn-top" onclick="compararSelecionadas()">
-      <svg fill="none" stroke-width="2.3" viewBox="0 0 24 24">
-        <path d="M10 4H6v6h4V4zM20 14h-6v6h4a2 2 0 0 0 2-2v-4zM14 4v6h6V6a2 2 0 0 0-2-2h-4zM4 14v4a2 2 0 0 0 2 2h4v-6H4z"/>
-      </svg>
-    </button>
-
-    <button id="btnEditarVarios" class="btn-top" onclick="editarSelecionados()">
-      <svg fill="none" stroke-width="2.3" viewBox="0 0 24 24">
-        <path d="M16.5 3.5l4 4L7 21l-4 1 1-4L16.5 3.5z"/>
-      </svg>
-    </button>
-
-    <button id="btnExcluirVarios" class="btn-top" onclick="excluirSelecionados()">
-      <svg fill="none" stroke-width="2.3" viewBox="0 0 24 24">
-        <path d="M3 6h18M8 6V4h8v2m-2 14H10a2 2 0 0 1-2-2V6h12v12a2 2 0 0 1-2 2z"/>
-      </svg>
-    </button>
-
-    <div class="header-icon" onclick="abrirUpload()">
-      <svg fill="none" stroke-width="2.3" viewBox="0 0 24 24">
-        <path d="M12 16V4m0 0l4 4m-4-4L8 8M4 16h16v4H4z"/>
-      </svg>
-    </div>
-  </div>
-</div>
-
-<button id="btnSairSelecao" class="float-exit" onclick="sairModoSelecao()">X</button>
-
-<div id="conteudoGaleria"></div>
-
-<!-- ✅ Modal de Upload (usado também pelo histórico) -->
-<div id="modalUpload" class="modal" aria-hidden="true">
-  <div class="modal-backdrop" onclick="fecharUpload()"></div>
-  <div class="modal-box">
-    <h3>Enviar Fotos</h3>
-
-    <label>Data</label>
-    <input type="date" id="uploadData" />
-
-    <label>Fotos</label>
-    <input type="file" id="uploadArquivos" multiple accept="image/*"/>
-
-    <button class="btn-primary" onclick="enviarMultiplas()">Enviar</button>
-  </div>
-</div>
+<div id="galeria"></div>
 
 <script>
-// ✅ Impede menu de contexto
-document.addEventListener("contextmenu", e => e.preventDefault());
-
-let selecionadas = new Set();
-const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-let selectionModeMobile = false;
-window.mapaPesos = {};
-
+// ======================
+// Normalize date
+// ======================
 function normalizeDate(val){
-  if (!val) return "";
-  const s = String(val).trim();
-  if (s.includes("T")) return s.split("T")[0];
-  return s.slice(0,10);
+  if(!val) return null;
+  return val.split("T")[0];
 }
 
-/* ✅ UPLOAD corrigido: sem coluna inexistente */
-async function enviarMultiplas(){
-  const data = document.getElementById("uploadData").value;
-  const files = document.getElementById("uploadArquivos").files;
-
-  if(!data || files.length===0){
-    alert("Selecione a data e pelo menos 1 foto.");
-    return;
-  }
-
-  for (let file of files){
-    const nome = `${Date.now()}-${file.name}`;
-
-    await supabase.storage.from("fotos").upload(nome, file);
-
-    const { data:pub } = supabase.storage.from("fotos").getPublicUrl(nome);
-
-    await supabase.from("fotos").insert({
-      data_foto: data,
-      url: pub.publicUrl
-    });
-  }
-
-  fecharUpload();
-  carregarGaleria();
+// ======================
+// Formatar igual pesos.js
+// ======================
+function formatarDataBR(iso) {
+  const meses = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+  const d = new Date(iso + "T00:00:00");
+  if (isNaN(d)) return iso;
+  const dia = String(d.getDate()).padStart(2,"0");
+  const mes = meses[d.getMonth()];
+  const ano = d.getFullYear();
+  return `${dia} ${mes} ${ano}`;
 }
 
-function abrirUpload(){
-  document.getElementById("uploadData").value = new Date().toISOString().slice(0,10);
-  document.getElementById("modalUpload").setAttribute("aria-hidden","false");
-}
+// ======================
+// Simulação de dados (troque pelo supabase no seu arquivo real)
+// ======================
+const dados = [
+  { data_foto: "2025-11-01", url: "https://via.placeholder.com/300" },
+  { data_foto: "2025-11-01", url: "https://via.placeholder.com/310" },
+  { data_foto: "2025-11-02", url: "https://via.placeholder.com/320" }
+];
 
-function fecharUpload(){
-  document.getElementById("modalUpload").setAttribute("aria-hidden","true");
-}
-
-async function carregarGaleria(){
-  selecionadas.clear();
-  atualizarTopo();
-
-  const { data: pesos } = await supabase.from("pesos").select("data,peso");
-
-  window.mapaPesos = {};
-  (pesos||[]).forEach(p=>{
-    window.mapaPesos[ normalizeDate(p.data) ] = Number(p.peso);
-  });
-
-  const { data: fotos } = await supabase
-    .from("fotos")
-    .select("id,data_foto,url")
-    .order("data_foto",{ ascending:false });
-
-  const area=document.getElementById("conteudoGaleria");
-  area.innerHTML="";
+// ======================
+// Render
+// ======================
+function renderGaleria(lista){
+  const area = document.getElementById("galeria");
+  area.innerHTML = "";
 
   const grupos = {};
 
-  (fotos||[]).forEach(f=>{
-    const key = normalizeDate(f.data_foto);
-    if(!grupos[key]) grupos[key]=[];
-    grupos[key].push(f);
+  lista.forEach(item=>{
+    const data = normalizeDate(item.data_foto);
+    if(!grupos[data]) grupos[data] = [];
+    grupos[data].push(item);
   });
 
-  Object.keys(grupos).forEach(key=>{
-    const peso = window.mapaPesos[key];
-    const labelPeso = (typeof peso==="number") ? ` — ${peso.toFixed(1)} kg` : "";
+  const dias = Object.keys(grupos).sort().reverse();
 
-    area.innerHTML+=`
-      <div class="data-bloco">
-        <div class="data-titulo">${key}${labelPeso}</div>
-        <div class="grid" id="grid-${key}"></div>
-      </div>`;
-
-    const grid=document.getElementById(`grid-${key}`);
-    grid.innerHTML = grupos[key].map(f=>{
-      return `
-        <div class="foto-bloco" id="foto-${f.id}" data-dia="${key}">
-          <div class="check">✓</div>
-          <img src="${f.url}" loading="lazy" decoding="async"
-               class="foto-galeria"
-               data-id="${f.id}" data-dia="${key}">
-        </div>`;
-    }).join("");
-  });
-
-  anexarHandlers();
-}
-
-function anexarHandlers(){
-  document.querySelectorAll(".foto-galeria").forEach(img=>{
-    const id  = Number(img.dataset.id);
-    const dia = img.dataset.dia;
-
-    if(!isMobile){
-      img.addEventListener("click",()=>toggleSelecao(id));
-      img.addEventListener("dblclick",()=>abrirCarrosselDia(id,dia));
-      return;
-    }
-
-    let pressTimer=null, startY=0, movedY=0;
-
-    img.addEventListener("touchstart", e=>{
-      movedY=0;
-      startY=e.touches[0].clientY;
-
-      pressTimer=setTimeout(()=>{
-        selectionModeMobile=true;
-        document.getElementById("btnSairSelecao").style.display="block";
-        toggleSelecao(id);
-      },420);
-    },{passive:true});
-
-    img.addEventListener("touchmove", e=>{
-      movedY=Math.abs(e.touches[0].clientY-startY);
-      if(movedY>10 && pressTimer){
-        clearTimeout(pressTimer);
-        pressTimer=null;
-      }
-    },{passive:true});
-
-    img.addEventListener("touchend", ()=>{
-      if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; }
-      if(movedY>10) return;
-
-      if(selectionModeMobile) toggleSelecao(id);
-      else abrirCarrosselDia(id,dia);
-    },{passive:true});
+  dias.forEach(key=>{
+    area.innerHTML += `
+      <div class="data-titulo">${formatarDataBR(key)}</div>
+      <div class="grid" id="grid-${key}"></div>
+    `;
+    const grid = document.getElementById(`grid-${key}`);
+    grupos[key].forEach(f=>{
+      grid.innerHTML += `<img src="${f.url}">`;
+    });
   });
 }
 
-function sairModoSelecao(){
-  selectionModeMobile=false;
-  document.getElementById("btnSairSelecao").style.display="none";
-  selecionadas.clear();
-  document.querySelectorAll(".selecionado").forEach(x=>x.classList.remove("selecionado"));
-  atualizarTopo();
-}
-
-function toggleSelecao(id){
-  const bloco=document.getElementById(`foto-${id}`);
-  if(selecionadas.has(id)){
-    selecionadas.delete(id);
-    bloco.classList.remove("selecionado");
-  } else {
-    selecionadas.add(id);
-    bloco.classList.add("selecionado");
-  }
-  atualizarTopo();
-}
-
-function atualizarTopo(){
-  const n = selecionadas.size;
-  document.getElementById("btnComparar").style.display = (n===2)?"block":"none";
-  document.getElementById("btnEditarVarios").style.display = (n>0)?"block":"none";
-  document.getElementById("btnExcluirVarios").style.display = (n>0)?"block":"none";
-}
-
-async function editarSelecionados(){
-  if(selecionadas.size===0) return;
-  const nova=prompt("Nova data (AAAA-MM-DD):");
-  if(!nova) return;
-
-  for(let id of selecionadas){
-    await supabase.from("fotos").update({data_foto:nova}).eq("id",id);
-  }
-
-  selecionadas.clear();
-  carregarGaleria();
-}
-
-function compararSelecionadas(){
-  if(selecionadas.size!==2) return;
-
-  const ids=[...selecionadas];
-  localStorage.setItem("comparar_id1",ids[0]);
-  localStorage.setItem("comparar_id2",ids[1]);
-
-  window.location="comparacao.html";
-}
-
-async function abrirCarrosselDia(idClicado,dia){
-  const { data } = await supabase
-    .from("fotos")
-    .select("id,url,data_foto")
-    .eq("data_foto",dia)
-    .order("id");
-
-  if(!data||!data.length) return;
-
-  const items = data.map(x=>({id:x.id,url:x.url}));
-  const idx = items.findIndex(x=>x.id===idClicado);
-
-  const peso = window.mapaPesos[dia] ?? "";
-
-  localStorage.setItem("carousel_items",JSON.stringify(items));
-  localStorage.setItem("carousel_index",String(idx));
-  localStorage.setItem("carousel_dia",dia);
-  localStorage.setItem("carousel_peso",peso);
-
-  window.location="carrossel.html";
-}
-
-/* ✅ EXCLUSÃO corrigida: remove só do banco */
-async function excluirSelecionados(){
-  if(!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
-
-  const bucket = "fotos";
-
-  // Helper: extrai o nome exato salvo no Storage a partir da URL pública
-  const getStorageNameFromUrl = (url) => {
-    if (!url) return null;
-
-    // 1) pega trecho após /object/public/ (padrão das URLs públicas)
-    let path = url.split("/object/public/")[1] || url;
-
-    // 2) se ainda não tiver bucket no começo, tenta após /fotos/
-    if (!path.startsWith(bucket + "/")) {
-      const afterBucket = url.split(`/${bucket}/`)[1];
-      if (afterBucket) path = `${bucket}/${afterBucket}`;
-    }
-
-    // 3) remove querystring
-    if (path.includes("?")) path = path.split("?")[0];
-
-    // 4) decodifica (%20 => espaço etc.)
-    path = decodeURIComponent(path);
-
-    // 5) no remove() precisamos apenas do "name" (sem prefixo do bucket)
-    if (path.startsWith(bucket + "/")) path = path.slice(bucket.length + 1);
-
-    return path || null;
-  };
-
-  // Helper: tenta remover, conferindo nome via listagem se necessário
-  const removerDoStorage = async (url) => {
-    let name = getStorageNameFromUrl(url);
-    if (!name) return { ok:false, msg:"URL inválida" };
-
-    // primeira tentativa: nome direto
-    let { error } = await supabase.storage.from(bucket).remove([name]);
-    if (!error) return { ok:true };
-
-    // se falhou, tentamos confirmar via listagem e ajustar case/encoding
-    const { data:lista, error:listErr } = await supabase.storage.from(bucket).list("", { limit: 1000 });
-    if (listErr) return { ok:false, msg:`Listagem falhou: ${listErr.message||listErr}` };
-
-    // comparação direta
-    let match = lista?.find(f => f.name === name);
-
-    // tenta case-insensitive
-    if (!match) {
-      const low = name.toLowerCase();
-      match = lista?.find(f => f.name.toLowerCase() === low);
-    }
-
-    // tenta basename simples (pós última barra, por garantia)
-    if (!match) {
-      const base = name.split("/").pop();
-      match = lista?.find(f => f.name === base) || lista?.find(f => f.name.toLowerCase() === base.toLowerCase());
-    }
-
-    if (match) {
-      const r2 = await supabase.storage.from(bucket).remove([match.name]);
-      if (!r2.error) return { ok:true };
-      return { ok:false, msg:`Storage remove falhou: ${r2.error.message||r2.error}` };
-    }
-
-    return { ok:false, msg:`Arquivo não encontrado no bucket: ${name}` };
-  };
-
-  for (let id of selecionadas) {
-    // 1) pega a URL no banco
-    const { data: foto, error: dbErr } = await supabase
-      .from("fotos")
-      .select("url")
-      .eq("id", id)
-      .single();
-
-    if (dbErr) {
-      console.error("Erro ao buscar URL no banco:", dbErr);
-      alert("Erro ao buscar URL no banco. Veja o console.");
-      continue;
-    }
-
-    // 2) tenta remover do Storage
-    const r = await removerDoStorage(foto?.url);
-    if (!r.ok) {
-      console.error("Falha ao excluir do Storage:", r.msg);
-      alert(`Não consegui excluir do Storage.\nMotivo: ${r.msg}\nVeja o console para detalhes.`);
-      // Se preferir, pare aqui e NÃO remova do banco:
-      // continue;
-    }
-
-    // 3) remove do banco
-    const { error: delDbErr } = await supabase.from("fotos").delete().eq("id", id);
-    if (delDbErr) {
-      console.error("Erro ao excluir registro no banco:", delDbErr);
-      alert("Erro ao excluir no banco. Veja o console.");
-    }
-  }
-
-  selecionadas.clear();
-  carregarGaleria();
-}
-
-carregarGaleria();
+renderGaleria(dados);
 </script>
 
 </body>
 </html>
-
-
-
-
-
-
