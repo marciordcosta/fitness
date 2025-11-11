@@ -381,36 +381,99 @@ async function abrirCarrosselDia(idClicado,dia){
 async function excluirSelecionados(){
   if(!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
 
-  for (let id of selecionadas) {
+  const bucket = "fotos";
 
-    // 1. pegar url
-    const { data: foto } = await supabase
+  // Helper: extrai o nome exato salvo no Storage a partir da URL pública
+  const getStorageNameFromUrl = (url) => {
+    if (!url) return null;
+
+    // 1) pega trecho após /object/public/ (padrão das URLs públicas)
+    let path = url.split("/object/public/")[1] || url;
+
+    // 2) se ainda não tiver bucket no começo, tenta após /fotos/
+    if (!path.startsWith(bucket + "/")) {
+      const afterBucket = url.split(`/${bucket}/`)[1];
+      if (afterBucket) path = `${bucket}/${afterBucket}`;
+    }
+
+    // 3) remove querystring
+    if (path.includes("?")) path = path.split("?")[0];
+
+    // 4) decodifica (%20 => espaço etc.)
+    path = decodeURIComponent(path);
+
+    // 5) no remove() precisamos apenas do "name" (sem prefixo do bucket)
+    if (path.startsWith(bucket + "/")) path = path.slice(bucket.length + 1);
+
+    return path || null;
+  };
+
+  // Helper: tenta remover, conferindo nome via listagem se necessário
+  const removerDoStorage = async (url) => {
+    let name = getStorageNameFromUrl(url);
+    if (!name) return { ok:false, msg:"URL inválida" };
+
+    // primeira tentativa: nome direto
+    let { error } = await supabase.storage.from(bucket).remove([name]);
+    if (!error) return { ok:true };
+
+    // se falhou, tentamos confirmar via listagem e ajustar case/encoding
+    const { data:lista, error:listErr } = await supabase.storage.from(bucket).list("", { limit: 1000 });
+    if (listErr) return { ok:false, msg:`Listagem falhou: ${listErr.message||listErr}` };
+
+    // comparação direta
+    let match = lista?.find(f => f.name === name);
+
+    // tenta case-insensitive
+    if (!match) {
+      const low = name.toLowerCase();
+      match = lista?.find(f => f.name.toLowerCase() === low);
+    }
+
+    // tenta basename simples (pós última barra, por garantia)
+    if (!match) {
+      const base = name.split("/").pop();
+      match = lista?.find(f => f.name === base) || lista?.find(f => f.name.toLowerCase() === base.toLowerCase());
+    }
+
+    if (match) {
+      const r2 = await supabase.storage.from(bucket).remove([match.name]);
+      if (!r2.error) return { ok:true };
+      return { ok:false, msg:`Storage remove falhou: ${r2.error.message||r2.error}` };
+    }
+
+    return { ok:false, msg:`Arquivo não encontrado no bucket: ${name}` };
+  };
+
+  for (let id of selecionadas) {
+    // 1) pega a URL no banco
+    const { data: foto, error: dbErr } = await supabase
       .from("fotos")
       .select("url")
       .eq("id", id)
       .single();
 
-    if (foto?.url) {
-
-      // 2. extrair SOMENTE o nome do arquivo presente no Storage
-      //    - split no bucket
-      //    - pegar o que vem depois de "fotos/"
-      //    - remover query params
-      let nome = foto.url.split("/fotos/")[1];
-      if (!nome) continue;
-      if (nome.includes("?")) nome = nome.split("?")[0];
-
-      // 3. agora nome está 100% igual ao "name" da listagem
-      const { error: delErr } = await supabase
-        .storage
-        .from("fotos")
-        .remove([nome]);
-
-      if (delErr) console.error("ERRO STORAGE:", delErr);
+    if (dbErr) {
+      console.error("Erro ao buscar URL no banco:", dbErr);
+      alert("Erro ao buscar URL no banco. Veja o console.");
+      continue;
     }
 
-    // 4. remover do banco
-    await supabase.from("fotos").delete().eq("id", id);
+    // 2) tenta remover do Storage
+    const r = await removerDoStorage(foto?.url);
+    if (!r.ok) {
+      console.error("Falha ao excluir do Storage:", r.msg);
+      alert(`Não consegui excluir do Storage.\nMotivo: ${r.msg}\nVeja o console para detalhes.`);
+      // Se preferir, pare aqui e NÃO remova do banco:
+      // continue;
+    }
+
+    // 3) remove do banco
+    const { error: delDbErr } = await supabase.from("fotos").delete().eq("id", id);
+    if (delDbErr) {
+      console.error("Erro ao excluir registro no banco:", delDbErr);
+      alert("Erro ao excluir no banco. Veja o console.");
+    }
   }
 
   selecionadas.clear();
@@ -422,6 +485,7 @@ carregarGaleria();
 
 </body>
 </html>
+
 
 
 
