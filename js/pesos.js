@@ -153,7 +153,7 @@ function renderHistorico(lista) {
     div.style.gap = "12px";
 
 div.innerHTML = `
-  <div style="display:flex;flex-direction:column;">
+  <div style="display:flex;align-items:center;gap:8px;">
     <div class="item-title">${item.peso.toFixed(1)} kg</div>
     <div class="item-sub">${item.data}</div>
   </div>
