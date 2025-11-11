@@ -138,7 +138,8 @@ button {
   border: 1px solid #ededed;
   margin-bottom: 8px;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 6px;
   align-items: center;
   cursor:pointer;
 }
