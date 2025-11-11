@@ -39,6 +39,13 @@ function abrirPeriodo() {
   document.getElementById("modalPeriodo").setAttribute("aria-hidden", "false");
 }
 
+/* ✅ Função nova: abrir modal de foto direto pelo histórico */
+function abrirFotoComDataDireto(data) {
+  fecharModals();
+  document.getElementById("dataFoto").value = data;
+  document.getElementById("modalFoto").setAttribute("aria-hidden", "false");
+}
+
 /* ===================== LOAD ===================== */
 window.addEventListener("load", () => {
   carregarPesos(true);
@@ -86,7 +93,7 @@ async function carregarPesos(filtrar = false) {
   const { data, error } = await supabase
     .from("pesos")
     .select("id, data, peso")
-    .order("data", { ascending: false });   // Histórico decrescente (pedido mantido)
+    .order("data", { ascending: false });   // Histórico decrescente
 
   if (error) return console.error(error);
 
@@ -98,7 +105,7 @@ async function carregarPesos(filtrar = false) {
     renderHistorico(dadosPesos);
   }
 
-  calcularSemanasEMedias(); // calcula médias e progressão
+  calcularSemanasEMedias();
 }
 
 function aplicarPeriodo() {
@@ -119,7 +126,7 @@ function aplicarPeriodo() {
 }
 
 function filtroPeriodo(dias) {
-  periodoAtual = dias; // número ou "all"
+  periodoAtual = dias;
   fecharModals();
   aplicarPeriodo();
 }
@@ -141,13 +148,27 @@ function renderHistorico(lista) {
         <div class="item-sub">${item.data}</div>
       </div>
 
-      <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
-        onclick="abrirEditarDireto(${item.id})" aria-label="Editar">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" stroke="#1c1c1e" stroke-width="2"/>
-          <path d="M14.06 6.19l3.75 3.75" stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
+      <div style="display:flex;gap:6px;">
+
+        <!-- ✅ Ícone novo: enviar foto -->
+        <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
+          onclick="abrirFotoComDataDireto('${item.data}')" aria-label="Enviar Foto">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M12 16V4M12 4l4 4M12 4L8 8M4 16h16v4H4z"
+              stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+
+        <!-- Ícone original: editar -->
+        <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
+          onclick="abrirEditarDireto(${item.id})" aria-label="Editar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" stroke="#1c1c1e" stroke-width="2"/>
+            <path d="M14.06 6.19l3.75 3.75" stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+
+      </div>
     `;
 
     el.appendChild(div);
@@ -184,7 +205,6 @@ async function excluirPeso() {
 
 /* ===================== GRÁFICO ===================== */
 function montarGrafico(lista) {
-  // ordem CRESCENTE SOMENTE no gráfico
   const asc = [...lista].sort((a, b) => parseISODateLocal(a.data) - parseISODateLocal(b.data));
 
   const labels = asc.map(x => x.data);
@@ -202,7 +222,6 @@ function montarGrafico(lista) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
-      // Remover completamente o eixo X (sem datas, sem grid, sem linha)
       scales: {
         x: { display: false }
       }
@@ -211,11 +230,6 @@ function montarGrafico(lista) {
 }
 
 /* ===================== MÉDIAS E PROGRESSÃO ===================== */
-/*
-  Semana = Terça (2) -> Segunda (1)
-  Média = soma dos registros reais / quantidade de registros reais
-  Progressão (%) = ((média_atual - média_anterior) / média_anterior) * 100
-*/
 function calcularSemanasEMedias() {
   const elAnt = document.getElementById("mediaSemanaAnterior");
   const elAtu = document.getElementById("mediaSemanaAtual");
@@ -230,8 +244,7 @@ function calcularSemanasEMedias() {
 
   const hoje = new Date(); hoje.setHours(0,0,0,0);
 
-  // terça da semana atual (mais recente Terça<=hoje)
-  const day = hoje.getDay(); // 0=Dom..6=Sáb
+  const day = hoje.getDay();
   const deltaAteTerca = (day - 2 + 7) % 7;
   const tercaAtual = new Date(hoje);
   tercaAtual.setDate(tercaAtual.getDate() - deltaAteTerca);
@@ -258,8 +271,7 @@ function calcularSemanasEMedias() {
 
   function media(lista) {
     if (!lista.length) return null;
-    const soma = lista.reduce((a,b)=>a + b.peso, 0);
-    return soma / lista.length; // divide pelo nº real de registros
+    return lista.reduce((a,b)=>a + b.peso, 0) / lista.length;
   }
 
   const listaAtual = registrosPeriodo(tercaAtual, segundaAtual);
