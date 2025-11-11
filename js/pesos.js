@@ -167,7 +167,7 @@ function renderHistorico(lista) {
 div.innerHTML = `
   <div style="display:flex;align-items:center;gap:8px;">
     <div class="item-title">${item.peso.toFixed(1)} kg</div>
-    <div class="item-sub">${item.data}</div>
+    <div class="item-sub">${formatarData(item.data)}</div>
   </div>
 
   <div style="display:flex;gap:8px;">
@@ -228,7 +228,7 @@ async function excluirPeso() {
 function montarGrafico(lista) {
   const asc = [...lista].sort((a, b) => parseISODateLocal(a.data) - parseISODateLocal(b.data));
 
-  const labels = asc.map(x => x.data);
+  const labels = asc.map(x => formatarData(x.data));
   const pesos = asc.map(x => x.peso);
 
   if (grafico) grafico.destroy();
