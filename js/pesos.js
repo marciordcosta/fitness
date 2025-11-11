@@ -277,7 +277,7 @@ function calcularSemanasEMedias() {
   const mAnt = media(listaAnterior);
 
   elAnt.innerText = mAnt != null ? mAnt.toFixed(1) + " kg" : "--";
-  elAtu.innerText = mAtu != null ? mAtAtu.toFixed(1) + " kg" : "--";
+  elAtu.innerText = mAtu != null ? mAtu.toFixed(1) + " kg" : "--";
 
   if (mAtu == null || mAnt == null || mAnt === 0) {
     elProg.innerText = "--";
