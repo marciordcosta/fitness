@@ -154,12 +154,22 @@ function renderHistorico(lista) {
         <div class="item-sub">${item.data}</div>
       </div>
 
-      <button class="btn-mini" onclick="abrirFotoComDataDireto('${item.data}')">
-        📷
+      <!-- ÍCONE ORIGINAL: UPLOAD -->
+      <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
+        onclick="abrirFotoComDataDireto('${item.data}')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M12 16V4m0 0l4 4m-4-4L8 8M4 16h16v4H4z"
+            stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
+        </svg>
       </button>
 
-      <button class="btn-mini" onclick="abrirEditarDireto(${item.id})">
-        ✏️
+      <!-- ÍCONE ORIGINAL: EDITAR -->
+      <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
+        onclick="abrirEditarDireto(${item.id})">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" stroke="#1c1c1e" stroke-width="2"/>
+          <path d="M14.06 6.19l3.75 3.75" stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
+        </svg>
       </button>
     `;
 
@@ -218,7 +228,7 @@ function montarGrafico(lista) {
   });
 }
 
-/* ======= MÉDIA SEMANAL (TERÇA → SEGUNDA) ======= */
+/* ======= MÉDIA SEMANAL (TERÇA → SEGUNDA — 7 DIAS) ======= */
 function calcularSemanasEMedias() {
   const elAnt = document.getElementById("mediaSemanaAnterior");
   const elAtu = document.getElementById("mediaSemanaAtual");
@@ -234,7 +244,8 @@ function calcularSemanasEMedias() {
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
 
-  const day = hoje.getDay(); // 0=Dom ... 2=Ter ...
+  // terça → segunda
+  const day = hoje.getDay();
   const delta = (day - 2 + 7) % 7;
 
   const tercaAtual = new Date(hoje);
