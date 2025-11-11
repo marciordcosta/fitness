@@ -381,9 +381,9 @@ async function abrirCarrosselDia(idClicado,dia){
 async function excluirSelecionados(){
   if(!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
 
-  for(let id of selecionadas){
+  for (let id of selecionadas) {
 
-    // 1. Buscar a URL da foto no banco
+    // 1. Buscar a URL da foto
     const { data: foto } = await supabase
       .from("fotos")
       .select("url")
@@ -391,16 +391,27 @@ async function excluirSelecionados(){
       .single();
 
     if (foto?.url) {
-      // 2. Extrair o nome do arquivo a partir da URL pública
-      // Exemplo: https://xyz.supabase.co/storage/v1/object/public/fotos/12345-imagem.jpg
-      const partes = foto.url.split("/");
-      const nomeArquivo = partes[partes.length - 1];
+
+      // 2. Extrair apenas o nome do arquivo, SEM parâmetros
+      let nomeArquivo = foto.url.split("/").pop();
+
+      // Remove tudo após o '?'
+      if (nomeArquivo.includes("?")) {
+        nomeArquivo = nomeArquivo.split("?")[0];
+      }
 
       // 3. Remover do storage
-      await supabase.storage.from("fotos").remove([nomeArquivo]);
+      const { error: delErr } = await supabase
+        .storage
+        .from("fotos")
+        .remove([nomeArquivo]);
+
+      if (delErr) {
+        console.error("Erro ao excluir do storage:", delErr);
+      }
     }
 
-    // 4. Remover a linha do banco
+    // 4. Remover do banco
     await supabase.from("fotos").delete().eq("id", id);
   }
 
@@ -413,4 +424,5 @@ carregarGaleria();
 
 </body>
 </html>
+
 
