@@ -382,7 +382,26 @@ async function excluirSelecionados(){
   if(!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
 
   for(let id of selecionadas){
-    await supabase.from("fotos").delete().eq("id",id);
+
+    // 1. Buscar a URL da foto no banco
+    const { data: foto } = await supabase
+      .from("fotos")
+      .select("url")
+      .eq("id", id)
+      .single();
+
+    if (foto?.url) {
+      // 2. Extrair o nome do arquivo a partir da URL pública
+      // Exemplo: https://xyz.supabase.co/storage/v1/object/public/fotos/12345-imagem.jpg
+      const partes = foto.url.split("/");
+      const nomeArquivo = partes[partes.length - 1];
+
+      // 3. Remover do storage
+      await supabase.storage.from("fotos").remove([nomeArquivo]);
+    }
+
+    // 4. Remover a linha do banco
+    await supabase.from("fotos").delete().eq("id", id);
   }
 
   selecionadas.clear();
@@ -394,3 +413,4 @@ carregarGaleria();
 
 </body>
 </html>
+
