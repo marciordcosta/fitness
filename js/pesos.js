@@ -11,12 +11,14 @@ function hojeISO() {
 }
 
 function parseISODateLocal(iso) {
-  return new Date(iso + "T00:00:00");
+  const d = new Date(iso);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
 /* ===================== MODAIS ===================== */
 function fecharModals() {
-  document.querySelectorAll(".modal").forEach(m => m.setAttribute("aria-hidden", "true"));
+  document.querySelectorAll(".modal")
+    .forEach(m => m.setAttribute("aria-hidden", "true"));
 }
 
 function abrirAddPeso() {
@@ -26,23 +28,20 @@ function abrirAddPeso() {
   document.getElementById("modalPeso").setAttribute("aria-hidden", "false");
 }
 
-function abrirFotoComDataDe(idInputData) {
-  const v = document.getElementById(idInputData).value || hojeISO();
-  fecharModals();
-  document.getElementById("dataFoto").value = v;
-  document.getElementById("modalFoto").setAttribute("aria-hidden", "false");
-}
-
 function abrirPeriodo() {
   fecharModals();
   document.getElementById("modalPeriodo").setAttribute("aria-hidden", "false");
 }
 
-/* ✅ Função adicionada */
+/* ✅ NOVO: abre o modalUpload da galeria */
 function abrirFotoComDataDireto(data) {
   fecharModals();
-  document.getElementById("dataFoto").value = data;
-  document.getElementById("modalFoto").setAttribute("aria-hidden", "false");
+
+  const inputData = document.getElementById("uploadData");
+  if (inputData) inputData.value = data;
+
+  const modal = document.getElementById("modalUpload");
+  if (modal) modal.setAttribute("aria-hidden", "false");
 }
 
 /* ===================== LOAD ===================== */
@@ -63,32 +62,17 @@ async function salvarPesoNovo() {
   carregarPesos(true);
 }
 
-/* ===================== SALVAR FOTO ===================== */
+/* ===================== SALVAR FOTO ANTIGO (DESATIVADO INTERNAMENTE)
+   O modalFoto não é mais usado. O upload passa a ser centralizado na galeria.
+===================== */
 async function salvarFoto() {
-  const data = document.getElementById("dataFoto").value;
-  const files = document.getElementById("arquivoFoto").files;
-
-  if (!data || !files.length) return alert("Selecione foto(s).");
-
-  for (let file of files) {
-    const nome = `${Date.now()}-${file.name}`;
-
-    const { error: upErr } = await supabase.storage.from("fotos").upload(nome, file);
-    if (upErr) {
-      console.error(upErr);
-      alert("Erro ao enviar imagem.");
-      continue;
-    }
-
-    const { data: pub } = supabase.storage.from("fotos").getPublicUrl(nome);
-    await supabase.from("fotos").insert({ data_foto: data, url: pub.publicUrl });
-  }
-
+  alert("Use o novo modal de upload para enviar múltiplas fotos.");
   fecharModals();
 }
 
 /* ===================== CARREGAR PESOS ===================== */
 async function carregarPesos(filtrar = false) {
+
   const { data, error } = await supabase
     .from("pesos")
     .select("id, data, peso")
@@ -115,10 +99,15 @@ function aplicarPeriodo() {
   }
 
   const hoje = new Date();
-  hoje.setHours(0,0,0,0);
-  const limite = new Date(hoje.getTime() - Number(periodoAtual) * 86400000);
+  hoje.setHours(0, 0, 0, 0);
 
-  const filtrado = dadosPesos.filter(p => parseISODateLocal(p.data) >= limite);
+  const limite = new Date(
+    hoje.getTime() - Number(periodoAtual) * 86400000
+  );
+
+  const filtrado = dadosPesos.filter(
+    p => parseISODateLocal(p.data) >= limite
+  );
 
   montarGrafico(filtrado);
   renderHistorico(filtrado);
@@ -147,11 +136,11 @@ function renderHistorico(lista) {
         <div class="item-sub">${item.data}</div>
       </div>
 
-      <!-- ✅ Botão: Enviar Foto -->
+      <!-- ✅ Botão para upload múltiplo (mesmo modal da galeria) -->
       <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
         onclick="abrirFotoComDataDireto('${item.data}')" aria-label="Enviar Foto">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M12 16V4M12 4l4 4M12 4L8 8M4 16h16v4H4z"
+          <path d="M12 16V4m0 0l4 4m-4-4L8 8M4 16h16v4H4z"
             stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
         </svg>
       </button>
@@ -159,9 +148,11 @@ function renderHistorico(lista) {
       <!-- Botão original: Editar -->
       <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
         onclick="abrirEditarDireto(${item.id})" aria-label="Editar">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" stroke="#1c1c1e" stroke-width="2"/>
-          <path d="M14.06 6.19l3.75 3.75" stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"
+            stroke="#1c1c1e" stroke-width="2"/>
+          <path d="M14.06 6.19l3.75 3.75"
+            stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
         </svg>
       </button>
     `;
@@ -170,7 +161,7 @@ function renderHistorico(lista) {
   });
 }
 
-/* ===================== EDITAR PESO ===================== */
+/* ===================== EDITAR ===================== */
 async function abrirEditarDireto(id) {
   const achou = dadosPesos.find(p => p.id === id);
   if (!achou) return;
@@ -200,7 +191,9 @@ async function excluirPeso() {
 
 /* ===================== GRÁFICO ===================== */
 function montarGrafico(lista) {
-  const asc = [...lista].sort((a, b) => parseISODateLocal(a.data) - parseISODateLocal(b.data));
+  const asc = [...lista].sort(
+    (a, b) => parseISODateLocal(a.data) - parseISODateLocal(b.data)
+  );
 
   const labels = asc.map(x => x.data);
   const pesos = asc.map(x => x.peso);
@@ -217,15 +210,14 @@ function montarGrafico(lista) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
-      scales: {
-        x: { display: false }
-      }
+      scales: { x: { display: false } }
     }
   });
 }
 
-/* ===================== MÉDIAS E PROGRESSÃO ===================== */
+/* ===================== MÉDIAS ===================== */
 function calcularSemanasEMedias() {
+
   const elAnt = document.getElementById("mediaSemanaAnterior");
   const elAtu = document.getElementById("mediaSemanaAtual");
   const elProg = document.getElementById("mediaProgressoValor");
@@ -237,25 +229,25 @@ function calcularSemanasEMedias() {
     return;
   }
 
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
 
   const day = hoje.getDay();
   const deltaAteTerca = (day - 2 + 7) % 7;
+
   const tercaAtual = new Date(hoje);
   tercaAtual.setDate(tercaAtual.getDate() - deltaAteTerca);
-  tercaAtual.setHours(0,0,0,0);
 
   const segundaAtual = new Date(tercaAtual);
   segundaAtual.setDate(segundaAtual.getDate() + 6);
-  segundaAtual.setHours(23,59,59,999);
+  segundaAtual.setHours(23, 59, 59, 999);
 
   const tercaAnterior = new Date(tercaAtual);
   tercaAnterior.setDate(tercaAnterior.getDate() - 7);
-  tercaAnterior.setHours(0,0,0,0);
 
   const segundaAnterior = new Date(tercaAtual);
   segundaAnterior.setDate(segundaAnterior.getDate() - 1);
-  segundaAnterior.setHours(23,59,59,999);
+  segundaAnterior.setHours(23, 59, 59, 999);
 
   function registrosPeriodo(inicio, fim) {
     return dadosPesos.filter(p => {
@@ -266,8 +258,7 @@ function calcularSemanasEMedias() {
 
   function media(lista) {
     if (!lista.length) return null;
-    const soma = lista.reduce((a,b)=>a + b.peso, 0);
-    return soma / lista.length;
+    return lista.reduce((a, b) => a + b.peso, 0) / lista.length;
   }
 
   const listaAtual = registrosPeriodo(tercaAtual, segundaAtual);
