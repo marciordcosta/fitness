@@ -1,6 +1,6 @@
 let grafico;
 let dadosPesos = [];
-let periodoAtual = 7;
+let periodoAtual = 7;  // "1 semana" no UI
 let idEditar = null;
 
 /* ===================== UTIL ===================== */
@@ -10,6 +10,7 @@ function hojeISO() {
   return local.toISOString().substring(0, 10);
 }
 
+// Robusto: aceita "YYYY-MM-DD" e "YYYY-MM-DDTHH:mm:ssZ"
 function parseISODateLocal(iso) {
   const d = new Date(iso);
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -17,8 +18,7 @@ function parseISODateLocal(iso) {
 
 /* ===================== MODAIS ===================== */
 function fecharModals() {
-  document.querySelectorAll(".modal")
-    .forEach(m => m.setAttribute("aria-hidden", "true"));
+  document.querySelectorAll(".modal").forEach(m => m.setAttribute("aria-hidden", "true"));
 }
 
 function abrirAddPeso() {
@@ -33,15 +33,30 @@ function abrirPeriodo() {
   document.getElementById("modalPeriodo").setAttribute("aria-hidden", "false");
 }
 
-/* ✅ NOVO: abre o modalUpload da galeria */
+/* ========= UPLOAD pelo HISTÓRICO (usa o modal já existente no index) =========
+   - Abre o modalFoto
+   - Preenche a data
+   - Ativa múltiplos arquivos no input existente
+*/
 function abrirFotoComDataDireto(data) {
   fecharModals();
 
-  const inputData = document.getElementById("uploadData");
-  if (inputData) inputData.value = data;
+  const dataInput = document.getElementById("dataFoto");
+  const fileInput = document.getElementById("arquivoFoto");
+  const modal = document.getElementById("modalFoto");
 
-  const modal = document.getElementById("modalUpload");
-  if (modal) modal.setAttribute("aria-hidden", "false");
+  if (!dataInput || !fileInput || !modal) {
+    console.error("Modal de foto não encontrado no index.html");
+    return;
+  }
+
+  dataInput.value = data || hojeISO();
+
+  // Garante múltiplos arquivos no input do index
+  fileInput.setAttribute("multiple", "true");
+  fileInput.value = ""; // limpa seleção anterior
+
+  modal.setAttribute("aria-hidden", "false");
 }
 
 /* ===================== LOAD ===================== */
@@ -62,21 +77,40 @@ async function salvarPesoNovo() {
   carregarPesos(true);
 }
 
-/* ===================== SALVAR FOTO ANTIGO (DESATIVADO INTERNAMENTE)
-   O modalFoto não é mais usado. O upload passa a ser centralizado na galeria.
-===================== */
+/* ===================== SALVAR FOTO (AGORA MÚLTIPLAS) ===================== */
 async function salvarFoto() {
-  alert("Use o novo modal de upload para enviar múltiplas fotos.");
+  const data = document.getElementById("dataFoto").value;
+  const files = document.getElementById("arquivoFoto").files;
+
+  if (!data || !files || files.length === 0) {
+    alert("Selecione a data e pelo menos 1 foto.");
+    return;
+  }
+
+  for (let file of files) {
+    const nome = `${Date.now()}-${file.name}`;
+    const { error: upErr } = await supabase.storage.from("fotos").upload(nome, file);
+    if (upErr) {
+      console.error(upErr);
+      continue;
+    }
+
+    const { data: pub } = supabase.storage.from("fotos").getPublicUrl(nome);
+    await supabase.from("fotos").insert({
+      data_foto: data,
+      url: pub.publicUrl
+    });
+  }
+
   fecharModals();
 }
 
-/* ===================== CARREGAR PESOS ===================== */
+/* ===================== CARREGAR PESOS / FILTROS ===================== */
 async function carregarPesos(filtrar = false) {
-
   const { data, error } = await supabase
     .from("pesos")
     .select("id, data, peso")
-    .order("data", { ascending: false });
+    .order("data", { ascending: false }); // histórico decrescente
 
   if (error) return console.error(error);
 
@@ -92,7 +126,11 @@ async function carregarPesos(filtrar = false) {
 }
 
 function aplicarPeriodo() {
-  if (periodoAtual === "all") {
+  // Quando o usuário escolhe "1 semana" (7), usamos 8 dias para permitir comparação do mesmo dia
+  let diasFiltro = periodoAtual;
+  if (diasFiltro === 7) diasFiltro = 8;
+
+  if (diasFiltro === "all") {
     montarGrafico(dadosPesos);
     renderHistorico(dadosPesos);
     return;
@@ -100,21 +138,16 @@ function aplicarPeriodo() {
 
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
+  const limite = new Date(hoje.getTime() - Number(diasFiltro) * 86400000);
 
-  const limite = new Date(
-    hoje.getTime() - Number(periodoAtual) * 86400000
-  );
-
-  const filtrado = dadosPesos.filter(
-    p => parseISODateLocal(p.data) >= limite
-  );
+  const filtrado = dadosPesos.filter(p => parseISODateLocal(p.data) >= limite);
 
   montarGrafico(filtrado);
   renderHistorico(filtrado);
 }
 
 function filtroPeriodo(dias) {
-  periodoAtual = dias;
+  periodoAtual = dias; // 7, 30, 180, 365, "all"
   fecharModals();
   aplicarPeriodo();
 }
@@ -136,7 +169,7 @@ function renderHistorico(lista) {
         <div class="item-sub">${item.data}</div>
       </div>
 
-      <!-- ✅ Botão para upload múltiplo (mesmo modal da galeria) -->
+      <!-- Upload múltiplo (usa modal do index) -->
       <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
         onclick="abrirFotoComDataDireto('${item.data}')" aria-label="Enviar Foto">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -145,14 +178,12 @@ function renderHistorico(lista) {
         </svg>
       </button>
 
-      <!-- Botão original: Editar -->
+      <!-- Editar -->
       <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
         onclick="abrirEditarDireto(${item.id})" aria-label="Editar">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"
-            stroke="#1c1c1e" stroke-width="2"/>
-          <path d="M14.06 6.19l3.75 3.75"
-            stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" stroke="#1c1c1e" stroke-width="2"/>
+          <path d="M14.06 6.19l3.75 3.75" stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
         </svg>
       </button>
     `;
@@ -161,7 +192,7 @@ function renderHistorico(lista) {
   });
 }
 
-/* ===================== EDITAR ===================== */
+/* ===================== EDITAR PESO ===================== */
 async function abrirEditarDireto(id) {
   const achou = dadosPesos.find(p => p.id === id);
   if (!achou) return;
@@ -191,9 +222,8 @@ async function excluirPeso() {
 
 /* ===================== GRÁFICO ===================== */
 function montarGrafico(lista) {
-  const asc = [...lista].sort(
-    (a, b) => parseISODateLocal(a.data) - parseISODateLocal(b.data)
-  );
+  // No gráfico, ordem crescente
+  const asc = [...lista].sort((a, b) => parseISODateLocal(a.data) - parseISODateLocal(b.data));
 
   const labels = asc.map(x => x.data);
   const pesos = asc.map(x => x.peso);
@@ -210,14 +240,19 @@ function montarGrafico(lista) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
+      // eixo X oculto (sem datas)
       scales: { x: { display: false } }
     }
   });
 }
 
-/* ===================== MÉDIAS ===================== */
+/* ===================== MÉDIAS E PROGRESSÃO ===================== */
+/*
+  Semana = Terça -> Segunda
+  Média = soma dos registros reais / quantidade de registros reais
+  Progressão (%) = ((média_atual - média_anterior) / média_anterior) * 100
+*/
 function calcularSemanasEMedias() {
-
   const elAnt = document.getElementById("mediaSemanaAnterior");
   const elAtu = document.getElementById("mediaSemanaAtual");
   const elProg = document.getElementById("mediaProgressoValor");
@@ -229,25 +264,26 @@ function calcularSemanasEMedias() {
     return;
   }
 
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
 
-  const day = hoje.getDay();
+  // terça da semana atual (mais recente Terça <= hoje)
+  const day = hoje.getDay(); // 0=Dom..6=Sáb
   const deltaAteTerca = (day - 2 + 7) % 7;
-
   const tercaAtual = new Date(hoje);
   tercaAtual.setDate(tercaAtual.getDate() - deltaAteTerca);
+  tercaAtual.setHours(0,0,0,0);
 
   const segundaAtual = new Date(tercaAtual);
   segundaAtual.setDate(segundaAtual.getDate() + 6);
-  segundaAtual.setHours(23, 59, 59, 999);
+  segundaAtual.setHours(23,59,59,999);
 
   const tercaAnterior = new Date(tercaAtual);
   tercaAnterior.setDate(tercaAnterior.getDate() - 7);
+  tercaAnterior.setHours(0,0,0,0);
 
   const segundaAnterior = new Date(tercaAtual);
   segundaAnterior.setDate(segundaAnterior.getDate() - 1);
-  segundaAnterior.setHours(23, 59, 59, 999);
+  segundaAnterior.setHours(23,59,59,999);
 
   function registrosPeriodo(inicio, fim) {
     return dadosPesos.filter(p => {
@@ -258,7 +294,8 @@ function calcularSemanasEMedias() {
 
   function media(lista) {
     if (!lista.length) return null;
-    return lista.reduce((a, b) => a + b.peso, 0) / lista.length;
+    const soma = lista.reduce((a,b)=>a + b.peso, 0);
+    return soma / lista.length; // divide pelo nº real de registros
   }
 
   const listaAtual = registrosPeriodo(tercaAtual, segundaAtual);
