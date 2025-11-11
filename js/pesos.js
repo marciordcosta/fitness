@@ -147,31 +147,39 @@ function renderHistorico(lista) {
   lista.forEach(item => {
     const div = document.createElement("div");
     div.className = "item";
+    div.style.display = "flex";
+    div.style.justifyContent = "space-between";
+    div.style.alignItems = "center";
+    div.style.gap = "12px";
 
-    div.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div class="item-title">${item.peso.toFixed(1)} kg</div>
-        <div class="item-sub">${item.data}</div>
-      </div>
+div.innerHTML = `
+  <div style="display:flex;flex-direction:column;">
+    <div class="item-title">${item.peso.toFixed(1)} kg</div>
+    <div class="item-sub">${item.data}</div>
+  </div>
 
-      <!-- ÍCONE ORIGINAL: UPLOAD -->
-      <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
-        onclick="abrirFotoComDataDireto('${item.data}')">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M12 16V4m0 0l4 4m-4-4L8 8M4 16h16v4H4z"
-            stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
+  <div style="display:flex;gap:8px;">
+    <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
+      onclick="abrirFotoComDataDireto('${item.data}')" aria-label="Enviar Foto">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+        xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 16V4m0 0l4 4m-4-4L8 8M4 16h16v4H4z"
+          stroke="#1c1c1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
 
-      <!-- ÍCONE ORIGINAL: EDITAR -->
-      <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
-        onclick="abrirEditarDireto(${item.id})">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" stroke="#1c1c1e" stroke-width="2"/>
-          <path d="M14.06 6.19l3.75 3.75" stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
-    `;
+    <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
+      onclick="abrirEditarDireto(${item.id})" aria-label="Editar Peso">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+        xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"
+          stroke="#1c1c1e" stroke-width="2"/>
+        <path d="M14.06 6.19l3.75 3.75"
+          stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+`;
 
     el.appendChild(div);
   });
