@@ -14,6 +14,18 @@ function parseISODateLocal(iso) {
   return new Date(iso + "T00:00:00");
 }
 
+function formatarData(iso) {
+  const meses = ["jan", "fev", "mar", "abr", "mai", "jun",
+                 "jul", "ago", "set", "out", "nov", "dez"];
+
+  const d = new Date(iso + "T00:00:00");
+  const dia = String(d.getDate()).padStart(2, "0");
+  const mes = meses[d.getMonth()];
+  const ano = d.getFullYear();
+
+  return `${dia} ${mes} ${ano}`;
+}
+
 /* ======= MODAIS ======= */
 function fecharModals() {
   document.querySelectorAll(".modal").forEach(m => m.setAttribute("aria-hidden", "true"));
