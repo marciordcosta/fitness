@@ -1,22 +1,20 @@
 let grafico;
 let dadosPesos = [];
-let periodoAtual = 7;  // "1 semana" no UI
+let periodoAtual = 7;
 let idEditar = null;
 
-/* ===================== UTIL ===================== */
+/* ======= FUNÇÕES AUXILIARES ======= */
 function hojeISO() {
   const d = new Date();
   const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
   return local.toISOString().substring(0, 10);
 }
 
-// Robusto: aceita "YYYY-MM-DD" e "YYYY-MM-DDTHH:mm:ssZ"
 function parseISODateLocal(iso) {
-  const d = new Date(iso);
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return new Date(iso + "T00:00:00");
 }
 
-/* ===================== MODAIS ===================== */
+/* ======= MODAIS ======= */
 function fecharModals() {
   document.querySelectorAll(".modal").forEach(m => m.setAttribute("aria-hidden", "true"));
 }
@@ -33,38 +31,31 @@ function abrirPeriodo() {
   document.getElementById("modalPeriodo").setAttribute("aria-hidden", "false");
 }
 
-/* ========= UPLOAD pelo HISTÓRICO (usa o modal já existente no index) =========
-   - Abre o modalFoto
-   - Preenche a data
-   - Ativa múltiplos arquivos no input existente
-*/
+/* ======= UPLOAD PELO HISTÓRICO ======= */
 function abrirFotoComDataDireto(data) {
   fecharModals();
-
+  const modal = document.getElementById("modalFoto");
   const dataInput = document.getElementById("dataFoto");
   const fileInput = document.getElementById("arquivoFoto");
-  const modal = document.getElementById("modalFoto");
 
-  if (!dataInput || !fileInput || !modal) {
-    console.error("Modal de foto não encontrado no index.html");
+  if (!modal) {
+    console.error("modalFoto não encontrado no index.html");
     return;
   }
 
-  dataInput.value = data || hojeISO();
-
-  // Garante múltiplos arquivos no input do index
+  dataInput.value = data;
+  fileInput.value = "";
   fileInput.setAttribute("multiple", "true");
-  fileInput.value = ""; // limpa seleção anterior
 
   modal.setAttribute("aria-hidden", "false");
 }
 
-/* ===================== LOAD ===================== */
+/* ======= LOAD INICIAL ======= */
 window.addEventListener("load", () => {
   carregarPesos(true);
 });
 
-/* ===================== SALVAR PESO ===================== */
+/* ======= SALVAR PESO ======= */
 async function salvarPesoNovo() {
   const data = document.getElementById("dataNovoPeso").value;
   const peso = parseFloat(document.getElementById("valorNovoPeso").value);
@@ -72,45 +63,38 @@ async function salvarPesoNovo() {
   if (!data || isNaN(peso)) return alert("Preencha todos os campos.");
 
   await supabase.from("pesos").insert({ data, peso });
-
   fecharModals();
   carregarPesos(true);
 }
 
-/* ===================== SALVAR FOTO (AGORA MÚLTIPLAS) ===================== */
+/* ======= SALVAR FOTO (MÚLTIPLAS) ======= */
 async function salvarFoto() {
   const data = document.getElementById("dataFoto").value;
   const files = document.getElementById("arquivoFoto").files;
 
-  if (!data || !files || files.length === 0) {
-    alert("Selecione a data e pelo menos 1 foto.");
+  if (!data || !files.length) {
+    alert("Selecione a data e pelo menos uma foto.");
     return;
   }
 
   for (let file of files) {
     const nome = `${Date.now()}-${file.name}`;
     const { error: upErr } = await supabase.storage.from("fotos").upload(nome, file);
-    if (upErr) {
-      console.error(upErr);
-      continue;
-    }
+    if (upErr) continue;
 
     const { data: pub } = supabase.storage.from("fotos").getPublicUrl(nome);
-    await supabase.from("fotos").insert({
-      data_foto: data,
-      url: pub.publicUrl
-    });
+    await supabase.from("fotos").insert({ data_foto: data, url: pub.publicUrl });
   }
 
   fecharModals();
 }
 
-/* ===================== CARREGAR PESOS / FILTROS ===================== */
+/* ======= CARREGAR PESOS E PERIODOS ======= */
 async function carregarPesos(filtrar = false) {
   const { data, error } = await supabase
     .from("pesos")
     .select("id, data, peso")
-    .order("data", { ascending: false }); // histórico decrescente
+    .order("data", { ascending: false });
 
   if (error) return console.error(error);
 
@@ -126,8 +110,8 @@ async function carregarPesos(filtrar = false) {
 }
 
 function aplicarPeriodo() {
-  // Quando o usuário escolhe "1 semana" (7), usamos 8 dias para permitir comparação do mesmo dia
   let diasFiltro = periodoAtual;
+
   if (diasFiltro === 7) diasFiltro = 8;
 
   if (diasFiltro === "all") {
@@ -138,6 +122,7 @@ function aplicarPeriodo() {
 
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
+
   const limite = new Date(hoje.getTime() - Number(diasFiltro) * 86400000);
 
   const filtrado = dadosPesos.filter(p => parseISODateLocal(p.data) >= limite);
@@ -147,15 +132,15 @@ function aplicarPeriodo() {
 }
 
 function filtroPeriodo(dias) {
-  periodoAtual = dias; // 7, 30, 180, 365, "all"
+  periodoAtual = dias;
   fecharModals();
   aplicarPeriodo();
 }
 
-/* ===================== HISTÓRICO ===================== */
+/* ======= HISTÓRICO ======= */
 function renderHistorico(lista) {
   const el = document.getElementById("listaPesos");
-  if (!lista.length) return el.innerHTML = "Nenhum registro.";
+  if (!lista.length) return (el.innerHTML = "Nenhum registro.");
 
   el.innerHTML = "";
 
@@ -169,22 +154,12 @@ function renderHistorico(lista) {
         <div class="item-sub">${item.data}</div>
       </div>
 
-      <!-- Upload múltiplo (usa modal do index) -->
-      <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
-        onclick="abrirFotoComDataDireto('${item.data}')" aria-label="Enviar Foto">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M12 16V4m0 0l4 4m-4-4L8 8M4 16h16v4H4z"
-            stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
-        </svg>
+      <button class="btn-mini" onclick="abrirFotoComDataDireto('${item.data}')">
+        📷
       </button>
 
-      <!-- Editar -->
-      <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
-        onclick="abrirEditarDireto(${item.id})" aria-label="Editar">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" stroke="#1c1c1e" stroke-width="2"/>
-          <path d="M14.06 6.19l3.75 3.75" stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
-        </svg>
+      <button class="btn-mini" onclick="abrirEditarDireto(${item.id})">
+        ✏️
       </button>
     `;
 
@@ -192,7 +167,7 @@ function renderHistorico(lista) {
   });
 }
 
-/* ===================== EDITAR PESO ===================== */
+/* ======= EDITAR PESO ======= */
 async function abrirEditarDireto(id) {
   const achou = dadosPesos.find(p => p.id === id);
   if (!achou) return;
@@ -209,7 +184,6 @@ async function salvarEdicao() {
   const peso = parseFloat(document.getElementById("pesoEditar").value);
 
   await supabase.from("pesos").update({ data, peso }).eq("id", idEditar);
-
   fecharModals();
   carregarPesos(true);
 }
@@ -220,9 +194,8 @@ async function excluirPeso() {
   carregarPesos(true);
 }
 
-/* ===================== GRÁFICO ===================== */
+/* ======= GRÁFICO ======= */
 function montarGrafico(lista) {
-  // No gráfico, ordem crescente
   const asc = [...lista].sort((a, b) => parseISODateLocal(a.data) - parseISODateLocal(b.data));
 
   const labels = asc.map(x => x.data);
@@ -240,18 +213,12 @@ function montarGrafico(lista) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
-      // eixo X oculto (sem datas)
       scales: { x: { display: false } }
     }
   });
 }
 
-/* ===================== MÉDIAS E PROGRESSÃO ===================== */
-/*
-  Semana = Terça -> Segunda
-  Média = soma dos registros reais / quantidade de registros reais
-  Progressão (%) = ((média_atual - média_anterior) / média_anterior) * 100
-*/
+/* ======= MÉDIA SEMANAL (TERÇA → SEGUNDA) ======= */
 function calcularSemanasEMedias() {
   const elAnt = document.getElementById("mediaSemanaAnterior");
   const elAtu = document.getElementById("mediaSemanaAtual");
@@ -264,26 +231,26 @@ function calcularSemanasEMedias() {
     return;
   }
 
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
 
-  // terça da semana atual (mais recente Terça <= hoje)
-  const day = hoje.getDay(); // 0=Dom..6=Sáb
-  const deltaAteTerca = (day - 2 + 7) % 7;
+  const day = hoje.getDay(); // 0=Dom ... 2=Ter ...
+  const delta = (day - 2 + 7) % 7;
+
   const tercaAtual = new Date(hoje);
-  tercaAtual.setDate(tercaAtual.getDate() - deltaAteTerca);
-  tercaAtual.setHours(0,0,0,0);
+  tercaAtual.setDate(tercaAtual.getDate() - delta);
+  tercaAtual.setHours(0, 0, 0, 0);
 
   const segundaAtual = new Date(tercaAtual);
   segundaAtual.setDate(segundaAtual.getDate() + 6);
-  segundaAtual.setHours(23,59,59,999);
+  segundaAtual.setHours(23, 59, 59, 999);
 
   const tercaAnterior = new Date(tercaAtual);
   tercaAnterior.setDate(tercaAnterior.getDate() - 7);
-  tercaAnterior.setHours(0,0,0,0);
 
   const segundaAnterior = new Date(tercaAtual);
   segundaAnterior.setDate(segundaAnterior.getDate() - 1);
-  segundaAnterior.setHours(23,59,59,999);
+  segundaAnterior.setHours(23, 59, 59, 999);
 
   function registrosPeriodo(inicio, fim) {
     return dadosPesos.filter(p => {
@@ -294,8 +261,7 @@ function calcularSemanasEMedias() {
 
   function media(lista) {
     if (!lista.length) return null;
-    const soma = lista.reduce((a,b)=>a + b.peso, 0);
-    return soma / lista.length; // divide pelo nº real de registros
+    return lista.reduce((acc, x) => acc + x.peso, 0) / lista.length;
   }
 
   const listaAtual = registrosPeriodo(tercaAtual, segundaAtual);
@@ -304,13 +270,12 @@ function calcularSemanasEMedias() {
   const mAtu = media(listaAtual);
   const mAnt = media(listaAnterior);
 
-  elAnt.innerText = mAnt != null ? mAnt.toFixed(1) + " kg" : "--";
-  elAtu.innerText = mAtu != null ? mAtu.toFixed(1) + " kg" : "--";
+  elAtu.innerText = mAtu != null ? `${mAtu.toFixed(1)} kg` : "--";
+  elAnt.innerText = mAnt != null ? `${mAnt.toFixed(1)} kg` : "--";
 
-  if (mAtu == null || mAnt == null || mAnt === 0) {
+  if (mAtu == null || mAnt == null) {
     elProg.innerText = "--";
   } else {
-    const variacao = ((mAtu - mAnt) / mAnt) * 100;
-    elProg.innerText = variacao.toFixed(1) + "%";
+    elProg.innerText = `${((mAtu - mAnt) / mAnt * 100).toFixed(1)}%`;
   }
 }
