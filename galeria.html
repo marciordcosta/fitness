@@ -59,8 +59,8 @@
   .grid{
     display:grid;
     grid-template-columns:repeat(5,1fr);
-    column-gap:6px; /* mantém o espaçamento lateral igual */
-    row-gap:2px;    /* aproxima verticalmente as linhas */
+    column-gap:6px;
+    row-gap:2px;
     padding:0 10px 10px;
   }
   @media(max-width:640px){ .grid{ grid-template-columns:repeat(3,1fr); } }
@@ -101,17 +101,11 @@
     display:none;
     z-index:2000;
   }
-
-  @media(max-width:640px){
-    .btn-top{ padding:8px 10px; }
-    .btn-top svg{ width:18px; height:18px; }
-  }
 </style>
 </head>
 <body>
 
 <div class="galeria-header">
-
   <div class="header-icon" onclick="window.location='index.html'">
     <svg fill="none" stroke-width="2.4" viewBox="0 0 24 24">
       <path d="M15 18l-6-6 6-6"></path>
@@ -119,10 +113,9 @@
   </div>
 
   <div class="top-actions">
-
     <button id="btnComparar" class="btn-top" onclick="compararSelecionadas()">
       <svg fill="none" stroke-width="2.3" viewBox="0 0 24 24">
-        <path d="M10 4H6a2 2 0 0 0-2 2v4h6V4zM20 14h-6v6h4a2 2 0 0 0 2-2v-4zM14 4v6h6V6a2 2 0 0 0-2-2h-4zM4 14v4a2 2 0 0 0 2 2h4v-6H4z"/>
+        <path d="M10 4H6v6h4V4zM20 14h-6v6h4a2 2 0 0 0 2-2v-4zM14 4v6h6V6a2 2 0 0 0-2-2h-4zM4 14v4a2 2 0 0 0 2 2h4v-6H4z"/>
       </svg>
     </button>
 
@@ -140,10 +133,9 @@
 
     <div class="header-icon" onclick="abrirUpload()">
       <svg fill="none" stroke-width="2.3" viewBox="0 0 24 24">
-        <path d="M12 16V4M12 4l4 4M12 4L8 8M4 16h16v4H4z"/>
+        <path d="M12 16V4m0 0l4 4m-4-4L8 8M4 16h16v4H4z"/>
       </svg>
     </div>
-
   </div>
 </div>
 
@@ -151,6 +143,7 @@
 
 <div id="conteudoGaleria"></div>
 
+<!-- ✅ Modal de Upload (usado também pelo histórico) -->
 <div id="modalUpload" class="modal" aria-hidden="true">
   <div class="modal-backdrop" onclick="fecharUpload()"></div>
   <div class="modal-box">
@@ -167,6 +160,7 @@
 </div>
 
 <script>
+// ✅ Impede menu de contexto
 document.addEventListener("contextmenu", e => e.preventDefault());
 
 let selecionadas = new Set();
@@ -175,13 +169,13 @@ let selectionModeMobile = false;
 window.mapaPesos = {};
 
 function normalizeDate(val){
-  if(!val) return "";
+  if (!val) return "";
   const s = String(val).trim();
-  if(s.includes("T")) return s.split("T")[0];
+  if (s.includes("T")) return s.split("T")[0];
   return s.slice(0,10);
 }
 
-/* ✅ UPLOAD corrigido: salva arquivo no banco */
+/* ✅ UPLOAD corrigido: sem coluna inexistente */
 async function enviarMultiplas(){
   const data = document.getElementById("uploadData").value;
   const files = document.getElementById("uploadArquivos").files;
@@ -191,7 +185,7 @@ async function enviarMultiplas(){
     return;
   }
 
-  for(let file of files){
+  for (let file of files){
     const nome = `${Date.now()}-${file.name}`;
 
     await supabase.storage.from("fotos").upload(nome, file);
@@ -200,8 +194,7 @@ async function enviarMultiplas(){
 
     await supabase.from("fotos").insert({
       data_foto: data,
-      url: pub.publicUrl,
-      arquivo: nome       /* ✅ salva o nome real do arquivo */
+      url: pub.publicUrl
     });
   }
 
@@ -213,6 +206,7 @@ function abrirUpload(){
   document.getElementById("uploadData").value = new Date().toISOString().slice(0,10);
   document.getElementById("modalUpload").setAttribute("aria-hidden","false");
 }
+
 function fecharUpload(){
   document.getElementById("modalUpload").setAttribute("aria-hidden","true");
 }
@@ -221,15 +215,11 @@ async function carregarGaleria(){
   selecionadas.clear();
   atualizarTopo();
 
-  const { data: pesos } = await supabase
-    .from("pesos")
-    .select("data,peso");
+  const { data: pesos } = await supabase.from("pesos").select("data,peso");
 
   window.mapaPesos = {};
   (pesos||[]).forEach(p=>{
-    const k = normalizeDate(p.data);
-    const v = Number(p.peso);
-    if(!isNaN(v)) window.mapaPesos[k] = v;
+    window.mapaPesos[ normalizeDate(p.data) ] = Number(p.peso);
   });
 
   const { data: fotos } = await supabase
@@ -241,6 +231,7 @@ async function carregarGaleria(){
   area.innerHTML="";
 
   const grupos = {};
+
   (fotos||[]).forEach(f=>{
     const key = normalizeDate(f.data_foto);
     if(!grupos[key]) grupos[key]=[];
@@ -258,7 +249,6 @@ async function carregarGaleria(){
       </div>`;
 
     const grid=document.getElementById(`grid-${key}`);
-
     grid.innerHTML = grupos[key].map(f=>{
       return `
         <div class="foto-bloco" id="foto-${f.id}" data-dia="${key}">
@@ -387,23 +377,11 @@ async function abrirCarrosselDia(idClicado,dia){
   window.location="carrossel.html";
 }
 
-/* ✅ EXCLUSÃO corrigida: busca arquivo no banco */
+/* ✅ EXCLUSÃO corrigida: remove só do banco */
 async function excluirSelecionados(){
   if(!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
 
   for(let id of selecionadas){
-
-    /* ✅ pega o nome real no banco */
-    const { data:foto } = await supabase
-      .from("fotos")
-      .select("arquivo")
-      .eq("id",id)
-      .single();
-
-    if(foto?.arquivo){
-      await supabase.storage.from("fotos").remove([foto.arquivo]);
-    }
-
     await supabase.from("fotos").delete().eq("id",id);
   }
 
@@ -416,8 +394,3 @@ carregarGaleria();
 
 </body>
 </html>
-
-
-
-
-
