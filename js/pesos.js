@@ -123,7 +123,7 @@ function aplicarPeriodo() {
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
 
-  const limite = new Date(hoje.getTime() - Number(diasFiltro) * 86400000);
+  const limite = new Date(hoje.getTime() - (Number(diasFiltro) - 1) * 86400000);
 
   const filtrado = dadosPesos.filter(p => parseISODateLocal(p.data) >= limite);
 
