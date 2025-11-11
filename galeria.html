@@ -383,7 +383,7 @@ async function excluirSelecionados(){
 
   for (let id of selecionadas) {
 
-    // buscar URL da foto
+    // 1. pegar url da foto
     const { data: foto } = await supabase
       .from("fotos")
       .select("url")
@@ -392,26 +392,22 @@ async function excluirSelecionados(){
 
     if (foto?.url) {
 
-      // extrair caminho após "object/public/"
-      let path = foto.url.split("/object/public/")[1];
-
-      // remover query string
-      if (path.includes("?")) {
-        path = path.split("?")[0];
+      // 2. extrair nome do arquivo SEM query string
+      let nomeArquivo = foto.url.split("/").pop();
+      if (nomeArquivo.includes("?")) {
+        nomeArquivo = nomeArquivo.split("?")[0];
       }
 
-      // remover do storage
+      // 3. excluir realmente no storage (seu bucket NÃO tem pastas)
       const { error: delErr } = await supabase
         .storage
         .from("fotos")
-        .remove([path]);
+        .remove([nomeArquivo]);
 
-      if (delErr) {
-        console.error("Erro removendo do storage:", delErr);
-      }
+      if (delErr) console.error("Erro ao excluir storage:", delErr);
     }
 
-    // remover do banco
+    // 4. excluir do banco
     await supabase.from("fotos").delete().eq("id", id);
   }
 
@@ -424,6 +420,7 @@ carregarGaleria();
 
 </body>
 </html>
+
 
 
 
