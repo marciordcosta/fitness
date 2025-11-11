@@ -101,18 +101,6 @@ async function salvarFoto() {
   fecharModals();
 }
 
-function removerDuplicadosPorData(lista) {
-  const mapa = {};
-
-  lista.forEach(item => {
-    // sempre mantém o último lançamento
-    mapa[item.data] = item;
-  });
-
-  // retorna só 1 por data
-  return Object.values(mapa);
-}
-
 /* ======= CARREGAR PESOS E PERIODOS ======= */
 async function carregarPesos(filtrar = false) {
   const { data, error } = await supabase
@@ -122,7 +110,7 @@ async function carregarPesos(filtrar = false) {
 
   if (error) return console.error(error);
 
-  dadosPesos = removerDuplicadosPorData(data || []);
+  dadosPesos = data || [];
 
   if (filtrar) aplicarPeriodo();
   else {
