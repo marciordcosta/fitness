@@ -10,7 +10,6 @@ function hojeISO() {
   return local.toISOString().substring(0, 10);
 }
 
-// Parse seguro para "YYYY-MM-DD" como local T00:00
 function parseISODateLocal(iso) {
   return new Date(iso + "T00:00:00");
 }
@@ -39,7 +38,7 @@ function abrirPeriodo() {
   document.getElementById("modalPeriodo").setAttribute("aria-hidden", "false");
 }
 
-/* ✅ Função nova: abrir modal de foto direto pelo histórico */
+/* ✅ Função adicionada */
 function abrirFotoComDataDireto(data) {
   fecharModals();
   document.getElementById("dataFoto").value = data;
@@ -93,7 +92,7 @@ async function carregarPesos(filtrar = false) {
   const { data, error } = await supabase
     .from("pesos")
     .select("id, data, peso")
-    .order("data", { ascending: false });   // Histórico decrescente
+    .order("data", { ascending: false });
 
   if (error) return console.error(error);
 
@@ -148,27 +147,23 @@ function renderHistorico(lista) {
         <div class="item-sub">${item.data}</div>
       </div>
 
-      <div style="display:flex;gap:6px;">
+      <!-- ✅ Botão: Enviar Foto -->
+      <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
+        onclick="abrirFotoComDataDireto('${item.data}')" aria-label="Enviar Foto">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M12 16V4M12 4l4 4M12 4L8 8M4 16h16v4H4z"
+            stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
 
-        <!-- ✅ Ícone novo: enviar foto -->
-        <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
-          onclick="abrirFotoComDataDireto('${item.data}')" aria-label="Enviar Foto">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M12 16V4M12 4l4 4M12 4L8 8M4 16h16v4H4z"
-              stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-        </button>
-
-        <!-- Ícone original: editar -->
-        <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
-          onclick="abrirEditarDireto(${item.id})" aria-label="Editar">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" stroke="#1c1c1e" stroke-width="2"/>
-            <path d="M14.06 6.19l3.75 3.75" stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-        </button>
-
-      </div>
+      <!-- Botão original: Editar -->
+      <button class="btn-mini" style="border:1px solid #e5e5ea;background:#f7f7f7"
+        onclick="abrirEditarDireto(${item.id})" aria-label="Editar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" stroke="#1c1c1e" stroke-width="2"/>
+          <path d="M14.06 6.19l3.75 3.75" stroke="#1c1c1e" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
     `;
 
     el.appendChild(div);
@@ -271,7 +266,8 @@ function calcularSemanasEMedias() {
 
   function media(lista) {
     if (!lista.length) return null;
-    return lista.reduce((a,b)=>a + b.peso, 0) / lista.length;
+    const soma = lista.reduce((a,b)=>a + b.peso, 0);
+    return soma / lista.length;
   }
 
   const listaAtual = registrosPeriodo(tercaAtual, segundaAtual);
@@ -281,7 +277,7 @@ function calcularSemanasEMedias() {
   const mAnt = media(listaAnterior);
 
   elAnt.innerText = mAnt != null ? mAnt.toFixed(1) + " kg" : "--";
-  elAtu.innerText = mAtu != null ? mAtu.toFixed(1) + " kg" : "--";
+  elAtu.innerText = mAtu != null ? mAtAtu.toFixed(1) + " kg" : "--";
 
   if (mAtu == null || mAnt == null || mAnt === 0) {
     elProg.innerText = "--";
