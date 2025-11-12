@@ -247,12 +247,6 @@ function montarGrafico(lista) {
       labels,
       datasets: [
         {
-          data: pesos,
-          borderWidth: 3,
-          tension: 0.25,
-          borderColor: "#d5d5d6"
-        },
-        {
           label: "Tendência",
           data: mediaSuave,
           borderColor: "#75a7ff",
@@ -260,6 +254,12 @@ function montarGrafico(lista) {
           tension: 0.4,
           cubicInterpolationMode: "monotone",
           pointRadius: 0
+        },
+        {
+          data: pesos,
+          borderWidth: 3,
+          tension: 0.25,
+          borderColor: "#eaeaec"
         }
       ]
     },
