@@ -544,10 +544,128 @@ async function excluirSelecionados(){
 
 /* Inicializa */
 carregarGaleria();
+
+/* === ORDENAR FOTOS POR DATA (arrastar e soltar) === */
+
+function habilitarOrdenacao() {
+  document.querySelectorAll(".grid").forEach(grid => {
+    let dragging = null;
+    let startIndex = null;
+
+    // eventos de mouse
+    grid.addEventListener("dragstart", e => {
+      if (!e.target.classList.contains("foto-galeria")) return;
+      dragging = e.target.closest(".foto-bloco");
+      startIndex = [...grid.children].indexOf(dragging);
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", dragging.id);
+      setTimeout(() => dragging.classList.add("arrastando"), 0);
+    });
+
+    grid.addEventListener("dragover", e => {
+      e.preventDefault();
+      const afterElement = getDragAfterElement(grid, e.clientX, e.clientY);
+      const current = document.querySelector(".arrastando");
+      if (!current) return;
+      if (afterElement == null) grid.appendChild(current);
+      else grid.insertBefore(current, afterElement);
+    });
+
+    grid.addEventListener("drop", async e => {
+      e.preventDefault();
+      const current = document.querySelector(".arrastando");
+      if (!current) return;
+      current.classList.remove("arrastando");
+      dragging = null;
+
+      const ids = [...grid.querySelectorAll(".foto-bloco")].map(b => b.id.replace("foto-", ""));
+      await salvarNovaOrdem(grid.id.replace("grid-", ""), ids);
+    });
+
+    grid.addEventListener("dragend", () => {
+      const current = document.querySelector(".arrastando");
+      if (current) current.classList.remove("arrastando");
+      dragging = null;
+    });
+
+    // eventos de toque (mobile)
+    let touchStart = null;
+    let targetBloco = null;
+
+    grid.querySelectorAll(".foto-bloco").forEach(bloco => {
+      bloco.draggable = true; // necessário p/ desktop
+
+      bloco.addEventListener("touchstart", e => {
+        if (selecionadas.size > 0) return; // ignora se em modo seleção
+        touchStart = e.touches[0];
+        targetBloco = bloco;
+        bloco.classList.add("arrastando");
+      }, { passive: true });
+
+      bloco.addEventListener("touchmove", e => {
+        if (!targetBloco) return;
+        const touch = e.touches[0];
+        const elemento = document.elementFromPoint(touch.clientX, touch.clientY);
+        const destino = elemento?.closest(".foto-bloco");
+        if (destino && destino.parentElement === grid && destino !== targetBloco) {
+          const all = [...grid.children];
+          const iOrigem = all.indexOf(targetBloco);
+          const iDestino = all.indexOf(destino);
+          if (iOrigem < iDestino) destino.after(targetBloco);
+          else destino.before(targetBloco);
+        }
+      }, { passive: true });
+
+      bloco.addEventListener("touchend", async e => {
+        if (!targetBloco) return;
+        targetBloco.classList.remove("arrastando");
+        const ids = [...grid.querySelectorAll(".foto-bloco")].map(b => b.id.replace("foto-", ""));
+        await salvarNovaOrdem(grid.id.replace("grid-", ""), ids);
+        targetBloco = null;
+      }, { passive: true });
+    });
+  });
+}
+
+/* ajuda a calcular posição durante o arrasto */
+function getDragAfterElement(container, x, y) {
+  const elementos = [...container.querySelectorAll(".foto-bloco:not(.arrastando)")];
+  return elementos.reduce((maisProximo, filho) => {
+    const box = filho.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > maisProximo.offset) {
+      return { offset: offset, elemento: filho };
+    } else {
+      return maisProximo;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).elemento;
+}
+
+/* salva nova ordem no Supabase */
+async function salvarNovaOrdem(data, ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return;
+  try {
+    for (let i = 0; i < ids.length; i++) {
+      await supabase.from("fotos").update({ ordem: i }).eq("id", ids[i]);
+    }
+    console.log(`✅ Ordem atualizada para ${data}:`, ids);
+  } catch (e) {
+    console.warn("⚠️ Não foi possível salvar a ordem (campo 'ordem' pode não existir).");
+  }
+}
+
+/* aplica após carregar a galeria */
+const _originalCarregarGaleria = carregarGaleria;
+carregarGaleria = async function() {
+  await _originalCarregarGaleria();
+  habilitarOrdenacao();
+}; 
+  
 </script>
 
 </body>
 </html>
+
 
 
 
