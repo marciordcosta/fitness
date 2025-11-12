@@ -254,7 +254,7 @@ function montarGrafico(lista) {
         {
           label: "Média móvel",
           data: mediaMovel,
-          borderColor: "red",
+          borderColor: "rgba(255, 0, 0, 0.4)",
           borderWidth: 2,
           tension: 0.25,
           pointRadius: 0
