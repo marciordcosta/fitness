@@ -316,7 +316,7 @@ async function carregarGaleria(){
       </div>`).join("");
     
     // torna as imagens arrastáveis no desktop
-   grid.querySelectorAll("img").forEach(img => img.setAttribute("draggable", "true"));
+   grid.querySelectorAll(".foto-bloco").forEach(bloco => bloco.setAttribute("draggable", "true"));
   });
 
   anexarHandlers();
@@ -675,6 +675,7 @@ carregarGaleria = async function() {
 
 </body>
 </html>
+
 
 
 
