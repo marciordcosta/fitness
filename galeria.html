@@ -54,6 +54,26 @@
     margin:10px 12px 8px;
     padding-left:8px;
     border-left:3px solid #007aff;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+
+  .toggle-icon{
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:24px;
+    height:24px;
+    margin-left:8px;
+  }
+
+  .toggle-icon svg{
+    width:18px;
+    height:18px;
+    stroke:#fff;
+    stroke-width:2;
   }
 
   .grid{
@@ -143,7 +163,7 @@
 
 <div id="conteudoGaleria"></div>
 
-<!-- ✅ Modal de Upload (usado também pelo histórico) -->
+<!-- ✅ Modal de Upload -->
 <div id="modalUpload" class="modal" aria-hidden="true">
   <div class="modal-backdrop" onclick="fecharUpload()"></div>
   <div class="modal-box">
@@ -160,7 +180,6 @@
 </div>
 
 <script>
-// ✅ Impede menu de contexto
 document.addEventListener("contextmenu", e => e.preventDefault());
 
 let selecionadas = new Set();
@@ -175,7 +194,6 @@ function normalizeDate(val){
   return s.slice(0,10);
 }
 
-/* ✅ UPLOAD corrigido: sem coluna inexistente */
 async function enviarMultiplas(){
   const data = document.getElementById("uploadData").value;
   const files = document.getElementById("uploadArquivos").files;
@@ -187,11 +205,8 @@ async function enviarMultiplas(){
 
   for (let file of files){
     const nome = `${Date.now()}-${file.name}`;
-
     await supabase.storage.from("fotos").upload(nome, file);
-
     const { data:pub } = supabase.storage.from("fotos").getPublicUrl(nome);
-
     await supabase.from("fotos").insert({
       data_foto: data,
       url: pub.publicUrl
@@ -206,7 +221,6 @@ function abrirUpload(){
   document.getElementById("uploadData").value = new Date().toISOString().slice(0,10);
   document.getElementById("modalUpload").setAttribute("aria-hidden","false");
 }
-
 function fecharUpload(){
   document.getElementById("modalUpload").setAttribute("aria-hidden","true");
 }
@@ -216,7 +230,6 @@ async function carregarGaleria(){
   atualizarTopo();
 
   const { data: pesos } = await supabase.from("pesos").select("data,peso");
-
   window.mapaPesos = {};
   (pesos||[]).forEach(p=>{
     window.mapaPesos[ normalizeDate(p.data) ] = Number(p.peso);
@@ -231,7 +244,6 @@ async function carregarGaleria(){
   area.innerHTML="";
 
   const grupos = {};
-
   (fotos||[]).forEach(f=>{
     const key = normalizeDate(f.data_foto);
     if(!grupos[key]) grupos[key]=[];
@@ -244,23 +256,32 @@ async function carregarGaleria(){
 
     area.innerHTML+=`
       <div class="data-bloco">
-        <div class="data-titulo">${key}${labelPeso}</div>
-        <div class="grid" id="grid-${key}"></div>
+        <div class="data-titulo">
+          <span>${key}${labelPeso}</span>
+          <div class="toggle-icon" onclick="toggleFotos('${key}')">
+            <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+        </div>
+        <div class="grid" id="grid-${key}" style="display:none;"></div>
       </div>`;
 
     const grid=document.getElementById(`grid-${key}`);
-    grid.innerHTML = grupos[key].map(f=>{
-      return `
-        <div class="foto-bloco" id="foto-${f.id}" data-dia="${key}">
-          <div class="check">✓</div>
-          <img src="${f.url}" loading="lazy" decoding="async"
-               class="foto-galeria"
-               data-id="${f.id}" data-dia="${key}">
-        </div>`;
-    }).join("");
+    grid.innerHTML = grupos[key].map(f=>`
+      <div class="foto-bloco" id="foto-${f.id}" data-dia="${key}">
+        <div class="check">✓</div>
+        <img src="${f.url}" loading="lazy" decoding="async"
+             class="foto-galeria"
+             data-id="${f.id}" data-dia="${key}">
+      </div>`).join("");
   });
 
   anexarHandlers();
+}
+
+function toggleFotos(key){
+  const grid=document.getElementById(`grid-${key}`);
+  if(!grid) return;
+  grid.style.display = (grid.style.display==="none") ? "grid" : "none";
 }
 
 function anexarHandlers(){
@@ -279,7 +300,6 @@ function anexarHandlers(){
     img.addEventListener("touchstart", e=>{
       movedY=0;
       startY=e.touches[0].clientY;
-
       pressTimer=setTimeout(()=>{
         selectionModeMobile=true;
         document.getElementById("btnSairSelecao").style.display="block";
@@ -298,7 +318,6 @@ function anexarHandlers(){
     img.addEventListener("touchend", ()=>{
       if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; }
       if(movedY>10) return;
-
       if(selectionModeMobile) toggleSelecao(id);
       else abrirCarrosselDia(id,dia);
     },{passive:true});
@@ -332,162 +351,8 @@ function atualizarTopo(){
   document.getElementById("btnExcluirVarios").style.display = (n>0)?"block":"none";
 }
 
-async function editarSelecionados(){
-  if(selecionadas.size===0) return;
-  const nova=prompt("Nova data (AAAA-MM-DD):");
-  if(!nova) return;
-
-  for(let id of selecionadas){
-    await supabase.from("fotos").update({data_foto:nova}).eq("id",id);
-  }
-
-  selecionadas.clear();
-  carregarGaleria();
-}
-
-function compararSelecionadas(){
-  if(selecionadas.size!==2) return;
-
-  const ids=[...selecionadas];
-  localStorage.setItem("comparar_id1",ids[0]);
-  localStorage.setItem("comparar_id2",ids[1]);
-
-  window.location="comparacao.html";
-}
-
-async function abrirCarrosselDia(idClicado,dia){
-  const { data } = await supabase
-    .from("fotos")
-    .select("id,url,data_foto")
-    .eq("data_foto",dia)
-    .order("id");
-
-  if(!data||!data.length) return;
-
-  const items = data.map(x=>({id:x.id,url:x.url}));
-  const idx = items.findIndex(x=>x.id===idClicado);
-
-  const peso = window.mapaPesos[dia] ?? "";
-
-  localStorage.setItem("carousel_items",JSON.stringify(items));
-  localStorage.setItem("carousel_index",String(idx));
-  localStorage.setItem("carousel_dia",dia);
-  localStorage.setItem("carousel_peso",peso);
-
-  window.location="carrossel.html";
-}
-
-/* ✅ EXCLUSÃO corrigida: remove só do banco */
-async function excluirSelecionados(){
-  if(!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
-
-  const bucket = "fotos";
-
-  // Helper: extrai o nome exato salvo no Storage a partir da URL pública
-  const getStorageNameFromUrl = (url) => {
-    if (!url) return null;
-
-    // 1) pega trecho após /object/public/ (padrão das URLs públicas)
-    let path = url.split("/object/public/")[1] || url;
-
-    // 2) se ainda não tiver bucket no começo, tenta após /fotos/
-    if (!path.startsWith(bucket + "/")) {
-      const afterBucket = url.split(`/${bucket}/`)[1];
-      if (afterBucket) path = `${bucket}/${afterBucket}`;
-    }
-
-    // 3) remove querystring
-    if (path.includes("?")) path = path.split("?")[0];
-
-    // 4) decodifica (%20 => espaço etc.)
-    path = decodeURIComponent(path);
-
-    // 5) no remove() precisamos apenas do "name" (sem prefixo do bucket)
-    if (path.startsWith(bucket + "/")) path = path.slice(bucket.length + 1);
-
-    return path || null;
-  };
-
-  // Helper: tenta remover, conferindo nome via listagem se necessário
-  const removerDoStorage = async (url) => {
-    let name = getStorageNameFromUrl(url);
-    if (!name) return { ok:false, msg:"URL inválida" };
-
-    // primeira tentativa: nome direto
-    let { error } = await supabase.storage.from(bucket).remove([name]);
-    if (!error) return { ok:true };
-
-    // se falhou, tentamos confirmar via listagem e ajustar case/encoding
-    const { data:lista, error:listErr } = await supabase.storage.from(bucket).list("", { limit: 1000 });
-    if (listErr) return { ok:false, msg:`Listagem falhou: ${listErr.message||listErr}` };
-
-    // comparação direta
-    let match = lista?.find(f => f.name === name);
-
-    // tenta case-insensitive
-    if (!match) {
-      const low = name.toLowerCase();
-      match = lista?.find(f => f.name.toLowerCase() === low);
-    }
-
-    // tenta basename simples (pós última barra, por garantia)
-    if (!match) {
-      const base = name.split("/").pop();
-      match = lista?.find(f => f.name === base) || lista?.find(f => f.name.toLowerCase() === base.toLowerCase());
-    }
-
-    if (match) {
-      const r2 = await supabase.storage.from(bucket).remove([match.name]);
-      if (!r2.error) return { ok:true };
-      return { ok:false, msg:`Storage remove falhou: ${r2.error.message||r2.error}` };
-    }
-
-    return { ok:false, msg:`Arquivo não encontrado no bucket: ${name}` };
-  };
-
-  for (let id of selecionadas) {
-    // 1) pega a URL no banco
-    const { data: foto, error: dbErr } = await supabase
-      .from("fotos")
-      .select("url")
-      .eq("id", id)
-      .single();
-
-    if (dbErr) {
-      console.error("Erro ao buscar URL no banco:", dbErr);
-      alert("Erro ao buscar URL no banco. Veja o console.");
-      continue;
-    }
-
-    // 2) tenta remover do Storage
-    const r = await removerDoStorage(foto?.url);
-    if (!r.ok) {
-      console.error("Falha ao excluir do Storage:", r.msg);
-      alert(`Não consegui excluir do Storage.\nMotivo: ${r.msg}\nVeja o console para detalhes.`);
-      // Se preferir, pare aqui e NÃO remova do banco:
-      // continue;
-    }
-
-    // 3) remove do banco
-    const { error: delDbErr } = await supabase.from("fotos").delete().eq("id", id);
-    if (delDbErr) {
-      console.error("Erro ao excluir registro no banco:", delDbErr);
-      alert("Erro ao excluir no banco. Veja o console.");
-    }
-  }
-
-  selecionadas.clear();
-  carregarGaleria();
-}
-
 carregarGaleria();
 </script>
 
 </body>
 </html>
-
-
-
-
-
-
