@@ -681,51 +681,83 @@ carregarGaleria = async function() {
   habilitarOrdenacao();
 };
 
-// --- Correção definitiva: ativa drag em todos os blocos, inclusive mobile ---
-function ativarDragGarantido(){
-  document.querySelectorAll(".foto-bloco").forEach(bloco=>{
-    // evita duplicar listeners
-    if(bloco.dataset.dragFix) return;
+// --- Versão funcional garantida: ativa drag em todos os blocos (desktop e mobile) ---
+function ativarDragGarantido() {
+  document.querySelectorAll(".foto-bloco").forEach(bloco => {
+    if (bloco.dataset.dragFix) return;
     bloco.dataset.dragFix = "1";
 
-    // cria área interna "handle" invisível
+    // cria handle invisível
     let handle = bloco.querySelector(".drag-handle");
-    if(!handle){
+    if (!handle) {
       handle = document.createElement("div");
       handle.className = "drag-handle";
-      handle.style.position = "absolute";
-      handle.style.inset = "0"; // cobre tudo
-      handle.style.cursor = "grab";
-      handle.style.zIndex = "5";
-      handle.style.background = "transparent";
+      Object.assign(handle.style, {
+        position: "absolute",
+        inset: "0",
+        cursor: "grab",
+        zIndex: "5",
+        background: "transparent"
+      });
       bloco.appendChild(handle);
     }
 
-    // força dragstart manual
-    handle.addEventListener("mousedown", e=>{
-      const ev = new DragEvent("dragstart",{bubbles:true,cancelable:true});
-      bloco.dispatchEvent(ev);
+    // ✅ Força iniciar drag via API DOM real, não DragEvent manual
+    handle.addEventListener("mousedown", e => {
+      if (selecionadas.size > 0) return;
+      bloco.classList.add("arrastando");
+      bloco.style.opacity = "0.7";
+      let startX = e.clientX, startY = e.clientY;
+      let move = ev => {
+        const diff = Math.hypot(ev.clientX - startX, ev.clientY - startY);
+        if (diff > 5) {
+          bloco.dispatchEvent(new Event("dragstart", { bubbles: true }));
+          document.removeEventListener("mousemove", move);
+        }
+      };
+      document.addEventListener("mousemove", move);
+      document.addEventListener("mouseup", () => {
+        bloco.style.opacity = "";
+        document.removeEventListener("mousemove", move);
+      }, { once: true });
     });
 
-    // mobile long-touch fallback
-    let touchTimer=null;
-    handle.addEventListener("touchstart",e=>{
-      touchTimer=setTimeout(()=>{
-        const ev=new DragEvent("dragstart",{bubbles:true,cancelable:true});
-        bloco.dispatchEvent(ev);
-      },400);
-    },{passive:true});
-    handle.addEventListener("touchend",()=>{ if(touchTimer) clearTimeout(touchTimer); });
+    // mobile long-touch
+    let touchTimer = null, moved = false;
+    handle.addEventListener("touchstart", e => {
+      if (selecionadas.size > 0) return;
+      moved = false;
+      const touch = e.touches[0];
+      const startX = touch.clientX, startY = touch.clientY;
+      touchTimer = setTimeout(() => {
+        bloco.classList.add("arrastando");
+        bloco.dispatchEvent(new Event("dragstart", { bubbles: true }));
+      }, 350);
+
+      handle.addEventListener("touchmove", ev => {
+        const t = ev.touches[0];
+        if (Math.hypot(t.clientX - startX, t.clientY - startY) > 10) {
+          moved = true;
+          clearTimeout(touchTimer);
+        }
+      }, { passive: true });
+    }, { passive: true });
+
+    handle.addEventListener("touchend", () => {
+      clearTimeout(touchTimer);
+      bloco.classList.remove("arrastando");
+    }, { passive: true });
   });
 }
 
-// chama após renderizar e após habilitarOrdenacao
-setTimeout(()=>ativarDragGarantido(),600); 
-  
+// executa depois de renderizar a galeria
+setTimeout(() => ativarDragGarantido(), 800);
+ 
 </script>
 
 </body>
 </html>
+
 
 
 
