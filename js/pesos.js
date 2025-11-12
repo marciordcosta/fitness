@@ -255,7 +255,7 @@ function montarGrafico(lista) {
         {
           label: "Tendência",
           data: mediaSuave,
-          borderColor: "#ff3b30",
+          borderColor: "rgba(180, 250, 250, 0.35)",
           borderWidth: 2,
           tension: 0.4,
           cubicInterpolationMode: "monotone",
