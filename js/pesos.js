@@ -250,7 +250,7 @@ function montarGrafico(lista) {
           data: pesos,
           borderWidth: 3,
           tension: 0.25,
-          borderColor: "#1e1c1c40"
+          borderColor: "#d5d5d6"
         },
         {
           label: "Tendência",
