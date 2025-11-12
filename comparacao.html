@@ -9,136 +9,114 @@
 <script src="js/supabase.js"></script>
 
 <style>
-  body{
-    margin:0;
-    background:#000;
-    color:#fff;
-    overflow:auto;
-  }
+body{
+  margin:0;
+  background:#000;
+  color:#fff;
+  overflow:auto;
+}
+.compare-container{ max-width:900px; margin:0 auto; padding:20px; }
+#grid{ display:grid; gap:22px; }
+#grid.lado{ grid-template-columns:1fr 1fr; }
+#grid.baixo{ grid-template-columns:1fr; }
 
-  .compare-container{
-    max-width:900px;
-    margin:0 auto;
-    padding:20px;
-  }
+.img-wrap{
+  background:#000;
+  border-radius:12px;
+  overflow:hidden;
+  position:relative;
+  touch-action:none;
+  max-height:80vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:grab;
+}
 
-  #grid{
-    display:grid;
-    gap:22px;
-  }
-  #grid.lado{ grid-template-columns:1fr 1fr; }
-  #grid.baixo{ grid-template-columns:1fr; }
+.info{
+  position:absolute;
+  top:10px; left:10px;
+  background:rgba(0,0,0,0.55);
+  padding:6px 10px;
+  border-radius:8px;
+  font-size:14px;
+  font-weight:600;
+  backdrop-filter:blur(3px);
+  z-index:50;
+  pointer-events:none;
+}
 
-  .img-wrap{
-    background:#000;
-    border-radius:12px;
-    overflow:hidden;
-    position:relative;
-    touch-action:none;
-    height:auto;
-    max-height:80vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:grab;
-  }
+.compare-img{
+  max-width:100%;
+  max-height:80vh;
+  object-fit:contain;
+  transition:transform .1s ease-out;
+  user-select:none;
+  pointer-events:none;
+  transform-origin:center center;
+}
 
-  /* ✅ BLOCO FIXO COM DATA E PESO */
-  .info{
-    position:absolute;
-    top:10px;
-    left:10px;
-    background:rgba(0,0,0,0.55);
-    padding:6px 10px;
-    border-radius:8px;
-    font-size:14px;
-    font-weight:600;
-    backdrop-filter:blur(3px);
-    z-index:50;
-    pointer-events:none;
-  }
+.controls{
+  text-align:center;
+  margin-top:10px;
+  display:flex;
+  justify-content:center;
+  gap:10px;
+}
+.btn{
+  background:#1c1c1e;
+  color:#fff;
+  border:none;
+  padding:10px 14px;
+  border-radius:10px;
+  cursor:pointer;
+  font-size:14px;
+}
 
-  .compare-img{
-    max-width:100%;
-    max-height:80vh;
-    object-fit:contain;
-    transition:transform .1s ease-out;
-    user-select:none;
-    pointer-events:none;
-    transform-origin:center center;
-  }
+.side-bar{
+  position:fixed;
+  right:10px; top:50%;
+  transform:translateY(-50%);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  z-index:999;
+}
+.btn-side{
+  background:#1c1c1e;
+  color:#fff;
+  border:none;
+  padding:10px 12px;
+  border-radius:10px;
+  cursor:pointer;
+  font-size:16px;
+}
+.btn-back{ background:#007aff; font-weight:600; }
+.dragging{ cursor:grabbing !important; }
 
-  .controls{
-    text-align:center;
-    margin-top:10px;
-    display:flex;
-    justify-content:center;
-    gap:10px;
-  }
-  .btn{
-    background:#1c1c1e;
-    color:#fff;
-    border:none;
-    padding:10px 14px;
-    border-radius:10px;
-    cursor:pointer;
-    font-size:14px;
-  }
+@media(max-width:600px){
+  .controls{ display:none; }
+  .img-wrap{ max-height:55vh; }
+  .compare-img{ max-height:55vh; }
 
   .side-bar{
-    position:fixed;
-    right:10px;
-    top:50%;
-    transform:translateY(-50%);
+    right:0; bottom:0; top:auto;
+    transform:none;
+    width:100%;
+    background:rgba(0,0,0,0.7);
+    backdrop-filter:blur(6px);
     display:flex;
-    flex-direction:column;
-    gap:10px;
-    z-index:999;
+    flex-direction:row;
+    justify-content:center;
+    gap:20px;
+    padding:10px 0;
   }
   .btn-side{
-    background:#1c1c1e;
-    color:#fff;
-    border:none;
-    padding:10px 12px;
-    border-radius:10px;
-    cursor:pointer;
+    padding:10px 16px;
     font-size:16px;
   }
-  .btn-back{
-    background:#007aff;
-    font-weight:600;
-  }
-
-  .dragging{ cursor:grabbing !important; }
-
-  @media(max-width:600px){
-    .controls{ display:none; }
-    .img-wrap{ max-height:55vh; }
-    .compare-img{ max-height:55vh; }
-
-    .side-bar{
-      right:0;
-      bottom:0;
-      top:auto;
-      transform:none;
-      width:100%;
-      background:rgba(0,0,0,0.7);
-      backdrop-filter:blur(6px);
-      display:flex;
-      flex-direction:row;
-      justify-content:center;
-      gap:20px;
-      padding:10px 0;
-    }
-    .btn-side{
-      padding:10px 16px;
-      font-size:16px;
-    }
-    .compare-container{
-      padding-bottom:100px;
-      padding-top:10px;
-    }
-  }
+  .compare-container{ padding-bottom:100px; padding-top:10px; }
+}
 </style>
 </head>
 <body>
@@ -151,191 +129,80 @@
 
 <div class="compare-container">
   <div id="grid" class="lado">
-
-    <div>
-      <div class="img-wrap" id="wrap1">
-        <div class="info" id="info1"></div>
-        <img id="img1" class="compare-img">
-      </div>
-
-      <div class="controls">
-        <button class="btn" onclick="zoomIn(1)">➕</button>
-        <button class="btn" onclick="zoomOut(1)">➖</button>
-        <button class="btn" onclick="resetZoom(1)">⭯ Reset</button>
-      </div>
-    </div>
-
-    <div>
-      <div class="img-wrap" id="wrap2">
-        <div class="info" id="info2"></div>
-        <img id="img2" class="compare-img">
-      </div>
-
-      <div class="controls">
-        <button class="btn" onclick="zoomIn(2)">➕</button>
-        <button class="btn" onclick="zoomOut(2)">➖</button>
-        <button class="btn" onclick="resetZoom(2)">⭯ Reset</button>
-      </div>
-    </div>
-
+    <div><div class="img-wrap" id="wrap1"><div class="info" id="info1"></div><img id="img1" class="compare-img"></div><div class="controls"><button class="btn" onclick="zoomIn(1)">➕</button><button class="btn" onclick="zoomOut(1)">➖</button><button class="btn" onclick="resetZoom(1)">⭯ Reset</button></div></div>
+    <div><div class="img-wrap" id="wrap2"><div class="info" id="info2"></div><img id="img2" class="compare-img"></div><div class="controls"><button class="btn" onclick="zoomIn(2)">➕</button><button class="btn" onclick="zoomOut(2)">➖</button><button class="btn" onclick="resetZoom(2)">⭯ Reset</button></div></div>
   </div>
 </div>
 
 <script>
-/* ======================== CARREGAR ======================== */
-async function carregarComparacao(){
-  const id1 = localStorage.getItem("comparar_id1");
-  const id2 = localStorage.getItem("comparar_id2");
-
-  if(!id1 || !id2){
-    alert("Selecione 2 fotos.");
-    window.location="galeria.html";
-    return;
-  }
-
-  /* ✅ Buscar foto + data */
-  const {data:fotos} = await supabase
-    .from("fotos")
-    .select("id,url,data_foto")
-    .in("id",[id1,id2]);
-
-  if(!fotos || fotos.length < 2){
-    alert("Erro ao carregar.");
-    window.location="galeria.html";
-    return;
-  }
-
-  const f1 = fotos.find(f => f.id == id1);
-  const f2 = fotos.find(f => f.id == id2);
-
-  document.getElementById("img1").src = f1.url;
-  document.getElementById("img2").src = f2.url;
-
-  /* ✅ Buscar pesos */
-  const {data: pesos} = await supabase
-    .from("pesos")
-    .select("data,peso");
-
-  const mapaPesos = {};
-  (pesos||[]).forEach(p=>{
-    const d = String(p.data).split("T")[0];
-    mapaPesos[d] = p.peso;
-  });
-
-  const d1 = String(f1.data_foto).split("T")[0];
-  const d2 = String(f2.data_foto).split("T")[0];
-
-  const peso1 = mapaPesos[d1] ? `${mapaPesos[d1]} kg` : "";
-  const peso2 = mapaPesos[d2] ? `${mapaPesos[d2]} kg` : "";
-
-  /* ✅ Exibir info correta em cada imagem */
-  document.getElementById("info1").textContent = peso1 ? `${d1} — ${peso1}` : d1;
-  document.getElementById("info2").textContent = peso2 ? `${d2} — ${peso2}` : d2;
-
-  aplicar(1);
-  aplicar(2);
-}
-
-/* ======================== TRANSFORM ======================== */
-const transform = {
-  1:{ scale:1,x:0,y:0 },
-  2:{ scale:1,x:0,y:0 }
-};
-
-function aplicar(n){
-  const img=document.getElementById(`img${n}`);
-  const t=transform[n];
-  img.style.transform = `translate(${t.x}px,${t.y}px) scale(${t.scale})`;
-}
-
+const transform = {1:{scale:1,x:0,y:0},2:{scale:1,x:0,y:0}};
+function aplicar(n){ const i=document.getElementById(`img${n}`); const t=transform[n]; i.style.transform=`translate(${t.x}px,${t.y}px) scale(${t.scale})`; }
 function zoomIn(n){ transform[n].scale=Math.min(transform[n].scale+0.2,4); aplicar(n); }
-function zoomOut(n){ 
-  transform[n].scale=Math.max(transform[n].scale-0.2,1);
-  if(transform[n].scale===1){ transform[n].x=0; transform[n].y=0; }
-  aplicar(n);
-}
+function zoomOut(n){ transform[n].scale=Math.max(transform[n].scale-0.2,1); if(transform[n].scale===1){transform[n].x=0;transform[n].y=0;} aplicar(n);}
 function resetZoom(n){ transform[n]={scale:1,x:0,y:0}; aplicar(n); }
 
-/* ======================== PAN ======================== */
 ["1","2"].forEach(n=>{
-  const wrap=document.getElementById(`wrap${n}`);
-  let dragging=false,lastX=0,lastY=0;
-
-  wrap.addEventListener("mousedown",e=>{
-    dragging=true;
-    lastX=e.clientX;
-    lastY=e.clientY;
-    wrap.classList.add("dragging");
-  });
-
-  window.addEventListener("mouseup",()=>{ dragging=false; wrap.classList.remove("dragging"); });
-
-  window.addEventListener("mousemove",e=>{
-    if(!dragging || transform[n].scale<=1) return;
-    transform[n].x += e.clientX-lastX;
-    transform[n].y += e.clientY-lastY;
-    lastX=e.clientX;
-    lastY=e.clientY;
-    aplicar(n);
-  });
+  const w=document.getElementById(`wrap${n}`); let drag=false,lx=0,ly=0;
+  w.addEventListener("mousedown",e=>{drag=true;lx=e.clientX;ly=e.clientY;w.classList.add("dragging");});
+  window.addEventListener("mouseup",()=>{drag=false;w.classList.remove("dragging");});
+  window.addEventListener("mousemove",e=>{if(!drag||transform[n].scale<=1)return;transform[n].x+=e.clientX-lx;transform[n].y+=e.clientY-ly;lx=e.clientX;ly=e.clientY;aplicar(n);});
 });
-
-/* ======================== TOUCH ======================== */
 ["1","2"].forEach(n=>{
-  const wrap=document.getElementById(`wrap${n}`);
-  let lastX=0,lastY=0,pinchStart=0;
-
-  wrap.addEventListener("touchstart",e=>{
-    if(e.touches.length===2){
-      const dx=e.touches[0].clientX-e.touches[1].clientX;
-      const dy=e.touches[0].clientY-e.touches[1].clientY;
-      pinchStart=Math.sqrt(dx*dx+dy*dy);
-    } else if(e.touches.length===1){
-      lastX=e.touches[0].clientX;
-      lastY=e.touches[0].clientY;
-    }
-  },{passive:false});
-
-  wrap.addEventListener("touchmove",e=>{
-    if(e.touches.length===2){
-      const dx=e.touches[0].clientX-e.touches[1].clientX;
-      const dy=e.touches[0].clientY-e.touches[1].clientY;
-      const dist=Math.sqrt(dx*dx+dy*dy);
-
-      let scale=transform[n].scale*(dist/pinchStart);
-      scale=Math.max(1,Math.min(4,scale));
-      transform[n].scale=scale;
-      pinchStart=dist;
-      aplicar(n);
-      e.preventDefault();
-    }
-    else if(e.touches.length===1 && transform[n].scale>1){
-      const t=e.touches[0];
-      transform[n].x += t.clientX-lastX;
-      transform[n].y += t.clientY-lastY;
-      lastX=t.clientX;
-      lastY=t.clientY;
-      aplicar(n);
-      e.preventDefault();
-    }
+  const w=document.getElementById(`wrap${n}`);let lx=0,ly=0,pinch=0;
+  w.addEventListener("touchstart",e=>{if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX;const dy=e.touches[0].clientY-e.touches[1].clientY;pinch=Math.sqrt(dx*dx+dy*dy);}else if(e.touches.length===1){lx=e.touches[0].clientX;ly=e.touches[0].clientY;}},{passive:false});
+  w.addEventListener("touchmove",e=>{
+    if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX;const dy=e.touches[0].clientY-e.touches[1].clientY;const dist=Math.sqrt(dx*dx+dy*dy);let sc=transform[n].scale*(dist/pinch);sc=Math.max(1,Math.min(4,sc));transform[n].scale=sc;pinch=dist;aplicar(n);e.preventDefault();}
+    else if(e.touches.length===1&&transform[n].scale>1){const t=e.touches[0];transform[n].x+=t.clientX-lx;transform[n].y+=t.clientY-ly;lx=t.clientX;ly=t.clientY;aplicar(n);e.preventDefault();}
   },{passive:false});
 });
 
-/* ======================== LAYOUT ======================== */
-function trocarPosicao(){
-  const g=document.getElementById("grid");
-  const p1=g.children[0], p2=g.children[1];
-  g.insertBefore(p2,p1);
+function trocarPosicao(){const g=document.getElementById("grid");const p1=g.children[0],p2=g.children[1];g.insertBefore(p2,p1);}
+let modo="lado";function toggleModo(){const g=document.getElementById("grid");modo=(modo==="lado")?"baixo":"lado";g.classList.remove("lado","baixo");g.classList.add(modo);}
+
+/* ====================== COMPARAÇÃO ====================== */
+async function carregarComparacao(){
+  const modo = localStorage.getItem("comparar_modo") || "imagem";
+  if(modo==="imagem"){return carregarComparacaoPorImagem();}
+  if(modo==="data"){return carregarComparacaoPorData();}
 }
 
-let modo="lado";
-function toggleModo(){
-  const grid=document.getElementById("grid");
-  modo=(modo==="lado")?"baixo":"lado";
-  grid.classList.remove("lado","baixo");
-  grid.classList.add(modo);
+/* --- MODO IMAGEM --- */
+async function carregarComparacaoPorImagem(){
+  const id1=localStorage.getItem("comparar_id1"), id2=localStorage.getItem("comparar_id2");
+  if(!id1||!id2){alert("Selecione 2 fotos.");window.location="galeria.html";return;}
+  const {data:fotos}=await supabase.from("fotos").select("id,url,data_foto").in("id",[id1,id2]);
+  if(!fotos||fotos.length<2){alert("Erro ao carregar.");window.location="galeria.html";return;}
+  const f1=fotos.find(f=>f.id==id1),f2=fotos.find(f=>f.id==id2);
+  document.getElementById("img1").src=f1.url;document.getElementById("img2").src=f2.url;
+  const {data:pesos}=await supabase.from("pesos").select("data,peso");const map={};(pesos||[]).forEach(p=>map[String(p.data).split("T")[0]]=p.peso);
+  const d1=String(f1.data_foto).split("T")[0],d2=String(f2.data_foto).split("T")[0];
+  document.getElementById("info1").textContent=`${d1}${map[d1]?` — ${map[d1]} kg`:""}`;
+  document.getElementById("info2").textContent=`${d2}${map[d2]?` — ${map[d2]} kg`:""}`;
+  aplicar(1);aplicar(2);
 }
 
+/* --- MODO DATA --- */
+async function carregarComparacaoPorData(){
+  const data1=localStorage.getItem("comparar_data1"), data2=localStorage.getItem("comparar_data2");
+  if(!data1||!data2){alert("Selecione 2 datas.");window.location="galeria.html";return;}
+  const {data:fotos1}=await supabase.from("fotos").select("url,data_foto").eq("data_foto",data1).order("id");
+  const {data:fotos2}=await supabase.from("fotos").select("url,data_foto").eq("data_foto",data2).order("id");
+  const {data:pesos}=await supabase.from("pesos").select("data,peso");
+  const map={};(pesos||[]).forEach(p=>map[String(p.data).split("T")[0]]=p.peso);
+  document.getElementById("info1").textContent=`${data1}${map[data1]?` — ${map[data1]} kg`:""}`;
+  document.getElementById("info2").textContent=`${data2}${map[data2]?` — ${map[data2]} kg`:""}`;
+
+  // carrossel simples (mostra primeira e permite avançar)
+  let idx1=0,idx2=0;
+  const img1=document.getElementById("img1"),img2=document.getElementById("img2");
+  function mostrar(){img1.src=fotos1[idx1]?.url||"";img2.src=fotos2[idx2]?.url||"";}
+  mostrar();
+  document.addEventListener("keydown",e=>{
+    if(e.key==="ArrowRight"){idx1=(idx1+1)%fotos1.length;idx2=(idx2+1)%fotos2.length;mostrar();}
+    if(e.key==="ArrowLeft"){idx1=(idx1-1+fotos1.length)%fotos1.length;idx2=(idx2-1+fotos2.length)%fotos2.length;mostrar();}
+  });
+  aplicar(1);aplicar(2);
+}
 carregarComparacao();
 </script>
 
