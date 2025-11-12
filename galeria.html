@@ -122,6 +122,13 @@
     display:none;
     z-index:2000;
   }
+
+  /* contador label do upload (pequeno ajuste visual) */
+  #contadorArquivos {
+    font-size:13px;
+    margin-top:6px;
+    color:#ccc;
+  }
 </style>
 </head>
 <body>
@@ -176,6 +183,8 @@
     <label>Fotos</label>
     <input type="file" id="uploadArquivos" multiple accept="image/*"/>
 
+    <div id="contadorArquivos"></div>
+
     <button class="btn-primary" onclick="enviarMultiplas()">Enviar</button>
   </div>
 </div>
@@ -222,10 +231,32 @@ async function enviarMultiplas(){
 function abrirUpload(){
   document.getElementById("uploadData").value = new Date().toISOString().slice(0,10);
   document.getElementById("modalUpload").setAttribute("aria-hidden","false");
+  // limpa contador ao abrir
+  const cont = document.getElementById("contadorArquivos");
+  if (cont) cont.textContent = "";
+  const input = document.getElementById("uploadArquivos");
+  if (input) input.value = "";
 }
 function fecharUpload(){
   document.getElementById("modalUpload").setAttribute("aria-hidden","true");
 }
+
+/* Contador de arquivos selecionados */
+(function attachFileCounter(){
+  const input = document.getElementById("uploadArquivos");
+  const contador = document.getElementById("contadorArquivos");
+  if (!input) return;
+
+  input.addEventListener("change", function () {
+    const qtd = this.files.length;
+    if (!contador) return;
+    if (qtd === 0) {
+      contador.textContent = "";
+      return;
+    }
+    contador.textContent = `${qtd} arquivo${qtd > 1 ? "s" : ""} selecionado${qtd > 1 ? "s" : ""}`;
+  });
+})();
 
 /* CARREGA GALERIA */
 async function carregarGaleria(){
@@ -359,7 +390,7 @@ function atualizarTopo(){
   document.getElementById("btnExcluirVarios").style.display = (n>0)?"block":"none";
 }
 
-/* === Funções que foram restauradas === */
+/* === Funções restauradas === */
 
 /* Editar selecionadas: altera a data das fotos selecionadas */
 async function editarSelecionados(){
