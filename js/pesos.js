@@ -231,10 +231,10 @@ function montarGrafico(lista) {
   const labels = asc.map(x => formatarData(x.data));
   const pesos = asc.map(x => x.peso);
 
-  // Calcula média móvel simples (3 pontos)
-  const mediaMovel = pesos.map((_, i) => {
-    const inicio = Math.max(0, i - 1);
-    const fim = Math.min(pesos.length - 1, i + 1);
+  // Média móvel suavizada (janela de 7 pontos)
+  const mediaSuave = pesos.map((_, i) => {
+    const inicio = Math.max(0, i - 3);
+    const fim = Math.min(pesos.length - 1, i + 3);
     const subset = pesos.slice(inicio, fim + 1);
     return subset.reduce((a, b) => a + b, 0) / subset.length;
   });
@@ -253,11 +253,12 @@ function montarGrafico(lista) {
           borderColor: "#1d5087"
         },
         {
-          label: "Média móvel",
-          data: mediaMovel,
-          borderColor: "rgba(255, 0, 0, 0.4)",
+          label: "Tendência",
+          data: mediaSuave,
+          borderColor: "rgba(255, 0, 0, 0.35)",
           borderWidth: 2,
-          tension: 0.25,
+          tension: 0.4,
+          cubicInterpolationMode: "monotone",
           pointRadius: 0
         }
       ]
