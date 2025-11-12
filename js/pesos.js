@@ -231,11 +231,13 @@ function montarGrafico(lista) {
   const labels = asc.map(x => formatarData(x.data));
   const pesos = asc.map(x => x.peso);
 
-  // Calcula média do filtro selecionado
-  const mediaFiltro = pesos.reduce((acc, x) => acc + x, 0) / pesos.length;
-
-  // Cria linha horizontal na média
-  const linhaMedia = new Array(pesos.length).fill(mediaFiltro);
+  // Calcula média móvel simples (3 pontos)
+  const mediaMovel = pesos.map((_, i) => {
+    const inicio = Math.max(0, i - 1);
+    const fim = Math.min(pesos.length - 1, i + 1);
+    const subset = pesos.slice(inicio, fim + 1);
+    return subset.reduce((a, b) => a + b, 0) / subset.length;
+  });
 
   if (grafico) grafico.destroy();
 
@@ -245,18 +247,16 @@ function montarGrafico(lista) {
       labels,
       datasets: [
         {
-          label: "Peso",
           data: pesos,
-          borderColor: "blue",
           borderWidth: 3,
           tension: 0.25
         },
         {
-          label: "Média",
-          data: linhaMedia,
+          label: "Média móvel",
+          data: mediaMovel,
           borderColor: "red",
           borderWidth: 2,
-          borderDash: [6, 6],
+          tension: 0.25,
           pointRadius: 0
         }
       ]
