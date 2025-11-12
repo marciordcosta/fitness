@@ -679,12 +679,54 @@ const _originalCarregarGaleria = carregarGaleria;
 carregarGaleria = async function() {
   await _originalCarregarGaleria();
   habilitarOrdenacao();
-}; 
+};
+
+// --- Correção definitiva: ativa drag em todos os blocos, inclusive mobile ---
+function ativarDragGarantido(){
+  document.querySelectorAll(".foto-bloco").forEach(bloco=>{
+    // evita duplicar listeners
+    if(bloco.dataset.dragFix) return;
+    bloco.dataset.dragFix = "1";
+
+    // cria área interna "handle" invisível
+    let handle = bloco.querySelector(".drag-handle");
+    if(!handle){
+      handle = document.createElement("div");
+      handle.className = "drag-handle";
+      handle.style.position = "absolute";
+      handle.style.inset = "0"; // cobre tudo
+      handle.style.cursor = "grab";
+      handle.style.zIndex = "5";
+      handle.style.background = "transparent";
+      bloco.appendChild(handle);
+    }
+
+    // força dragstart manual
+    handle.addEventListener("mousedown", e=>{
+      const ev = new DragEvent("dragstart",{bubbles:true,cancelable:true});
+      bloco.dispatchEvent(ev);
+    });
+
+    // mobile long-touch fallback
+    let touchTimer=null;
+    handle.addEventListener("touchstart",e=>{
+      touchTimer=setTimeout(()=>{
+        const ev=new DragEvent("dragstart",{bubbles:true,cancelable:true});
+        bloco.dispatchEvent(ev);
+      },400);
+    },{passive:true});
+    handle.addEventListener("touchend",()=>{ if(touchTimer) clearTimeout(touchTimer); });
+  });
+}
+
+// chama após renderizar e após habilitarOrdenacao
+setTimeout(()=>ativarDragGarantido(),600); 
   
 </script>
 
 </body>
 </html>
+
 
 
 
