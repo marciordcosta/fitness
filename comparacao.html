@@ -182,7 +182,6 @@ async function carregarComparacaoPorImagem(){
 }
 
 /* --- MODO DATA --- */
-/* --- MODO DATA (versão final com setas integradas) --- */
 async function carregarComparacaoPorData() {
   const data1 = localStorage.getItem("comparar_data1"),
         data2 = localStorage.getItem("comparar_data2");
@@ -242,29 +241,22 @@ async function carregarComparacaoPorData() {
 
   mostrar();
 
-  // 🔧 garante que existe um container para inserir botões
-  function obterOuCriarControls(img, lado) {
-    let c = img.closest(".controls");
-    if (!c) {
-      c = document.createElement("div");
-      c.className = "controls";
-      img.parentElement.insertAdjacentElement("afterend", c);
-    }
-
-    // limpa controles anteriores e cria conjunto completo
+  // 🔧 substitui o conteúdo dos botões existentes
+  function atualizarControles(lado) {
+    const c = document.querySelectorAll(".controls")[lado - 1];
+    if (!c) return;
     c.innerHTML = `
-      <button class="btn" onclick="anterior(${lado})">⬅️</button>
+      <button class="btn" onclick="anterior(${lado})">◁</button>
       <span id="contador${lado}" style="margin:0 4px;">${(lado === 1 ? idx1 + 1 : idx2 + 1)}/${(lado === 1 ? total1 : total2)}</span>
-      <button class="btn" onclick="proximo(${lado})">➡️</button>
+      <button class="btn" onclick="proximo(${lado})">▷</button>
       <button class="btn" onclick="zoomIn(${lado})">➕</button>
       <button class="btn" onclick="zoomOut(${lado})">➖</button>
       <button class="btn" onclick="resetZoom(${lado})">⭯ Reset</button>
     `;
-    return c;
   }
 
-  obterOuCriarControls(img1, 1);
-  obterOuCriarControls(img2, 2);
+  atualizarControles(1);
+  atualizarControles(2);
 
   // funções globais p/ navegação
   window.proximo = function (lado) {
