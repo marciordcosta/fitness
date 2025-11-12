@@ -250,6 +250,7 @@ function montarGrafico(lista) {
           data: pesos,
           borderWidth: 3,
           tension: 0.25
+          borderColor: "#1d5087"
         },
         {
           label: "Média móvel",
