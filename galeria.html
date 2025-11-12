@@ -466,52 +466,41 @@ async function abrirCarrosselDia(idClicado,dia){
   window.location="carrossel.html";
 }
 
-/* Excluir selecionadas: remove do Storage e do DB (mesma lógica original) */
-async function excluirSelecionados(){
-  if(!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
+/* Excluir selecionadas: remove do Storage e do DB */
+async function excluirSelecionados() {
+  if (selecionadas.size === 0) return;
+  if (!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
 
   const bucket = "fotos";
 
   const getStorageNameFromUrl = (url) => {
     if (!url) return null;
-    let path = url.split("/object/public/")[1] || url;
-    if (!path.startsWith(bucket + "/")) {
-      const afterBucket = url.split(`/${bucket}/`)[1];
-      if (afterBucket) path = `${bucket}/${afterBucket}`;
+    try {
+      let clean = url.split("/object/public/")[1] || url;
+      if (clean.startsWith(bucket + "/")) clean = clean.slice(bucket.length + 1);
+      if (clean.includes("?")) clean = clean.split("?")[0];
+      clean = decodeURIComponent(clean);
+      return clean.split("/").pop();
+    } catch {
+      return null;
     }
-    if (path.includes("?")) path = path.split("?")[0];
-    path = decodeURIComponent(path);
-    if (path.startsWith(bucket + "/")) path = path.slice(bucket.length + 1);
-    return path || null;
   };
 
   const removerDoStorage = async (url) => {
-    let name = getStorageNameFromUrl(url);
-    if (!name) return { ok:false, msg:"URL inválida" };
+    const name = getStorageNameFromUrl(url);
+    if (!name) return { ok: false, msg: "URL inválida" };
 
-    let { error } = await supabase.storage.from(bucket).remove([name]);
-    if (!error) return { ok:true };
+    const { error } = await supabase.storage.from(bucket).remove([name]);
+    if (!error) return { ok: true };
 
-    const { data:lista, error:listErr } = await supabase.storage.from(bucket).list("", { limit: 1000 });
-    if (listErr) return { ok:false, msg:`Listagem falhou: ${listErr.message||listErr}` };
-
-    let match = lista?.find(f => f.name === name);
-    if (!match) {
-      const low = name.toLowerCase();
-      match = lista?.find(f => f.name.toLowerCase() === low);
-    }
-    if (!match) {
-      const base = name.split("/").pop();
-      match = lista?.find(f => f.name === base) || lista?.find(f => f.name.toLowerCase() === base.toLowerCase());
-    }
-
+    console.warn("Falha na remoção direta:", error.message);
+    const { data: lista } = await supabase.storage.from(bucket).list("", { limit: 1000 });
+    const match = lista?.find(f => f.name === name);
     if (match) {
       const r2 = await supabase.storage.from(bucket).remove([match.name]);
-      if (!r2.error) return { ok:true };
-      return { ok:false, msg:`Storage remove falhou: ${r2.error.message||r2.error}` };
+      if (!r2.error) return { ok: true };
     }
-
-    return { ok:false, msg:`Arquivo não encontrado no bucket: ${name}` };
+    return { ok: false, msg: "Arquivo não encontrado no bucket" };
   };
 
   for (let id of selecionadas) {
@@ -521,23 +510,16 @@ async function excluirSelecionados(){
       .eq("id", id)
       .single();
 
-    if (dbErr) {
-      console.error("Erro ao buscar URL no banco:", dbErr);
-      alert("Erro ao buscar URL no banco. Veja o console.");
+    if (dbErr || !foto) {
+      console.warn("Erro ao buscar URL:", dbErr);
       continue;
     }
 
-    const r = await removerDoStorage(foto?.url);
-    if (!r.ok) {
-      console.error("Falha ao excluir do Storage:", r.msg);
-      alert(`Não consegui excluir do Storage.\nMotivo: ${r.msg}\nVeja o console para detalhes.`);
-    }
+    const r = await removerDoStorage(foto.url);
+    if (!r.ok) console.warn("Falha ao remover do Storage:", r.msg);
 
     const { error: delDbErr } = await supabase.from("fotos").delete().eq("id", id);
-    if (delDbErr) {
-      console.error("Erro ao excluir registro no banco:", delDbErr);
-      alert("Erro ao excluir no banco. Veja o console.");
-    }
+    if (delDbErr) console.warn("Erro ao excluir no banco:", delDbErr);
   }
 
   selecionadas.clear();
@@ -582,6 +564,7 @@ carregarGaleria();
 
 </body>
 </html>
+
 
 
 
