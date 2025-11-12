@@ -231,13 +231,35 @@ function montarGrafico(lista) {
   const labels = asc.map(x => formatarData(x.data));
   const pesos = asc.map(x => x.peso);
 
+  // Calcula média do filtro selecionado
+  const mediaFiltro = pesos.reduce((acc, x) => acc + x, 0) / pesos.length;
+
+  // Cria linha horizontal na média
+  const linhaMedia = new Array(pesos.length).fill(mediaFiltro);
+
   if (grafico) grafico.destroy();
 
   grafico = new Chart(document.getElementById("graficoPeso"), {
     type: "line",
     data: {
       labels,
-      datasets: [{ data: pesos, borderWidth: 3, tension: 0.25 }]
+      datasets: [
+        {
+          label: "Peso",
+          data: pesos,
+          borderColor: "blue",
+          borderWidth: 3,
+          tension: 0.25
+        },
+        {
+          label: "Média",
+          data: linhaMedia,
+          borderColor: "red",
+          borderWidth: 2,
+          borderDash: [6, 6],
+          pointRadius: 0
+        }
+      ]
     },
     options: {
       responsive: true,
@@ -264,7 +286,6 @@ function calcularSemanasEMedias() {
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
 
-  // terça → segunda
   const day = hoje.getDay();
   const delta = (day - 2 + 7) % 7;
 
