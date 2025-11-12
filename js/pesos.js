@@ -250,12 +250,12 @@ function montarGrafico(lista) {
           data: pesos,
           borderWidth: 3,
           tension: 0.25,
-          borderColor: "#1d5087"
+          borderColor: "#75a7ff"
         },
         {
           label: "Tendência",
           data: mediaSuave,
-          borderColor: "rgba(255, 0, 0, 0.35)",
+          borderColor: "#ff3b30",
           borderWidth: 2,
           tension: 0.4,
           cubicInterpolationMode: "monotone",
