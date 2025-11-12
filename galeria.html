@@ -271,9 +271,10 @@ async function carregarGaleria(){
   });
 
   const { data: fotos } = await supabase
-    .from("fotos")
-    .select("id,data_foto,url")
-    .order("data_foto",{ ascending:false });
+  .from("fotos")
+  .select("id,data_foto,url,ordem")
+  .order("data_foto", { ascending: false })
+  .order("ordem", { ascending: true });
 
   const area=document.getElementById("conteudoGaleria");
   area.innerHTML="";
@@ -581,6 +582,7 @@ carregarGaleria();
 
 </body>
 </html>
+
 
 
 
