@@ -11,6 +11,7 @@
 
 <style>
   body { background:#000; margin:0; color:#fff; min-height:100vh; }
+  html { background:#000; height:100%; }
 
   .galeria-header{
     padding:12px 16px;
@@ -23,7 +24,7 @@
     border-bottom:1px solid #222;
   }
 
-  #conteudoGaleria{ margin-top:80px; }
+  #conteudoGaleria{ margin-top:80px; background:#000; min-height:100vh; }
 
   .header-icon{
     width:40px; height:40px;
@@ -194,6 +195,7 @@ function normalizeDate(val){
   return s.slice(0,10);
 }
 
+/* UPLOAD */
 async function enviarMultiplas(){
   const data = document.getElementById("uploadData").value;
   const files = document.getElementById("uploadArquivos").files;
@@ -225,6 +227,7 @@ function fecharUpload(){
   document.getElementById("modalUpload").setAttribute("aria-hidden","true");
 }
 
+/* CARREGA GALERIA */
 async function carregarGaleria(){
   selecionadas.clear();
   atualizarTopo();
@@ -278,12 +281,14 @@ async function carregarGaleria(){
   anexarHandlers();
 }
 
+/* TOGGLE fotos do dia */
 function toggleFotos(key){
   const grid=document.getElementById(`grid-${key}`);
   if(!grid) return;
   grid.style.display = (grid.style.display==="none") ? "grid" : "none";
 }
 
+/* Handlers das imagens */
 function anexarHandlers(){
   document.querySelectorAll(".foto-galeria").forEach(img=>{
     const id  = Number(img.dataset.id);
@@ -324,6 +329,7 @@ function anexarHandlers(){
   });
 }
 
+/* Sair do modo seleção */
 function sairModoSelecao(){
   selectionModeMobile=false;
   document.getElementById("btnSairSelecao").style.display="none";
@@ -332,6 +338,7 @@ function sairModoSelecao(){
   atualizarTopo();
 }
 
+/* Toggle seleção */
 function toggleSelecao(id){
   const bloco=document.getElementById(`foto-${id}`);
   if(selecionadas.has(id)){
@@ -344,6 +351,7 @@ function toggleSelecao(id){
   atualizarTopo();
 }
 
+/* Atualiza topo (mostrar/ocultar botões) */
 function atualizarTopo(){
   const n = selecionadas.size;
   document.getElementById("btnComparar").style.display = (n===2)?"block":"none";
@@ -351,9 +359,137 @@ function atualizarTopo(){
   document.getElementById("btnExcluirVarios").style.display = (n>0)?"block":"none";
 }
 
+/* === Funções que foram restauradas === */
+
+/* Editar selecionadas: altera a data das fotos selecionadas */
+async function editarSelecionados(){
+  if(selecionadas.size===0) return;
+  const nova=prompt("Nova data (AAAA-MM-DD):");
+  if(!nova) return;
+
+  for(let id of selecionadas){
+    await supabase.from("fotos").update({data_foto:nova}).eq("id",id);
+  }
+
+  selecionadas.clear();
+  carregarGaleria();
+}
+
+/* Comparar selecionadas: guarda IDs e vai para pagina de comparação */
+function compararSelecionadas(){
+  if(selecionadas.size!==2) return;
+
+  const ids=[...selecionadas];
+  localStorage.setItem("comparar_id1",ids[0]);
+  localStorage.setItem("comparar_id2",ids[1]);
+
+  window.location="comparacao.html";
+}
+
+/* Abrir carrossel do dia (quando clica/doubleclick em imagem) */
+async function abrirCarrosselDia(idClicado,dia){
+  const { data } = await supabase
+    .from("fotos")
+    .select("id,url,data_foto")
+    .eq("data_foto",dia)
+    .order("id");
+
+  if(!data||!data.length) return;
+
+  const items = data.map(x=>({id:x.id,url:x.url}));
+  const idx = items.findIndex(x=>x.id===idClicado);
+
+  const peso = window.mapaPesos[dia] ?? "";
+
+  localStorage.setItem("carousel_items",JSON.stringify(items));
+  localStorage.setItem("carousel_index",String(idx));
+  localStorage.setItem("carousel_dia",dia);
+  localStorage.setItem("carousel_peso",peso);
+
+  window.location="carrossel.html";
+}
+
+/* Excluir selecionadas: remove do Storage e do DB (mesma lógica original) */
+async function excluirSelecionados(){
+  if(!confirm(`Excluir ${selecionadas.size} foto(s)?`)) return;
+
+  const bucket = "fotos";
+
+  const getStorageNameFromUrl = (url) => {
+    if (!url) return null;
+    let path = url.split("/object/public/")[1] || url;
+    if (!path.startsWith(bucket + "/")) {
+      const afterBucket = url.split(`/${bucket}/`)[1];
+      if (afterBucket) path = `${bucket}/${afterBucket}`;
+    }
+    if (path.includes("?")) path = path.split("?")[0];
+    path = decodeURIComponent(path);
+    if (path.startsWith(bucket + "/")) path = path.slice(bucket.length + 1);
+    return path || null;
+  };
+
+  const removerDoStorage = async (url) => {
+    let name = getStorageNameFromUrl(url);
+    if (!name) return { ok:false, msg:"URL inválida" };
+
+    let { error } = await supabase.storage.from(bucket).remove([name]);
+    if (!error) return { ok:true };
+
+    const { data:lista, error:listErr } = await supabase.storage.from(bucket).list("", { limit: 1000 });
+    if (listErr) return { ok:false, msg:`Listagem falhou: ${listErr.message||listErr}` };
+
+    let match = lista?.find(f => f.name === name);
+    if (!match) {
+      const low = name.toLowerCase();
+      match = lista?.find(f => f.name.toLowerCase() === low);
+    }
+    if (!match) {
+      const base = name.split("/").pop();
+      match = lista?.find(f => f.name === base) || lista?.find(f => f.name.toLowerCase() === base.toLowerCase());
+    }
+
+    if (match) {
+      const r2 = await supabase.storage.from(bucket).remove([match.name]);
+      if (!r2.error) return { ok:true };
+      return { ok:false, msg:`Storage remove falhou: ${r2.error.message||r2.error}` };
+    }
+
+    return { ok:false, msg:`Arquivo não encontrado no bucket: ${name}` };
+  };
+
+  for (let id of selecionadas) {
+    const { data: foto, error: dbErr } = await supabase
+      .from("fotos")
+      .select("url")
+      .eq("id", id)
+      .single();
+
+    if (dbErr) {
+      console.error("Erro ao buscar URL no banco:", dbErr);
+      alert("Erro ao buscar URL no banco. Veja o console.");
+      continue;
+    }
+
+    const r = await removerDoStorage(foto?.url);
+    if (!r.ok) {
+      console.error("Falha ao excluir do Storage:", r.msg);
+      alert(`Não consegui excluir do Storage.\nMotivo: ${r.msg}\nVeja o console para detalhes.`);
+    }
+
+    const { error: delDbErr } = await supabase.from("fotos").delete().eq("id", id);
+    if (delDbErr) {
+      console.error("Erro ao excluir registro no banco:", delDbErr);
+      alert("Erro ao excluir no banco. Veja o console.");
+    }
+  }
+
+  selecionadas.clear();
+  carregarGaleria();
+}
+
+/* Inicializa */
 carregarGaleria();
 </script>
 
 </body>
 </html>
-
