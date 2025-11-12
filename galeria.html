@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="style.css" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="js/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <style>
   body { background:#000; margin:0; color:#fff; min-height:100vh; }
@@ -542,12 +543,45 @@ async function excluirSelecionados(){
   carregarGaleria();
 }
 
+  /* === ORDENAR FOTOS POR DATA (arrastar e soltar) === */
+function habilitarOrdenacaoComSortable() {
+  document.querySelectorAll(".grid").forEach(grid => {
+    if (grid._sortable) return; // evita inicializar duas vezes
+    const sortable = new Sortable(grid, {
+      animation: 150,
+      draggable: ".foto-bloco",
+      handle: ".foto-bloco",
+      onEnd: async () => {
+        const ids = [...grid.querySelectorAll(".foto-bloco")].map(b => b.id.replace("foto-", ""));
+        const data = grid.id.replace("grid-", "");
+        try {
+          for (let i = 0; i < ids.length; i++) {
+            await supabase.from("fotos").update({ ordem: i }).eq("id", ids[i]);
+          }
+          console.log(`✅ Ordem salva para ${data}:`, ids);
+        } catch (e) {
+          console.warn("⚠️ Falha ao salvar ordem:", e);
+        }
+      }
+    });
+    grid._sortable = sortable;
+  });
+}
+
+/* chama após carregar a galeria */
+const _originalCarregarGaleria = carregarGaleria;
+carregarGaleria = async function() {
+  await _originalCarregarGaleria();
+  habilitarOrdenacaoComSortable();
+};
+
 /* Inicializa */
 carregarGaleria();
 </script>
 
 </body>
 </html>
+
 
 
 
