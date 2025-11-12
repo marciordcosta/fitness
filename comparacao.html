@@ -182,7 +182,6 @@ async function carregarComparacaoPorImagem(){
 }
 
 /* --- MODO DATA --- */
-/* --- MODO DATA (corrigido: inicia na foto selecionada) --- */
 async function carregarComparacaoPorData() {
   const data1 = localStorage.getItem("comparar_data1"),
         data2 = localStorage.getItem("comparar_data2");
@@ -192,7 +191,6 @@ async function carregarComparacaoPorData() {
     return;
   }
 
-  // Recupera a imagem que o usuário clicou em cada data
   const id1 = localStorage.getItem("comparar_id1");
   const id2 = localStorage.getItem("comparar_id2");
 
@@ -219,14 +217,8 @@ async function carregarComparacaoPorData() {
     map[data2] ? ` — ${map[data2]} kg` : ""
   }`;
 
-  // Encontra o índice da foto selecionada em cada data
-  let idx1 = id1
-    ? fotos1.findIndex(f => String(f.id) === String(id1))
-    : 0;
-  let idx2 = id2
-    ? fotos2.findIndex(f => String(f.id) === String(id2))
-    : 0;
-
+  let idx1 = id1 ? fotos1.findIndex(f => String(f.id) === String(id1)) : 0;
+  let idx2 = id2 ? fotos2.findIndex(f => String(f.id) === String(id2)) : 0;
   if (idx1 < 0) idx1 = 0;
   if (idx2 < 0) idx2 = 0;
 
@@ -249,26 +241,35 @@ async function carregarComparacaoPorData() {
 
   mostrar();
 
-  // adiciona botões de navegação embaixo de cada imagem
-  const c1 = img1.closest(".controls");
-  const c2 = img2.closest(".controls");
-  if (c1 && c2) {
-    const nav1 = document.createElement("div");
-    nav1.style.marginTop = "8px";
-    nav1.innerHTML = `
-      <button class="btn" onclick="anterior(1)">⬅️</button>
-      <span id="contador1" style="margin:0 6px;">1/${total1}</span>
-      <button class="btn" onclick="proximo(1)">➡️</button>`;
-    c1.appendChild(nav1);
-
-    const nav2 = document.createElement("div");
-    nav2.style.marginTop = "8px";
-    nav2.innerHTML = `
-      <button class="btn" onclick="anterior(2)">⬅️</button>
-      <span id="contador2" style="margin:0 6px;">1/${total2}</span>
-      <button class="btn" onclick="proximo(2)">➡️</button>`;
-    c2.appendChild(nav2);
+  // 🔧 garante que existe um container para inserir botões
+  function obterOuCriarControls(img) {
+    let c = img.closest(".controls");
+    if (!c) {
+      c = document.createElement("div");
+      c.className = "controls";
+      img.parentElement.insertAdjacentElement("afterend", c);
+    }
+    return c;
   }
+
+  const c1 = obterOuCriarControls(img1);
+  const c2 = obterOuCriarControls(img2);
+
+  const nav1 = document.createElement("div");
+  nav1.style.marginTop = "8px";
+  nav1.innerHTML = `
+    <button class="btn" onclick="anterior(1)">⬅️</button>
+    <span id="contador1" style="margin:0 6px;">${idx1 + 1}/${total1}</span>
+    <button class="btn" onclick="proximo(1)">➡️</button>`;
+  c1.appendChild(nav1);
+
+  const nav2 = document.createElement("div");
+  nav2.style.marginTop = "8px";
+  nav2.innerHTML = `
+    <button class="btn" onclick="anterior(2)">⬅️</button>
+    <span id="contador2" style="margin:0 6px;">${idx2 + 1}/${total2}</span>
+    <button class="btn" onclick="proximo(2)">➡️</button>`;
+  c2.appendChild(nav2);
 
   // funções globais p/ navegação
   window.proximo = function (lado) {
