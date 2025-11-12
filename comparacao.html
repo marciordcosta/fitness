@@ -182,27 +182,120 @@ async function carregarComparacaoPorImagem(){
 }
 
 /* --- MODO DATA --- */
-async function carregarComparacaoPorData(){
-  const data1=localStorage.getItem("comparar_data1"), data2=localStorage.getItem("comparar_data2");
-  if(!data1||!data2){alert("Selecione 2 datas.");window.location="galeria.html";return;}
-  const {data:fotos1}=await supabase.from("fotos").select("url,data_foto").eq("data_foto",data1).order("id");
-  const {data:fotos2}=await supabase.from("fotos").select("url,data_foto").eq("data_foto",data2).order("id");
-  const {data:pesos}=await supabase.from("pesos").select("data,peso");
-  const map={};(pesos||[]).forEach(p=>map[String(p.data).split("T")[0]]=p.peso);
-  document.getElementById("info1").textContent=`${data1}${map[data1]?` — ${map[data1]} kg`:""}`;
-  document.getElementById("info2").textContent=`${data2}${map[data2]?` — ${map[data2]} kg`:""}`;
+/* --- MODO DATA (corrigido: inicia na foto selecionada) --- */
+async function carregarComparacaoPorData() {
+  const data1 = localStorage.getItem("comparar_data1"),
+        data2 = localStorage.getItem("comparar_data2");
+  if (!data1 || !data2) {
+    alert("Selecione 2 datas.");
+    window.location = "galeria.html";
+    return;
+  }
 
-  // carrossel simples (mostra primeira e permite avançar)
-  let idx1=0,idx2=0;
-  const img1=document.getElementById("img1"),img2=document.getElementById("img2");
-  function mostrar(){img1.src=fotos1[idx1]?.url||"";img2.src=fotos2[idx2]?.url||"";}
+  // Recupera a imagem que o usuário clicou em cada data
+  const id1 = localStorage.getItem("comparar_id1");
+  const id2 = localStorage.getItem("comparar_id2");
+
+  const { data: fotos1 } = await supabase
+    .from("fotos")
+    .select("id,url,data_foto")
+    .eq("data_foto", data1)
+    .order("id");
+
+  const { data: fotos2 } = await supabase
+    .from("fotos")
+    .select("id,url,data_foto")
+    .eq("data_foto", data2)
+    .order("id");
+
+  const { data: pesos } = await supabase.from("pesos").select("data,peso");
+  const map = {};
+  (pesos || []).forEach(p => (map[String(p.data).split("T")[0]] = p.peso));
+
+  document.getElementById("info1").textContent = `${data1}${
+    map[data1] ? ` — ${map[data1]} kg` : ""
+  }`;
+  document.getElementById("info2").textContent = `${data2}${
+    map[data2] ? ` — ${map[data2]} kg` : ""
+  }`;
+
+  // Encontra o índice da foto selecionada em cada data
+  let idx1 = id1
+    ? fotos1.findIndex(f => String(f.id) === String(id1))
+    : 0;
+  let idx2 = id2
+    ? fotos2.findIndex(f => String(f.id) === String(id2))
+    : 0;
+
+  if (idx1 < 0) idx1 = 0;
+  if (idx2 < 0) idx2 = 0;
+
+  const img1 = document.getElementById("img1");
+  const img2 = document.getElementById("img2");
+  const total1 = fotos1.length;
+  const total2 = fotos2.length;
+
+  function mostrar() {
+    img1.src = fotos1[idx1]?.url || "";
+    img2.src = fotos2[idx2]?.url || "";
+    atualizarContador(1, idx1, total1);
+    atualizarContador(2, idx2, total2);
+  }
+
+  function atualizarContador(lado, idx, total) {
+    const el = document.getElementById(`contador${lado}`);
+    if (el) el.textContent = `${idx + 1}/${total}`;
+  }
+
   mostrar();
-  document.addEventListener("keydown",e=>{
-    if(e.key==="ArrowRight"){idx1=(idx1+1)%fotos1.length;idx2=(idx2+1)%fotos2.length;mostrar();}
-    if(e.key==="ArrowLeft"){idx1=(idx1-1+fotos1.length)%fotos1.length;idx2=(idx2-1+fotos2.length)%fotos2.length;mostrar();}
-  });
-  aplicar(1);aplicar(2);
+
+  // adiciona botões de navegação embaixo de cada imagem
+  const c1 = img1.closest(".controls");
+  const c2 = img2.closest(".controls");
+  if (c1 && c2) {
+    const nav1 = document.createElement("div");
+    nav1.style.marginTop = "8px";
+    nav1.innerHTML = `
+      <button class="btn" onclick="anterior(1)">⬅️</button>
+      <span id="contador1" style="margin:0 6px;">1/${total1}</span>
+      <button class="btn" onclick="proximo(1)">➡️</button>`;
+    c1.appendChild(nav1);
+
+    const nav2 = document.createElement("div");
+    nav2.style.marginTop = "8px";
+    nav2.innerHTML = `
+      <button class="btn" onclick="anterior(2)">⬅️</button>
+      <span id="contador2" style="margin:0 6px;">1/${total2}</span>
+      <button class="btn" onclick="proximo(2)">➡️</button>`;
+    c2.appendChild(nav2);
+  }
+
+  // funções globais p/ navegação
+  window.proximo = function (lado) {
+    if (lado === 1 && total1 > 0) {
+      idx1 = (idx1 + 1) % total1;
+      mostrar();
+    }
+    if (lado === 2 && total2 > 0) {
+      idx2 = (idx2 + 1) % total2;
+      mostrar();
+    }
+  };
+  window.anterior = function (lado) {
+    if (lado === 1 && total1 > 0) {
+      idx1 = (idx1 - 1 + total1) % total1;
+      mostrar();
+    }
+    if (lado === 2 && total2 > 0) {
+      idx2 = (idx2 - 1 + total2) % total2;
+      mostrar();
+    }
+  };
+
+  aplicar(1);
+  aplicar(2);
 }
+  
 carregarComparacao();
 </script>
 
