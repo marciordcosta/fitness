@@ -336,12 +336,14 @@ function anexarHandlers(){
     img.addEventListener("touchstart", e=>{
       movedY=0;
       startY=e.touches[0].clientY;
-      pressTimer=setTimeout(()=>{
-        selectionModeMobile=true;
-        document.getElementById("btnSairSelecao").style.display="block";
-        toggleSelecao(id);
-      },420);
-    },{passive:true});
+      pressTimer = setTimeout(() => {
+      selectionModeMobile = true;
+      document.getElementById("btnSairSelecao").style.display = "block";
+      toggleSelecao(id);
+      // Evita o touchend seguinte de "tirar" a seleção inicial
+      img.classList.add("bloquearTouchEnd");
+    }, 420);
+  },{passive:true});
 
     img.addEventListener("touchmove", e=>{
       movedY=Math.abs(e.touches[0].clientY-startY);
@@ -354,6 +356,13 @@ function anexarHandlers(){
     img.addEventListener("touchend", ()=>{
       if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; }
       if(movedY>10) return;
+
+      // Evita que o primeiro touchend desmarque a seleção recém criada
+      if (img.classList.contains("bloquearTouchEnd")) {
+        img.classList.remove("bloquearTouchEnd");
+        return;
+      }
+
       if(selectionModeMobile) toggleSelecao(id);
       else abrirCarrosselDia(id,dia);
     },{passive:true});
@@ -524,3 +533,4 @@ carregarGaleria();
 
 </body>
 </html>
+
