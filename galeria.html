@@ -129,6 +129,13 @@
     margin-top:6px;
     color:#ccc;
   }
+
+.arrastando {
+  opacity: 0.6;
+  border: 2px dashed #007aff !important;
+  border-radius: 6px;
+}
+  
 </style>
 </head>
 <body>
@@ -307,6 +314,9 @@ async function carregarGaleria(){
              class="foto-galeria"
              data-id="${f.id}" data-dia="${key}">
       </div>`).join("");
+    
+    // torna as imagens arrastáveis no desktop
+   grid.querySelectorAll("img").forEach(img => img.setAttribute("draggable", "true"));
   });
 
   anexarHandlers();
@@ -665,6 +675,7 @@ carregarGaleria = async function() {
 
 </body>
 </html>
+
 
 
 
