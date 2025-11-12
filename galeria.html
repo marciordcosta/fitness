@@ -564,7 +564,7 @@ function habilitarOrdenacao() {
 
     // eventos de mouse
     grid.addEventListener("dragstart", e => {
-      if (!e.target.classList.contains("foto-galeria")) return;
+      if (!e.target.closest(".foto-bloco")) return;
       dragging = e.target.closest(".foto-bloco");
       startIndex = [...grid.children].indexOf(dragging);
       e.dataTransfer.effectAllowed = "move";
@@ -675,6 +675,7 @@ carregarGaleria = async function() {
 
 </body>
 </html>
+
 
 
 
