@@ -422,23 +422,21 @@ function compararSelecionadas(){
   if (selecionadas.size !== 2) return;
 
   const ids = [...selecionadas];
-  const dias = [...new Set(ids.map(id => document.querySelector(`#foto-${id}`).dataset.dia))];
 
-  if (dias.length === 1) {
-    // 🔵 Modo original (duas imagens da mesma data)
-    localStorage.setItem("comparar_modo", "imagem");
-    localStorage.setItem("comparar_id1", ids[0]);
-    localStorage.setItem("comparar_id2", ids[1]);
-  } else {
-    // 🔴 Novo modo (comparação por data)
-    localStorage.setItem("comparar_modo", "data");
-    localStorage.setItem("comparar_data1", dias[0]);
-    localStorage.setItem("comparar_data2", dias[1]);
+  const dias = [...new Set(ids.map(id => 
+    document.querySelector(`#foto-${id}`).dataset.dia
+  ))];
 
-    // 🔹 Também salva os IDs das fotos clicadas (fundamental para abrir na posição correta)
-    localStorage.setItem("comparar_id1", ids[0]);
-    localStorage.setItem("comparar_id2", ids[1]);
-  }
+  // 🔵 Sempre comparação por data, mesmo se as duas forem do mesmo dia
+  localStorage.setItem("comparar_modo", "data");
+
+  localStorage.setItem("comparar_data1", dias[0]);
+  localStorage.setItem("comparar_data2", dias[1] || dias[0]); 
+  // se for mesma data, data2 = data1
+
+  // Fotos selecionadas → para iniciar carrossel no item correto
+  localStorage.setItem("comparar_id1", ids[0]);
+  localStorage.setItem("comparar_id2", ids[1]);
 
   window.location = "comparacao.html";
 }
@@ -564,6 +562,7 @@ carregarGaleria();
 
 </body>
 </html>
+
 
 
 
