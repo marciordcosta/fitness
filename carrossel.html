@@ -52,6 +52,12 @@ body{margin:0;background:#000;overflow:hidden;touch-action:none}
 </head>
 <body>
 
+<script>
+supabase.auth.getUser().then(({ data }) => {
+  if (!data.user) window.location.href = "login.html";
+});
+</script>
+
 <button id="btnClose" onclick="voltar()">X</button>
 <div id="infoBox"></div>
 
@@ -261,3 +267,4 @@ async function excluirFoto(){
 
 </body>
 </html>
+
