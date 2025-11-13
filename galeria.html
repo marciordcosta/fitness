@@ -134,6 +134,12 @@
 </head>
 <body>
 
+<script>
+supabase.auth.getUser().then(({ data }) => {
+  if (!data.user) window.location.href = "login.html";
+});
+</script>
+
 <div class="galeria-header">
   <div class="header-icon" onclick="window.location='index.html'">
     <svg fill="none" stroke-width="2.4" viewBox="0 0 24 24">
@@ -562,6 +568,7 @@ carregarGaleria();
 
 </body>
 </html>
+
 
 
 
