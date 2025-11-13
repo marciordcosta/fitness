@@ -121,6 +121,12 @@ body{
 </head>
 <body>
 
+<script>
+supabase.auth.getUser().then(({ data }) => {
+  if (!data.user) window.location.href = "login.html";
+});
+</script>
+
 <div class="side-bar">
   <button class="btn-side" onclick="trocarPosicao()">⇆</button>
   <button class="btn-side" onclick="toggleModo()">↕/↔</button>
