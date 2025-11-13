@@ -11,6 +11,12 @@
 
   <script src="js/supabase.js"></script>
   <script src="js/pesos.js"></script>
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#000000">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+
 </head>
 <body>
 
@@ -144,6 +150,13 @@
 supabase.auth.getUser().then(({ data }) => {
   if (!data.user) window.location.href = "login.html";
 });
+  
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js');
+}
 </script>
 
 </body>
