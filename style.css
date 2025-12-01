@@ -256,22 +256,20 @@ button {
   cursor: pointer;
 }
 
-/* ===== AJUSTE MOBILE: 2×2 NOS BLOCOS ===== */
 @media (max-width: 520px) {
   .medias-container {
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
 
   .media-bloco {
-    flex: 1 1 calc(50% - 10px);
-    max-width: calc(50% - 10px);
+    width: 90% !important;
+    margin: 0 !important;
   }
 
-  /* Ajuste de fonte para não quebrar */
   .media-bloco h3 {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .media-bloco div {
