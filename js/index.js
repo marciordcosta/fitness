@@ -1,0 +1,998 @@
+// index.js — versão com correção mínima
+const sb = window.sb;
+let listaFiltradaGlobal = [];
+let grafico;
+let dadosPesos = [];
+let periodoAtual = 7;
+let idEditar = null;
+
+// Meta: persistida em localStorage
+const META_KEY = "meta_config";
+let metaConfig = null; // { tipo: 'percent'|'manutencao', percentual: -1|..., metaKg: 67.3 }
+let ultimaMediaSemanaAnterior = null; // atualizada em calcularSemanasEMedias
+
+// Variáveis para Treino
+let padroesTreinoCache = [];
+let exerciciosTreinoCache = [];
+let dataFotoSelecionada = null; 
+let treinoSelecionado = null;
+
+/* ======= FUNÇÕES AUXILIARES ======= */
+function hojeISO() {
+  const d = new Date();
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return local.toISOString().substring(0, 10);
+}
+
+function parseISODateLocal(iso) {
+  return new Date(iso + "T00:00:00");
+}
+
+function formatarData(iso) {
+  const meses = ["jan", "fev", "mar", "abr", "mai", "jun",
+                 "jul", "ago", "set", "out", "nov", "dez"];
+
+  const d = new Date(iso + "T00:00:00");
+  const dia = String(d.getDate()).padStart(2, "0");
+  const mes = meses[d.getMonth()];
+  const ano = d.getFullYear();
+
+  return `${dia} ${mes} ${ano}`;
+}
+
+/* ======= MODAIS ======= */
+function fecharModals() {
+  document.querySelectorAll(".modal").forEach(m => m.setAttribute("aria-hidden", "true"));
+  removerMenuFlutuante();
+}
+
+function abrirAddPeso() {
+  fecharModals();
+  const dataInput = document.getElementById("dataNovoPeso");
+  const valorInput = document.getElementById("valorNovoPeso");
+  const modal = document.getElementById("modalPeso");
+  
+  if (!modal || !dataInput || !valorInput) {
+      console.error("ERRO: Elementos do modalPeso não encontrados.");
+      return; 
+  }
+  
+  dataInput.value = hojeISO();
+  valorInput.value = "";
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function abrirPeriodo() {
+  fecharModals();
+  const modal = document.getElementById("modalPeriodo");
+  
+  if (!modal) {
+      console.error("ERRO: Elemento do modalPeriodo não encontrado.");
+      return; 
+  }
+  
+  modal.setAttribute("aria-hidden", "false");
+}
+
+/* ======= UPLOAD PELO HISTÓRICO ======= */
+function abrirFotoComDataDireto(data) {
+  fecharModals();
+  const modal = document.getElementById("modalFoto");
+  const dataInput = document.getElementById("dataFoto");
+  const fileInput = document.getElementById("arquivoFoto");
+
+  if (!modal || !dataInput || !fileInput) {
+    console.error("modalFoto ou seus inputs não encontrados.");
+    return;
+  }
+
+  dataFotoSelecionada = data; 
+  dataInput.value = data;
+  fileInput.value = "";
+  fileInput.setAttribute("multiple", "true");
+
+  modal.setAttribute("aria-hidden", "false");
+}
+
+/* ======= MODAL TREINO ======= */
+async function abrirModalTreino() {
+  fecharModals();
+
+  const painelDetalhe = document.getElementById("painelTreinoDetalhe");
+  const painelSelecao = document.getElementById("painelTreinoSelecao");
+  const modalTreino = document.getElementById("modalTreino");
+
+  if (!painelDetalhe || !painelSelecao || !modalTreino) {
+      console.error("ERRO: Elementos do modalTreino não encontrados. Verifique os IDs no index.html.");
+      return; 
+  }
+  
+  if (!padroesTreinoCache.length) {
+    await carregarRotinasDeTreino(); 
+  }
+  
+  renderBotoesTreino();
+  
+  painelDetalhe.style.display = 'none';
+  painelSelecao.style.display = 'block';
+
+  modalTreino.setAttribute("aria-hidden", "false");
+}
+
+function fecharModalTreino() {
+  const modalTreino = document.getElementById("modalTreino");
+  if (modalTreino) {
+      modalTreino.setAttribute("aria-hidden", "true");
+  }
+}
+
+async function carregarRotinasDeTreino() {
+  const { data, error } = await sb
+    .from("treinos")
+    .select("id, nome_treino")
+    .order("ordem", { ascending: true });
+
+  if (error) {
+    console.error("Erro ao carregar treinos:", error);
+    padroesTreinoCache = [];
+    return;
+  }
+
+  padroesTreinoCache = data || [];
+}
+  
+async function carregarExerciciosPorPadrao(treinoId) {
+  const { data, error } = await sb
+    .from("treino_exercicios")
+    .select("*, exercicios(id, exercicio, grupo1, grupo2, grupo3, descanso)")
+    .eq("treino_id", treinoId)
+    .order("ordem", { ascending: true });
+
+  if (error) {
+    console.error("Erro ao carregar exercícios do treino:", error);
+    return [];
+  }
+  return data || [];
+}
+
+function renderBotoesTreino() {
+  const container = document.getElementById("listaBotoesTreino");
+  if (!container) return; 
+  
+  container.innerHTML = "";
+  
+  if (!padroesTreinoCache.length) {
+    container.innerHTML = "Nenhuma rotina de treino (A, B, C...) encontrada.";
+    return;
+  }
+  
+  padroesTreinoCache.forEach(rotina => {
+    const btn = document.createElement("button");
+    btn.className = "btn-secondary";
+    btn.textContent = rotina.nome_treino || rotina.nome || "Treino"; 
+    btn.style.margin = "4px";
+    btn.onclick = () => visualizarTreino(rotina.id, rotina.nome_treino || rotina.nome || "Treino");
+    container.appendChild(btn);
+  });
+}
+
+async function visualizarTreino(treinoId, nomeTreino) {
+  treinoSelecionado = treinoId;
+
+  const dataHoje = dataFotoSelecionada || hojeISO();
+
+  const { data: registrosExistentes, error: erroReg } = await sb
+    .from("treino_registros")
+    .select("*")
+    .eq("data", dataHoje)
+    .eq("treino_id", treinoId)
+    .order("exercicio_id, serie", { ascending: true });
+
+  if (erroReg) {
+    console.error("Erro ao carregar registros do treino:", erroReg);
+  }
+
+  const exercicios = await carregarExerciciosPorPadrao(treinoId);
+
+  const painelDetalhe = document.getElementById("painelTreinoDetalhe");
+  const titulo = document.getElementById("treinoDetalheTitulo");
+  const lista = document.getElementById("listaExerciciosTreino");
+  const painelSelecao = document.getElementById("painelTreinoSelecao");
+
+  if (!painelDetalhe || !titulo || !lista || !painelSelecao) {
+      console.error("ERRO: Elementos de detalhe de treino não encontrados para renderização.");
+      return; 
+  }
+
+  titulo.textContent = `Treino: ${nomeTreino}`;
+  lista.innerHTML = "";
+
+  if (!exercicios.length) {
+    lista.innerHTML = `Nenhum exercício configurado para o Treino ${nomeTreino}.`;
+  } else {
+    exercicios.forEach((e, idx) => {
+      const item = document.createElement("div");
+      item.className = "treino-item";
+      item.style.display = "flex";
+      item.style.flexDirection = "column";
+      item.style.gap = "6px";
+
+      const nomeEx = e.exercicios?.exercicio || e.exercicio || 'Exercício';
+      const descanso = e.exercicios?.descanso ?? e.descanso ?? '--';
+      const grupos = [];
+      if (e.exercicios?.grupo1) grupos.push(`${e.exercicios.grupo1}`);
+      if (e.exercicios?.grupo2) grupos.push(`${e.exercicios.grupo2}`);
+      if (e.exercicios?.grupo3) grupos.push(`${e.exercicios.grupo3}`);
+
+      const gruposText = grupos.length ? ' · ' + grupos.join(' / ') : '';
+
+      item.innerHTML = `
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <strong style="display:block;">${idx + 1}. ${nomeEx}</strong>
+    <small style="color:#666;font-size:12px;">Descanso: ${resto(descanso)}</small>
+  </div>
+
+  <div class="series-container"
+       style="display:flex; flex-direction:column; gap:0px; margin-top:0px;"></div>
+
+  <button class="btn-add-serie"
+          style="margin-top:6px;width:26px;height:26px;border-radius:6px;
+                 border:1px solid #ccc;background:#fafafa;
+                 display:flex;justify-content:center;align-items:center;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+           stroke="#444" stroke-width="2" stroke-linecap="round">
+          <line x1="12" y1="5"  x2="12" y2="19" />
+          <line x1="5"  y1="12" x2="19" y2="12" />
+      </svg>
+  </button>
+`;
+
+item.dataset.exercicioId = e.exercicio_id;
+const containerSeries = item.querySelector('.series-container');
+
+const registrosDoExercicio = registrosExistentes?.filter(r => r.exercicio_id === e.exercicio_id) || [];
+
+if (registrosDoExercicio.length > 0) {
+    registrosDoExercicio.forEach(reg => {
+        const linha = criarLinhaSerie();
+        linha.querySelector(".serie-peso").value = reg.peso ?? "";
+        linha.querySelector(".serie-rep").value = reg.repeticoes ?? "";
+        containerSeries.appendChild(linha);
+    });
+} else {
+    containerSeries.appendChild(criarLinhaSerie());
+    containerSeries.appendChild(criarLinhaSerie());
+}
+
+item.querySelector('.btn-add-serie').onclick = () => {
+    containerSeries.appendChild(criarLinhaSerie());
+};
+lista.appendChild(item);
+    });
+  }
+
+  painelSelecao.style.display = 'none';
+  painelDetalhe.style.display = 'block';
+}
+
+function criarLinhaSerie() {
+  const linha = document.createElement("div");
+  linha.className = "linha-serie";
+  linha.style.display = "flex";
+  linha.style.gap = "6px";
+  linha.style.alignItems = "center";
+
+  linha.innerHTML = `
+    <input type="number" class="serie-peso" step="0.5" placeholder="Peso"
+           style="width:70px;margin-bottom:5px;padding:6px;border-radius:6px;border:1px solid #ddd;">
+
+    <input type="number" class="serie-rep" step="1" placeholder="Reps"
+           style="width:70px;margin-bottom:5px;padding:6px;border-radius:6px;border:1px solid #ddd;">
+
+    <button class="remover-linha"
+            style="width:22px;height:22px;border-radius:6px;
+                   display:flex;justify-content:center;align-items:center;
+                   border:1px solid #d0d0d0;background:#fafafa;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="#c33" stroke-width="2" stroke-linecap="round">
+            <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+    </button>
+  `;
+
+  linha.querySelector(".remover-linha").onclick = () => linha.remove();
+
+  return linha;
+}
+
+
+async function salvarTreinoDoDia() {
+  try {
+    const u = await sb.auth.getUser();
+    const userId = u?.data?.user?.id;
+    if (!treinoSelecionado || !userId) return alert("Erro: usuário ou treino não encontrado.");
+
+    const dataHoje = dataFotoSelecionada || hojeISO();
+    const inserts = [];
+
+    document.querySelectorAll("#listaExerciciosTreino .treino-item").forEach(ex => {
+      const exercicioId = ex.dataset.exercicioId;
+      const series = ex.querySelectorAll(".linha-serie");
+      let num = 1;
+      series.forEach(linha => {
+        const pesoVal = linha.querySelector(".serie-peso")?.value;
+        const repVal = linha.querySelector(".serie-rep")?.value;
+        const peso = pesoVal !== undefined && pesoVal !== '' ? parseFloat(pesoVal) : null;
+        const rep = repVal !== undefined && repVal !== '' ? parseInt(repVal) : null;
+
+        if ((peso !== null && !isNaN(peso)) || (rep !== null && !isNaN(rep))) {
+          inserts.push({
+            user_id: userId,
+            data: dataHoje,
+            treino_id: treinoSelecionado,
+            exercicio_id: exercicioId,
+            serie: num++,
+            peso: peso,
+            repeticoes: rep
+          });
+        }
+      });
+    });
+
+    if (!inserts.length) {
+      alert("Nenhuma série preenchida.");
+      return;
+    }
+
+    // apagar registros anteriores da mesma data + treino
+    await sb
+    .from("treino_registros")
+    .delete()
+    .eq("data", dataHoje)
+    .eq("treino_id", treinoSelecionado);
+
+
+    const { error } = await sb.from("treino_registros").insert(inserts);
+    if (error) {
+      console.error(error);
+      alert("Erro ao salvar.");
+      return;
+    }
+
+    fecharModalTreino();
+    alert("Treino salvo com sucesso.");
+  } catch (err) {
+    console.error(err);
+    alert("Erro inesperado ao salvar treino.");
+  }
+}
+
+function resto(v) {
+  return v === null || v === undefined ? '--' : v;
+}
+
+function voltarSelecaoTreino() {
+  const painelDetalhe = document.getElementById("painelTreinoDetalhe");
+  const painelSelecao = document.getElementById("painelTreinoSelecao");
+
+  if (!painelDetalhe || !painelSelecao) {
+      console.error("ERRO: Elementos de seleção de treino não encontrados para voltar.");
+      return;
+  }
+
+  painelDetalhe.style.display = 'none';
+  painelSelecao.style.display = 'block';
+}
+
+/* ======= LOAD INICIAL ======= */
+window.addEventListener("load", () => {
+  carregarMetaLocal();
+  carregarPesos(true);
+
+  // evento para abrir modal meta ao clicar no bloco
+  const metaBloco = document.getElementById("metaBloco");
+  if (metaBloco) {
+    metaBloco.addEventListener("click", () => {
+      abrirModalMeta();
+    });
+  }
+
+  // controle do modal meta: mostrar campo de manutenção quando selecionado
+  document.addEventListener("change", (e) => {
+    if (e.target && e.target.name === "metaOpt") {
+      const wrap = document.getElementById("metaManutencaoWrap");
+      if (e.target.value === "manutencao") {
+        wrap.style.display = "block";
+      } else {
+        wrap.style.display = "none";
+      }
+    }
+  });
+
+  // fechar menu flutuante clicando fora
+  document.addEventListener("click", (ev) => {
+    const isMenu = ev.target.closest && ev.target.closest('.menu-flutuante');
+    const isTrigger = ev.target.closest && ev.target.closest('.menu-trigger');
+    if (!isMenu && !isTrigger) removerMenuFlutuante();
+  }, true);
+});
+
+/* ======= SALVAR PESO, FOTO, CARREGAR PESOS E ETC. ======= */
+
+async function salvarPesoNovo() {
+  const data = document.getElementById("dataNovoPeso")?.value;
+  const peso = parseFloat(document.getElementById("valorNovoPeso")?.value);
+
+  if (!data || isNaN(peso)) return alert("Preencha todos os campos.");
+
+  await sb.from("pesos").insert({ data, peso });
+  fecharModals();
+  carregarPesos(true);
+}
+
+async function salvarFoto() {
+  const data = document.getElementById("dataFoto")?.value;
+  const files = document.getElementById("arquivoFoto")?.files;
+
+  if (!data || !files || files.length === 0) {
+    alert("Selecione a data e pelo menos uma foto.");
+    return;
+  }
+
+  for (let file of files) {
+    const nome = `${Date.now()}-${file.name}`;
+    const { error: upErr } = await sb.storage.from("fotos").upload(nome, file);
+    if (upErr) continue;
+
+    const { data: pub } = sb.storage.from("fotos").getPublicUrl(nome);
+    await sb.from("fotos").insert({ data_foto: data, url: pub.publicUrl });
+  }
+
+  fecharModals();
+}
+
+async function carregarPesos(filtrar = false) {
+  const { data, error } = await sb
+    .from("pesos")
+    .select("id, data, peso")
+    .order("data", { ascending: false });
+
+  if (error) return console.error(error);
+
+  dadosPesos = data || [];
+
+  if (filtrar) {
+    aplicarPeriodo();
+  } else {
+    montarGrafico(dadosPesos);
+    renderHistorico(dadosPesos);
+    calcularSemanasEMedias();
+  }
+}
+
+function aplicarPeriodo() {
+  let diasFiltro = periodoAtual;
+
+  if (diasFiltro === 7) diasFiltro = 8; 
+
+  if (diasFiltro === "all") {
+    listaFiltradaGlobal = dadosPesos;
+    montarGrafico(dadosPesos);
+    renderHistorico(dadosPesos);
+    calcularSemanasEMedias();
+    return;
+  }
+  
+  let numDias;
+  if (diasFiltro == 30) {
+      numDias = 30;
+  } else if (diasFiltro == 90) {
+      numDias = 90;     
+  } else if (diasFiltro == 180) {
+      numDias = 180; 
+  } else if (diasFiltro == 365) {
+      numDias = 365; 
+  } else {
+      numDias = 7; 
+  }
+  
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
+  const limite = new Date(hoje.getTime() - (Number(numDias) - 1) * 86400000);
+
+  const filtrado = dadosPesos.filter(p => {
+    const d = parseISODateLocal(p.data);
+    return d >= limite;
+  });
+
+  listaFiltradaGlobal = filtrado;
+
+  montarGrafico(filtrado);
+  renderHistorico(filtrado);
+  calcularSemanasEMedias();
+}
+
+function filtroPeriodo(dias) {
+  periodoAtual = dias;
+  atualizarTextoFiltro();
+  fecharModals();
+  aplicarPeriodo();
+}
+
+function atualizarTextoFiltro() {
+  const el = document.getElementById("textoFiltroSelecionado");
+  if (!el) return;
+
+  let nome = "";
+
+  switch (periodoAtual) {
+    case 7:
+      nome = "1 semana";
+      break;
+    case 30:
+      nome = "1 mês";
+      break;
+    case 90:
+      nome = "3 meses";
+      break;  
+    case 180:
+      nome = "6 meses";
+      break;
+    case 365:
+      nome = "1 ano";
+      break;
+    case "all":
+      nome = "Tudo";
+      break;
+    default:
+      nome = periodoAtual + " dias";
+  }
+
+  el.innerText = nome;
+}
+
+function renderHistorico(lista) {
+  const el = document.getElementById("listaPesos");
+  if (!el) return;
+  if (!lista.length) return (el.innerHTML = "Nenhum registro.");
+
+  el.innerHTML = "";
+
+  lista.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.style.justifyContent = "space-between";
+    div.style.position = "relative";
+
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="item-title">${item.peso.toFixed(1)} kg</div>
+        <div class="item-sub">${formatarData(item.data)}</div>
+      </div>
+
+      <div style="display:flex;gap:8px;">
+        <button class="btn-mini menu-trigger" style="border:1px solid #ffffffff;background:#fff" aria-label="Mais opções"> 
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="5" r="1.5" fill="#1c1c1e"></circle>
+            <circle cx="12" cy="12" r="1.5" fill="#1c1c1e"></circle>
+            <circle cx="12" cy="19" r="1.5" fill="#1c1c1e"></circle>
+          </svg>
+        </button>
+      </div>
+    `;
+
+    // append and then attach menu handler
+    el.appendChild(div);
+
+    const trigger = div.querySelector('.menu-trigger');
+    if (trigger) {
+      trigger.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        abrirMenuFlutuanteParaItem(ev.currentTarget, item);
+      });
+    }
+  });
+}
+
+async function abrirEditarDireto(id) {
+  const achou = dadosPesos.find(p => p.id === id);
+  if (!achou) return;
+
+  idEditar = id;
+  const dataInput = document.getElementById("dataEditar");
+  const pesoInput = document.getElementById("pesoEditar");
+  const modal = document.getElementById("modalEditar");
+  
+  if (dataInput) dataInput.value = achou.data;
+  if (pesoInput) pesoInput.value = achou.peso;
+
+  if (modal) modal.setAttribute("aria-hidden", "false");
+}
+
+async function salvarEdicao() {
+  const data = document.getElementById("dataEditar")?.value;
+  const peso = parseFloat(document.getElementById("pesoEditar")?.value);
+
+  await sb.from("pesos").update({ data, peso }).eq("id", idEditar);
+  fecharModals();
+  carregarPesos(true);
+}
+
+async function excluirPeso() {
+  await sb.from("pesos").delete().eq("id", idEditar);
+  fecharModals();
+  carregarPesos(true);
+}
+
+/* ======= MENU FLUTUANTE (3 pontos) ======= */
+function removerMenuFlutuante() {
+  const existing = document.querySelector(".menu-flutuante");
+  if (existing) existing.remove();
+}
+
+function abrirMenuFlutuanteParaItem(triggerEl, item) {
+  removerMenuFlutuante();
+
+  const rect = triggerEl.getBoundingClientRect();
+  const menu = document.createElement("div");
+  menu.className = "menu-flutuante";
+  menu.innerHTML = `
+    <button data-action="editar">Editar peso</button>
+    <button data-action="foto">Carregar foto</button>
+    <button data-action="treino">Treino</button>
+  `;
+
+  // posicionamento simples: abaixo e alinhado à direita do trigger
+  menu.style.top = (window.scrollY + rect.top + rect.height + 8) + "px";
+  menu.style.left = (window.scrollX + rect.left - 120 + rect.width) + "px";
+
+  document.body.appendChild(menu);
+
+  menu.querySelector('[data-action="editar"]').onclick = () => {
+    removerMenuFlutuante();
+    abrirEditarDireto(item.id);
+  };
+  menu.querySelector('[data-action="foto"]').onclick = () => {
+    removerMenuFlutuante();
+    abrirFotoComDataDireto(item.data);
+  };
+  menu.querySelector('[data-action="treino"]').onclick = () => {
+    removerMenuFlutuante();
+    dataFotoSelecionada = item.data;
+    abrirModalTreino();
+  };
+}
+
+/* ======= GRÁFICO ======= */
+function montarGrafico(lista) {
+  const asc = [...lista].sort((a, b) => parseISODateLocal(a.data) - parseISODateLocal(b.data));
+
+  const labels = asc.map(x => formatarData(x.data));
+  const pesos = asc.map(x => x.peso);
+
+  const mediaSuave = pesos.map((_, i) => {
+    const inicio = Math.max(0, i - 3);
+    const fim = Math.min(pesos.length - 1, i + 3);
+    const subset = pesos.slice(inicio, fim + 1);
+    return subset.reduce((a, b) => a + b, 0) / subset.length;
+  });
+
+  if (grafico) grafico.destroy();
+  
+  const graficoElement = document.getElementById("graficoPeso");
+  if (!graficoElement) return;
+
+  // Registro seguro do plugin de anotação — evita ReferenceError
+  if (typeof annotationPlugin !== "undefined") {
+      Chart.register(annotationPlugin);
+  } else if (typeof ChartAnnotation !== "undefined") {
+      Chart.register(ChartAnnotation);
+  } else {
+      console.warn("Plugin chartjs-plugin-annotation não encontrado.");
+  }
+
+  // datasets base
+  const datasets = [
+    {
+      label: "Tendência",
+      data: mediaSuave,
+      borderColor: "#75a7ff",
+      borderWidth: 2,
+      tension: 0.4,
+      cubicInterpolationMode: "monotone",
+      pointRadius: 0
+    },
+    {
+      data: pesos,
+      borderWidth: 3,
+      tension: 0.25,
+      borderColor: "#eaeaec"
+    }
+  ];
+
+  // adicionar linha de meta (se houver)
+  const metaKg = obterMetaKgCalculada();
+  if (metaKg != null && labels.length) {
+    const linhaMeta = labels.map(() => metaKg);
+    datasets.push({
+      label: "Meta",
+      data: linhaMeta,
+      borderWidth: 1.5,
+      borderColor: "#ff0202ff",
+      borderDash: [4,4],
+      pointRadius: 0,
+      tension: 0
+    });
+  }
+
+  grafico = new Chart(graficoElement, {
+    type: "line",
+    data: {
+      labels,
+      datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+            legend: { display: false },
+            annotation: {
+                annotations: gerarLinhasMensais(lista)
+            }
+        },
+      scales: { x: { display: false } }
+    }
+  });
+  
+  if (typeof atualizarTextoFiltro === "function") {
+    atualizarTextoFiltro();
+  }
+}
+
+function gerarLinhasMensais(lista) {
+    // se filtro <= 30 dias, não desenhar as linhas
+    if (periodoAtual <= 30 || !lista || lista.length < 2) return {};
+
+    const anotacoes = {};
+    const sorted = [...lista].sort((a, b) => parseISODateLocal(a.data) - parseISODateLocal(b.data));
+
+    let primeira = parseISODateLocal(sorted[0].data);
+    let ultima = parseISODateLocal(sorted[sorted.length - 1].data);
+
+    // começa a partir do primeiro ponto
+    let atual = new Date(primeira);
+
+    while (atual < ultima) {
+        // avança 30 dias como critério de “mês”
+        atual.setDate(atual.getDate() + 30);
+
+        const alvoISO = atual.toISOString().substring(0, 10);
+        const idx = sorted.findIndex(p => p.data === alvoISO);
+        if (idx === -1) continue;
+
+        anotacoes["linha_" + atual.getTime()] = {
+            type: "line",
+            xMin: idx,
+            xMax: idx,
+            borderColor: "rgba(150,150,150,0.35)",
+            borderWidth: 1,
+            borderDash: [4, 4]
+        };
+    }
+
+    return anotacoes;
+}
+
+
+/* ======= CÁLCULO DE SEMANAS E MÉDIAS ======= */
+function calcularSemanasEMedias() {
+  const elAnt = document.getElementById("mediaSemanaAnterior");
+  const elAtu = document.getElementById("mediaSemanaAtual");
+  const elProg = document.getElementById("mediaProgressoValor");
+
+  if (!elAnt || !elAtu || !elProg) return;
+
+  if (!dadosPesos.length) { 
+    elAnt.innerText="--"; elAtu.innerText="--"; elProg.innerText="--"; 
+    ultimaMediaSemanaAnterior = null;
+    atualizarMetaExibicao();
+    return; 
+  }
+
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const day = hoje.getDay(); 
+  const delta = (day - 2 + 7) % 7;
+  const tA = new Date(hoje); tA.setDate(tA.getDate()-delta); tA.setHours(0,0,0,0);
+  const sA = new Date(tA); sA.setDate(tA.getDate()+6); sA.setHours(23,59,59,999);
+
+  function registrosEm(lista, inicio, fim) {
+    return (lista || []).filter(p => {
+      const d = parseISODateLocal(p.data);
+      return d >= inicio && d <= fim;
+    });
+  }
+  function media(lst){ if(!lst || !lst.length) return null; return lst.reduce((a,b)=>a+b.peso,0)/lst.length; }
+
+  const mAtu = media(registrosEm(dadosPesos, tA, sA));
+
+  let mAnt = null;
+  const baseFiltrada = listaFiltradaGlobal && listaFiltradaGlobal.length ? listaFiltradaGlobal : dadosPesos;
+
+  if (periodoAtual === 7) {
+    const tP = new Date(tA); tP.setDate(tP.getDate()-7); tP.setHours(0,0,0,0);
+    const sP = new Date(sA); sP.setDate(sP.getDate()-7); sP.setHours(23,59,59,999);
+    mAnt = media(registrosEm(dadosPesos, tP, sP));
+  } else {
+    if (baseFiltrada.length) {
+      const sorted = [...baseFiltrada].sort((a,b)=>parseISODateLocal(a.data)-parseISODateLocal(b.data));
+      const firstDate = parseISODateLocal(sorted[0].data);
+      
+      const dow = firstDate.getDay();
+      const deltaStart = (dow - 2 + 7) % 7;
+      const iniT = new Date(firstDate); iniT.setDate(iniT.getDate()-deltaStart); iniT.setHours(0,0,0,0);
+      
+      const iniS = new Date(iniT); iniS.setDate(iniT.getDate()+6); iniS.setHours(23,59,59,999);
+      
+      mAnt = media(registrosEm(dadosPesos, iniT, iniS));
+    }
+  }
+
+  elAtu.innerText = mAtu!=null? mAtu.toFixed(1)+" kg":"--";
+  elAnt.innerText = mAnt!=null? mAnt.toFixed(1)+" kg":"--";
+
+  // Correção mínima: evita divisão por zero quando mAnt === 0
+  let progresso = "--";
+  if (mAtu != null && mAnt != null) {
+    if (mAnt === 0) {
+      progresso = "--";
+    } else {
+      const percent = ((mAtu - mAnt) / mAnt * 100).toFixed(1);
+      progresso = `${percent}%`;
+    }
+  }
+  elProg.innerText = progresso;
+
+
+  // guardar a última média da semana anterior para cálculo de meta percentual
+  ultimaMediaSemanaAnterior = mAnt;
+  atualizarMetaExibicao();
+}
+
+/* ======= META: armazenamento local ======= */
+function carregarMetaLocal() {
+  try {
+    const raw = localStorage.getItem(META_KEY);
+    if (raw) {
+      metaConfig = JSON.parse(raw);
+    } else {
+      metaConfig = null;
+    }
+  } catch (err) {
+    console.error("Erro ao carregar meta do localStorage", err);
+    metaConfig = null;
+  }
+  atualizarMetaExibicao();
+}
+
+function salvarMetaLocal() {
+  try {
+    if (metaConfig) localStorage.setItem(META_KEY, JSON.stringify(metaConfig));
+    else localStorage.removeItem(META_KEY);
+  } catch (err) {
+    console.error("Erro ao salvar meta no localStorage", err);
+  }
+  atualizarMetaExibicao();
+}
+
+function abrirModalMeta() {
+  fecharModals();
+  const modal = document.getElementById("modalMeta");
+  if (!modal) return;
+  // preencher opções com meta atual
+  if (metaConfig) {
+    const tipo = metaConfig.tipo;
+    if (tipo === "manutencao") {
+      document.querySelectorAll('input[name="metaOpt"]').forEach(r => r.checked = (r.value === "manutencao"));
+      document.getElementById("metaManutencao").value = metaConfig.metaKg != null ? metaConfig.metaKg : "";
+      document.getElementById("metaManutencaoWrap").style.display = "block";
+    } else if (tipo === "percent") {
+      document.querySelectorAll('input[name="metaOpt"]').forEach(r => r.checked = (Number(r.value) === Number(metaConfig.percentual)));
+      document.getElementById("metaManutencaoWrap").style.display = "none";
+    }
+  } else {
+    // limpar seleção
+    document.querySelectorAll('input[name="metaOpt"]').forEach(r => r.checked = false);
+    document.getElementById("metaManutencaoWrap").style.display = "none";
+    document.getElementById("metaManutencao").value = "";
+  }
+
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function salvarMeta() {
+  const radios = document.querySelectorAll('input[name="metaOpt"]');
+  let sel = null;
+  radios.forEach(r => { if (r.checked) sel = r.value; });
+  if (!sel) return alert("Selecione uma opção de meta.");
+
+  if (sel === "manutencao") {
+    const val = parseFloat(document.getElementById("metaManutencao")?.value);
+    if (isNaN(val)) return alert("Informe o peso de manutenção (kg).");
+    metaConfig = { tipo: "manutencao", metaKg: val };
+  } else {
+    const percentual = parseFloat(sel);
+    // precisa de ultimaMediaSemanaAnterior para calcular
+    if (ultimaMediaSemanaAnterior == null) {
+      // calcular semanas e medias para obter valor
+      calcularSemanasEMedias();
+    }
+    const base = ultimaMediaSemanaAnterior;
+    if (base == null) return alert("Não é possível calcular a meta agora (média anterior indisponível).");
+    const metaKg = +(base * (1 + percentual/100)).toFixed(1);
+    metaConfig = { tipo: "percent", percentual: percentual, metaKg };
+  }
+
+  salvarMetaLocal();
+  fecharModals();
+  // redesenhar gráfico
+  aplicarPeriodo();
+}
+
+/* retorna metaKg calculada (number) ou null */
+function obterMetaKgCalculada() {
+  if (!metaConfig) return null;
+  if (metaConfig.tipo === "manutencao") {
+    return typeof metaConfig.metaKg === "number" ? metaConfig.metaKg : null;
+  }
+  if (metaConfig.tipo === "percent") {
+    // metaConfig.metaKg já armazenado ao salvar, mas recalcular caso falta e exista ultimaMediaSemanaAnterior
+    if (typeof metaConfig.metaKg === "number") return metaConfig.metaKg;
+    if (ultimaMediaSemanaAnterior != null && typeof metaConfig.percentual === "number") {
+      return +(ultimaMediaSemanaAnterior * (1 + metaConfig.percentual/100)).toFixed(1);
+    }
+  }
+  return null;
+}
+
+/* atualiza exibição do bloco meta (apenas peso em kg) */
+function atualizarMetaExibicao() {
+  const el = document.getElementById("metaValor");
+  if (!el) return;
+  const kg = obterMetaKgCalculada();
+  if (kg == null) {
+    el.innerText = "--";
+  } else {
+    el.innerText = `${kg.toFixed(1)} kg`;
+  }
+
+  // redesenhar gráfico para garantir linha atualizada
+  if (Array.isArray(listaFiltradaGlobal) && listaFiltradaGlobal.length) montarGrafico(listaFiltradaGlobal);
+  else montarGrafico(dadosPesos);
+
+  // ===== TÍTULO COM DIFERENÇA =====
+  const titulo = document.getElementById("metaTitulo");
+  if (titulo) {
+      let mediaAtualNum = null;
+      const mediaAtualEl = document.getElementById("mediaSemanaAtual");
+
+      if (mediaAtualEl && mediaAtualEl.innerText.includes("kg")) {
+          mediaAtualNum = parseFloat(mediaAtualEl.innerText.replace("kg",""));
+      }
+
+      const metaKg = obterMetaKgCalculada();
+
+      // Não calcula se faltar dados
+      if (metaKg == null || mediaAtualNum == null || isNaN(mediaAtualNum)) {
+          titulo.innerHTML = "Meta";
+      } else {
+          const dif = +(metaKg - mediaAtualNum).toFixed(1);
+
+          let cor = "#888";
+          if (dif > 0) cor = "#1ca93a";    // verde
+          if (dif < 0) cor = "#f0422fff";    // vermelho
+
+          titulo.innerHTML = `Meta <span style="color:${cor}; font-weight:500;">(${dif > 0 ? "+" : ""}${dif} kg)</span>`;
+      }
+  }
+}
