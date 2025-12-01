@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gerenciar Exercícios</title>
+
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="js/supabase.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial;
+      background: #f5f5f7;
+      color: #111;
+    }
+
+    .kanban-wrapper {
+      padding: 12px 10px 16px;
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    .kanban-board {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      grid-auto-flow: dense;
+    }
+
+    .coluna {
+      width: 100%;
+      min-width: 260px;
+
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: transform 0.12s ease, opacity 0.12s ease;
+      box-sizing: border-box;
+    }
+
+    .coluna.arrastando {
+      opacity: 0.65;
+      transform: scale(0.97);
+    }
+
+    .coluna-topo {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding-right: 4px;
+    }
+
+    .coluna-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .coluna-header-actions button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .campo-nome-padrao {
+      flex: 1;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      padding: 6px 8px;
+      box-sizing: border-box;
+      min-width: 0;
+      font-size: 14px;
+      font-weight: bolder;
+      text-align: center;
+    }
+
+    .coluna-icons {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .icon-btn {
+      border: none;
+      background: none;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon-btn:hover {
+      background: rgba(0,0,0,0.06);
+    }
+
+    .lista-ex {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 10px;
+    }
+
+    .item-ex {
+      position: relative;
+      background: #f7f7f9;
+      border-radius: 8px;
+      padding: 8px;
+      cursor: grab;
+      transition: transform 0.1s ease, opacity 0.1s ease, box-shadow 0.1s ease;
+      box-shadow: 0 1px 1px rgba(0,0,0,0.08);
+    }
+    .item-ex.arrastando {
+      opacity: 0.7;
+      transform: scale(0.98);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+    }
+
+    .item-ex strong {
+      font-size: 14px;
+    }
+
+    .item-ex small {
+      display: block;
+      font-size: 12px;
+      color: #555;
+      margin-top: 2px;
+    }
+
+    .item-actions {
+      position: absolute;
+      top: 10px;
+      right: 5px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hint-empty {
+      font-size: 13px;
+      color: #777;
+      padding: 8px;
+      text-align: center;
+      border-radius: 8px;
+      border: 1px dashed #ddd;
+      background: #fff;
+    }
+
+    /* modal genérico */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 99;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal[aria-hidden="false"] {
+      display: flex;
+    }
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+    }
+    .modal-box {
+      position: relative;
+      z-index: 100;
+      background: #fff;
+      border-radius: 12px;
+      padding: 14px 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+      max-width: 480px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .modal-box h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    .modal-footer {
+      margin-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 10px;
+    }
+
+    .btn-primary,
+    .btn-secondary,
+    .btn-danger {
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary { background:#007aff; color:#fff; }
+    .btn-secondary { background:#e5e5e5; color:#111; }
+    .btn-danger { background:#d9534f; color:#fff; margin-top: 0;}
+
+    .modal-box label {
+      display: block;
+      font-size: 12px;
+      margin-bottom: 4px;
+      color: #444;
+    }
+
+    .modal-box input,
+    .modal-box select {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      font-size: 13px;
+      margin-bottom: 0;
+    }
+
+    /* layout compacto dos dois pickers de cor */
+    .modal-color-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .modal-color-row .color-field label {
+      margin-bottom: 4px;
+    }
+    .modal-color-row .color-field input[type="color"] {
+      width: 100%;
+      height: 32px;
+      padding: 0;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      background: transparent;
+    }
+  </style>
+</head>
+<body>
+
+<script>
+supabase.auth.getUser().then(({ data }) => {
+  if (!data.user) window.location.href = "login.html";
+});
+</script>
+
+<header class="app-header">
+  <!-- voltar para treino.html -->
+  <button class="header-btn" title="Treino" onclick="window.location.href='treino.html'">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path d="M15 6l-6 6 6 6" stroke="#1c1c1e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+
+  <!-- adicionar novo padrão (coluna) -->
+  <button class="header-btn" title="Novo padrão" onclick="novoPadrao()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path d="M12 5v14M5 12h14" stroke="#1c1c1e" stroke-width="2.4" stroke-linecap="round"/>
+    </svg>
+  </button>
+</header>
+
+<div class="kanban-wrapper">
+  <div id="kanban" class="kanban-board"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script src="js/exercicios.js" defer></script>
+
+<!-- MODAL DE CORES -->
+<div id="modalCores" class="modal" aria-hidden="true">
+  <div class="modal-backdrop"></div>
+
+  <div class="modal-box" style="max-width:320px;">
+    <h3>Selecionar cores</h3>
+
+    <div class="modal-color-row">
+      <div class="color-field">
+        <label for="pick_fundo">Cor de fundo</label>
+        <input type="color" id="pick_fundo">
+      </div>
+      <div class="color-field">
+        <label for="pick_fonte">Cor da fonte</label>
+        <input type="color" id="pick_fonte">
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;">
+      <button class="btn-secondary" onclick="fecharModalCores()">Cancelar</button>
+      <button class="btn-primary" onclick="salvarCoresPadrao()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

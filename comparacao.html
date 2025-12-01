@@ -122,7 +122,7 @@ body{
 <body>
 
 <script>
-supabase.auth.getUser().then(({ data }) => {
+sb.auth.getUser().then(({ data }) => {
   if (!data.user) window.location.href = "login.html";
 });
 </script>
@@ -176,11 +176,11 @@ async function carregarComparacao(){
 async function carregarComparacaoPorImagem(){
   const id1=localStorage.getItem("comparar_id1"), id2=localStorage.getItem("comparar_id2");
   if(!id1||!id2){alert("Selecione 2 fotos.");window.location="galeria.html";return;}
-  const {data:fotos}=await supabase.from("fotos").select("id,url,data_foto").in("id",[id1,id2]);
+  const {data:fotos}=await sb.from("fotos").select("id,url,data_foto").in("id",[id1,id2]);
   if(!fotos||fotos.length<2){alert("Erro ao carregar.");window.location="galeria.html";return;}
   const f1=fotos.find(f=>f.id==id1),f2=fotos.find(f=>f.id==id2);
   document.getElementById("img1").src=f1.url;document.getElementById("img2").src=f2.url;
-  const {data:pesos}=await supabase.from("pesos").select("data,peso");const map={};(pesos||[]).forEach(p=>map[String(p.data).split("T")[0]]=p.peso);
+  const {data:pesos}=await sb.from("pesos").select("data,peso");const map={};(pesos||[]).forEach(p=>map[String(p.data).split("T")[0]]=p.peso);
   const d1=String(f1.data_foto).split("T")[0],d2=String(f2.data_foto).split("T")[0];
   document.getElementById("info1").textContent=`${d1}${map[d1]?` — ${map[d1]} kg`:""}`;
   document.getElementById("info2").textContent=`${d2}${map[d2]?` — ${map[d2]} kg`:""}`;
@@ -200,19 +200,19 @@ async function carregarComparacaoPorData() {
   const id1 = localStorage.getItem("comparar_id1");
   const id2 = localStorage.getItem("comparar_id2");
 
-  const { data: fotos1 } = await supabase
+  const { data: fotos1 } = await sb
     .from("fotos")
     .select("id,url,data_foto")
     .eq("data_foto", data1)
     .order("id");
 
-  const { data: fotos2 } = await supabase
+  const { data: fotos2 } = await sb
     .from("fotos")
     .select("id,url,data_foto")
     .eq("data_foto", data2)
     .order("id");
 
-  const { data: pesos } = await supabase.from("pesos").select("data,peso");
+  const { data: pesos } = await sb.from("pesos").select("data,peso");
   const map = {};
   (pesos || []).forEach(p => (map[String(p.data).split("T")[0]] = p.peso));
 

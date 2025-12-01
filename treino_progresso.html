@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Progresso - Treinos</title>
+
+    <style>
+        /* ============================
+           ESTILOS GERAIS
+           ============================ */
+        body {
+            background: #f6f7fb;
+            color: #111;
+            font-family: Inter, system-ui, Segoe UI, Roboto, Arial, sans-serif;
+            margin: 0;
+            padding: 16px;
+        }
+
+        h2 { margin: 0 0 12px 0; }
+
+        .card {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .btn {
+            border: 1px solid #d0d0d0;
+            background: #fafafa;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        /* Estilo do botão Voltar */
+        #btnVoltarProgresso {
+            width: 40px;
+            height: 32px;
+            border-radius: 8px;
+            background: #ffffff;
+            border: 1px solid #e3e3e6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        /* ============================
+           ESTILOS DA LISTA E BOLINHAS
+           ============================ */
+
+        .ex-item {
+            /* Estilos removidos do JS */
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            border-radius: 6px;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            border: 1px solid transparent;
+        }
+
+        .ex-item:hover {
+            background: #f8fbff;
+            border-color: #e6f0ff;
+        }
+
+        .ex-item .ex-name {
+            flex: 1;
+            text-align: left;
+            font-weight: normal;
+        }
+
+        .checkbox { margin-right: 8px; }
+
+        .bolinhas-container {
+            display: flex;
+            gap: 6px;
+        }
+
+        .progresso-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        #chartProgresso {
+            width: 100% !important;
+            height: 260px !important;
+        }
+
+        /* ============================
+           DETALHES/HISTÓRICO EM COLUNAS
+           ============================ */
+        .detalhes-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        /* Estilos inline removidos do TD */
+        .detalhes-col {
+            vertical-align: top;
+            padding: 8px;
+            width: 200px;
+        }
+
+        /* Estilos inline removidos do HEADER */
+        .detalhes-header {
+            font-weight: 600;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 20px;
+        }
+
+        .detalhes-add-btn {
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 900;
+            padding: 0 4px;
+            border-radius: 4px;
+        }
+
+        .detalhes-add-btn:hover {
+            background: #eee;
+        }
+
+      /* ============================
+      HISTÓRICO DE PROGRESSÃO E HOVER
+      ============================ */
+
+        .historico-registro {
+            margin-bottom: 0px;
+            font-size: 15px;
+            line-height: 1.4;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 4px;
+            display: block; 
+        }
+
+        .historico-registro:hover {
+            background: #f0f0f0;
+        }
+
+        /* Data mais discreta */
+        .historico-registro .data-registro {
+            font-weight: normal;
+            font-size: 13px;
+            color: #666;
+            margin-right: 4px;
+        }
+
+        /* Estilos inline removidos do REGISTRO */
+        .detalhes-registro {
+            margin-bottom: 0px;
+            font-size: 15px;
+            line-height: 1.4;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 4px;
+        }
+
+        .detalhes-registro strong {
+            display: block;
+            font-size: 13px;
+            color: #555;
+            font-weight: 400;
+        }
+
+        .detalhes-registro:hover {
+            background: #f0f0f0;
+        }
+
+        /* ============================
+           MODAL
+           ============================ */
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.55);
+            /* Corrigido para flex para centralizar */
+            display: flex; 
+            align-items: center !important;
+            justify-content: center !important;
+            z-index: 9999;
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        /* Caixa branca central */
+        .modal-content {
+            background: #ffffff;
+            width: 100%;
+            max-width: 300px;
+            border-radius: 14px;
+            padding: 22px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+            margin: 0 auto;
+        }
+
+        /* Título do modal */
+        #modalProgressoTitulo {
+            margin: 0 0 12px 0;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        /* Inputs e botões */
+        .modal-content label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .modal-content input[type="date"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-top: 0px;
+            margin-bottom: 10px;
+            font-size: 15px;
+            box-sizing: border-box;
+        }
+
+        /* Contêiner de Séries */
+        .prog-serie {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .prog-serie input[type="number"] {
+            width: 80px;
+            box-sizing: border-box;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        .prog-serie input:first-child { flex: 1; }
+        .prog-serie input:nth-child(2) { flex: 1; }
+
+        .btn-del-serie {
+            width: 45px;
+            height: 39px;
+            color: #ff2222;
+            background: #fafafa;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .btn-del-serie:hover {
+            background: #f0f0f0;
+        }
+
+        #btnProgressoAddSerie {
+            width: 100%;
+            padding: 10px;
+            border-radius: 10px;
+            margin-top: 6px;
+        }
+
+        #btnProgressoSalvar,
+        #btnProgressoExcluir {
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 15px;
+        }
+
+        #btnProgressoExcluir {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            width: auto;
+            flex: 1;
+        }
+
+        #btnProgressoSalvar {
+            background: #2ecc71;
+            color: white;
+            border: none;
+            width: auto;
+            flex: 1;
+            margin-left: 10px;
+        }
+
+
+        /* Botão fechar (X) */
+        .modal-close,
+        #modalProgressoFechar {
+            position: absolute;
+            top: 14px;
+            right: 16px;
+            font-size: 22px;
+            cursor: pointer;
+        }
+
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .modal-content {
+                max-width: 94%;
+                padding: 16px;
+            }
+        }
+
+        /* Responsivo Colunas Detalhes */
+        @media (max-width: 600px) {
+            .detalhes-table, .detalhes-table tbody, .detalhes-table tr, .detalhes-table td {
+                display: block;
+                width: 100%;
+            }
+            .detalhes-col {
+                padding: 8px 0;
+                border-bottom: 1px solid #eee;
+            }
+            .detalhes-col:last-child {
+                border-bottom: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+
+        <h2 style="margin:0;">Progresso por Grupos Musculares</h2>
+
+        <button id="btnVoltarProgresso">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+        </button>
+
+    </div>
+
+    <div style="display:flex;gap:16px;margin-top:12px;">
+
+
+        <section style="width:320px;" class="card">
+
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <strong>Exercícios relacionados</strong>
+
+                <div>
+                    <label style="font-size:12px;margin-right:6px;">Filtro</label>
+                    <select id="filtroPeriodo" style="font-size:13px">
+                        <option value="30">1 mês</option>
+                        <option value="90" selected>3 meses</option>
+                        <option value="180">6 meses</option>
+                        <option value="365">1 ano</option>
+                        <option value="all">Tudo</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="exerciciosList"></div>
+
+        </section>
+
+        <section style="flex:1;min-height:400px;">
+
+            <div id="painel-grafico" class="card" style="position:relative;">
+                <canvas id="chartProgresso"></canvas>
+            </div>
+
+            <div id="detalhes" class="card" style="margin-top:12px;min-height:120px;">
+                <em>Selecione um exercício para ver detalhes e histórico.</em>
+            </div>
+
+        </section>
+
+    </div>
+
+    <div id="modalProgresso" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span id="modalProgressoFechar" class="modal-close">&times;</span>
+
+            <h2 id="modalProgressoTitulo">Editar Registro</h2>
+
+            <label for="progData">Data</label>
+            <input type="date" id="progData" />
+
+            <div id="progSeriesContainer"></div>
+
+            <button id="btnProgressoAddSerie" class="btn btn-block">
+                Adicionar Série
+            </button>
+
+            <div style="margin-top:20px; display:flex;">
+                <button id="btnProgressoExcluir" class="btn btn-danger">Excluir</button>
+                <button id="btnProgressoSalvar" class="btn btn-primary">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script> 
+    <script src="js/treino_progresso.js"></script>
+
+</body>
+</html>

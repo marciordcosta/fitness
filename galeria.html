@@ -8,6 +8,9 @@
 <link rel="stylesheet" href="style.css" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="js/supabase.js"></script>
+<script>
+    const sb = window.sb; 
+</script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <style>
@@ -223,9 +226,9 @@ async function enviarMultiplas(){
 
   for (let file of files){
     const nome = `${Date.now()}-${file.name}`;
-    await supabase.storage.from("fotos").upload(nome, file);
+    await sb.storage.from("fotos").upload(nome, file);
     const { data:pub } = supabase.storage.from("fotos").getPublicUrl(nome);
-    await supabase.from("fotos").insert({
+    await sb.from("fotos").insert({
       data_foto: data,
       url: pub.publicUrl
     });
@@ -270,13 +273,13 @@ async function carregarGaleria(){
   selecionadas.clear();
   atualizarTopo();
 
-  const { data: pesos } = await supabase.from("pesos").select("data,peso");
+  const { data: pesos } = await sb.from("pesos").select("data,peso");
   window.mapaPesos = {};
   (pesos||[]).forEach(p=>{
     window.mapaPesos[ normalizeDate(p.data) ] = Number(p.peso);
   });
 
-  const { data: fotos } = await supabase
+  const { data: fotos } = await sb
   .from("fotos")
   .select("id,data_foto,url,ordem")
   .order("data_foto", { ascending: false })
@@ -416,7 +419,7 @@ async function editarSelecionados(){
   if(!nova) return;
 
   for(let id of selecionadas){
-    await supabase.from("fotos").update({data_foto:nova}).eq("id",id);
+    await sb.from("fotos").update({data_foto:nova}).eq("id",id);
   }
 
   selecionadas.clear();
@@ -449,7 +452,7 @@ function compararSelecionadas(){
 
 /* Abrir carrossel do dia (quando clica/doubleclick em imagem) */
 async function abrirCarrosselDia(idClicado,dia){
-  const { data } = await supabase
+  const { data } = await sb
     .from("fotos")
     .select("id,url,data_foto")
     .eq("data_foto",dia)
@@ -494,21 +497,21 @@ async function excluirSelecionados() {
     const name = getStorageNameFromUrl(url);
     if (!name) return { ok: false, msg: "URL inválida" };
 
-    const { error } = await supabase.storage.from(bucket).remove([name]);
+    const { error } = await sb.storage.from(bucket).remove([name]);
     if (!error) return { ok: true };
 
     console.warn("Falha na remoção direta:", error.message);
-    const { data: lista } = await supabase.storage.from(bucket).list("", { limit: 1000 });
+    const { data: lista } = await sb.storage.from(bucket).list("", { limit: 1000 });
     const match = lista?.find(f => f.name === name);
     if (match) {
-      const r2 = await supabase.storage.from(bucket).remove([match.name]);
+      const r2 = await sb.storage.from(bucket).remove([match.name]);
       if (!r2.error) return { ok: true };
     }
     return { ok: false, msg: "Arquivo não encontrado no bucket" };
   };
 
   for (let id of selecionadas) {
-    const { data: foto, error: dbErr } = await supabase
+    const { data: foto, error: dbErr } = await sb
       .from("fotos")
       .select("url")
       .eq("id", id)
@@ -522,7 +525,7 @@ async function excluirSelecionados() {
     const r = await removerDoStorage(foto.url);
     if (!r.ok) console.warn("Falha ao remover do Storage:", r.msg);
 
-    const { error: delDbErr } = await supabase.from("fotos").delete().eq("id", id);
+    const { error: delDbErr } = await sb.from("fotos").delete().eq("id", id);
     if (delDbErr) console.warn("Erro ao excluir no banco:", delDbErr);
   }
 
@@ -543,7 +546,7 @@ function habilitarOrdenacaoComSortable() {
         const data = grid.id.replace("grid-", "");
         try {
           for (let i = 0; i < ids.length; i++) {
-            await supabase.from("fotos").update({ ordem: i }).eq("id", ids[i]);
+            await sb.from("fotos").update({ ordem: i }).eq("id", ids[i]);
           }
           console.log(`✅ Ordem salva para ${data}:`, ids);
         } catch (e) {
