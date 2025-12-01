@@ -253,8 +253,27 @@ window.addEventListener('load', async () => {
   const { data: { user }, error } = await window.sb.auth.getUser();
 
   if (error || !user) {
-    // Se não estiver logado, redireciona para a página de login
     window.location.href = 'login.html';
+    return;
+  }
+
+  // ------------------------------
+  // BLOQUEIO DE EMAILS PERMITIDOS
+  // ------------------------------
+  const emailsPermitidosGoogle = ["marciordcosta@gmail.com"];
+  const emailsPermitidosSenha = ["teste@teste.com"];
+
+  const email = user.email;
+
+  // Se o usuário NÃO estiver em nenhuma das listas → bloqueia
+  if (
+    !emailsPermitidosGoogle.includes(email) &&
+    !emailsPermitidosSenha.includes(email)
+  ) {
+    alert("Acesso não autorizado.");
+    await window.sb.auth.signOut();
+    window.location.href = 'login.html';
+    return;
   }
 });
 </script>
