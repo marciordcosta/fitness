@@ -318,28 +318,46 @@
             cursor: pointer;
         }
 
-        /* Responsivo */
+        /* ============================
+        MOBILE: empilhar tudo
+        ============================ */
         @media (max-width: 768px) {
-            .modal-content {
-                max-width: 94%;
-                padding: 16px;
+
+            /* Quebra o layout de duas colunas */
+            body > div[style*="display:flex"][style*="gap:16px"] {
+                display: block !important;
+            }
+
+            /* Lista de exercícios */
+            section.card[style*="width:320px"] {
+                width: 100% !important;
+                margin-bottom: 16px;
+                display: block !important;
+            }
+
+            /* Gráfico */
+            #painel-grafico {
+                width: 100% !important;
+                margin-bottom: 16px;
+                display: block !important;
+            }
+
+            /* Detalhes */
+            #detalhes {
+                width: 100% !important;
+                display: block !important;
+            }
+
+        /* Tabela de detalhes -> virar blocos */
+            .detalhes-table,
+            .detalhes-table tbody,
+            .detalhes-table tr,
+            .detalhes-table td {
+                display: block !important;
+                width: 100% !important;
             }
         }
 
-        /* Responsivo Colunas Detalhes */
-        @media (max-width: 600px) {
-            .detalhes-table, .detalhes-table tbody, .detalhes-table tr, .detalhes-table td {
-                display: block;
-                width: 100%;
-            }
-            .detalhes-col {
-                padding: 8px 0;
-                border-bottom: 1px solid #eee;
-            }
-            .detalhes-col:last-child {
-                border-bottom: none;
-            }
-        }
     </style>
 </head>
 <body>
