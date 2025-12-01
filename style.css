@@ -255,3 +255,25 @@ button {
   border-radius: 8px;
   cursor: pointer;
 }
+
+/* ===== AJUSTE MOBILE: 2×2 NOS BLOCOS ===== */
+@media (max-width: 520px) {
+  .medias-container {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .media-bloco {
+    flex: 1 1 calc(50% - 10px); /* 2 por linha */
+  }
+
+  /* Ajuste de fonte para não quebrar */
+  .media-bloco h3 {
+    font-size: 12px;
+  }
+
+  .media-bloco div {
+    font-size: 18px;
+  }
+}
+
