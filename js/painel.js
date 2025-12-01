@@ -111,7 +111,7 @@ function initPainel(colDireita) {
     <div id="painelTreino" class="painel-wrapper">
       <div class="painel-topo">
         <div class="painel-titulo">Distribuição por grupo muscular</div>
-        <button id="btnAddIntervaloPainel" type="button" class="painel-btn-intervalo">+ Intervalo</button>
+        <button id="btnAddIntervaloPainel" type="button" class="painel-btn-intervalo">Intervalo</button>
       </div>
       <div id="painelEmptyMsg" class="painel-empty" style="display:none;"></div>
       <div class="painel-tabela-wrapper">
@@ -644,3 +644,4 @@ function removerIntervalo(idIntervalo) {
   );
   atualizarPainel();
 }
+
