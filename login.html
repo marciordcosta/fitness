@@ -142,10 +142,12 @@
     async function loginGoogle() {
       await sb.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: "https://marciordcosta.github.io/Fitness/" }
+        options: {
+          redirectTo: "https://marciordcosta.github.io/fitness"
+        }
       });
     }
-  </script>
+</script>
 
 </body>
 </html>
