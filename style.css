@@ -261,10 +261,12 @@ button {
   .medias-container {
     flex-wrap: wrap;
     gap: 10px;
+    justify-content: center;
   }
 
   .media-bloco {
-    flex: 1 1 calc(50% - 10px); /* 2 por linha */
+    flex: 1 1 calc(50% - 10px);
+    max-width: calc(50% - 10px);
   }
 
   /* Ajuste de fonte para não quebrar */
