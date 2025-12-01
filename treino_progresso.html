@@ -323,38 +323,54 @@
         ============================ */
         @media (max-width: 768px) {
 
-            /* Quebra o layout de duas colunas */
-            body > div[style*="display:flex"][style*="gap:16px"] {
+            /* Quebra o layout de duas colunas (funciona sempre, sem depender de espaços no style) */
+            body > div[style*="display:flex"] {
                 display: block !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow-x: hidden !important;
+                box-sizing: border-box !important;
             }
 
-            /* Lista de exercícios */
-            section.card[style*="width:320px"] {
+            /* Lista de exercícios – captura qualquer variação do inline width:320px */
+            section.card[style*="width"] {
                 width: 100% !important;
-                margin-bottom: 16px;
+                max-width: 100% !important;
                 display: block !important;
+                margin-bottom: 16px !important;
+                box-sizing: border-box !important;
+                overflow-x: hidden !important;
             }
 
             /* Gráfico */
             #painel-grafico {
                 width: 100% !important;
-                margin-bottom: 16px;
+                max-width: 100% !important;
                 display: block !important;
+                margin-bottom: 16px !important;
+                box-sizing: border-box !important;
+                overflow-x: hidden !important;
             }
 
             /* Detalhes */
             #detalhes {
                 width: 100% !important;
+                max-width: 100% !important;
                 display: block !important;
+                box-sizing: border-box !important;
+                overflow-x: hidden !important;
             }
 
-        /* Tabela de detalhes -> virar blocos */
+            /* Tabela de detalhes -> virar blocos */
             .detalhes-table,
             .detalhes-table tbody,
             .detalhes-table tr,
             .detalhes-table td {
                 display: block !important;
                 width: 100% !important;
+                max-width: 100% !important;
+                box-sizing: border-box !important;
             }
         }
 
