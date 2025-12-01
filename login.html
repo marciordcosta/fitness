@@ -119,6 +119,14 @@
       const email = document.getElementById("email").value;
       const senha = document.getElementById("senha").value;
 
+      // Lista de e-mails permitidos no login por email e senha
+      const emailsPermitidos = ["teste@teste.com"];  
+
+      if (!emailsPermitidos.includes(email)) {
+      alert("Acesso não autorizado.");
+      return;
+      }
+
       const { data, error } = await sb.auth.signInWithPassword({
         email: email,
         password: senha
