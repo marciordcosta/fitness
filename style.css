@@ -275,5 +275,16 @@ button {
   .media-bloco div {
     font-size: 18px;
   }
-}
 
+  #painelContainer,
+  .painel-lateral,
+  .painel-direita {
+    display: none !important;
+  }
+
+  /* Painel flutuante do gráfico semanal (painel_grafico.js) */
+  #btnAbrirGraficoPainel,
+  #painel-flutuante-series-semanais {
+    display: none !important;
+  }
+}
