@@ -35,16 +35,27 @@ function atualizarPainel() {
     if (!painelInputListenerAttached) {
       painelInputListenerAttached = true;
 
-      document.addEventListener("input", (e) => {
+      // Recalcular somente quando o usuário CONFIRMAR a edição
+      document.addEventListener("change", (e) => {
         const alvo = e.target;
         if (!alvo || !alvo.classList) return;
 
-        // Sempre que mexer em um input-mini (séries, etc.), recalcula o painel
         if (alvo.classList.contains("input-mini")) {
-          // Evita loop: atualizarPainel só recalcula, não dispara 'input'
           atualizarPainel();
         }
       });
+
+      // Também recalcular quando o usuário apertar ENTER
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          const alvo = e.target;
+          if (alvo && alvo.classList && alvo.classList.contains("input-mini")) {
+            alvo.blur();       // força fechar o teclado
+            atualizarPainel(); // atualiza depois de confirmado
+          }
+        }
+      });
+
     }
 
     if (!Array.isArray(TREINOS) || !Array.isArray(TREINO_EXS) || !Array.isArray(BASE_EXERCICIOS)) {
@@ -771,3 +782,5 @@ function atualizarDiasAtivo() {
 document.addEventListener("input", e => {
   if (e.target.id === "painelDataInput") atualizarDiasAtivo();
 });
+
+
