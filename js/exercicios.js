@@ -29,6 +29,34 @@ let sortableColunas = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
   kanbanEl = document.getElementById("kanban");
+  
+  // --- CORREÇÃO: Bloqueio total de seleção de texto e manipulação para melhorar o Drag/Drop ---
+  if (kanbanEl) {
+    // 1. Desabilita a seleção de texto via CSS em todo o kanban
+    kanbanEl.style.userSelect = 'none';
+    kanbanEl.style.webkitUserSelect = 'none';
+    kanbanEl.style.mozUserSelect = 'none';
+    kanbanEl.style.msUserSelect = 'none';
+    kanbanEl.style.webkitTouchCallout = 'none'; // Para dispositivos touch
+
+    // 2. Bloqueia copy/paste/cut em todo o painel, exceto em INPUTs/TEXTAREAs
+    const blockTextManipulation = (e) => {
+        // Permite a manipulação de texto em campos de formulário (inputs de nome de coluna, modais)
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation(); 
+        return false;
+    };
+
+    // Usa a fase de captura (true) para interceptar o evento antes dos elementos internos
+    kanbanEl.addEventListener("copy", blockTextManipulation, true); 
+    kanbanEl.addEventListener("paste", blockTextManipulation, true);
+    kanbanEl.addEventListener("cut", blockTextManipulation, true);
+  }
+  // ---------------------------------------------------------------------------------------------
+
   criarModalExercicioDOM();
 
   await initUser();
@@ -506,6 +534,13 @@ function criarColunaDOM(p) {
   nomeInput.value = p.nome || "";
   nomeInput.style.background = p.cor_fundo || "#ffffff";
   nomeInput.style.color = p.cor_fonte || "#111111";
+  
+  // CORREÇÃO: Sobrescreve a regra do pai (kanbanEl) para permitir a seleção de texto no input.
+  nomeInput.style.userSelect = 'text';
+  nomeInput.style.webkitUserSelect = 'text';
+  nomeInput.style.mozUserSelect = 'text';
+  nomeInput.style.msUserSelect = 'text';
+
   nomeInput.oninput = async () => {
     const novoNome = nomeInput.value;
     const { error } = await sb
@@ -712,45 +747,94 @@ async function excluirExercicioDireto(id) {
   renderKanban();
 }
 
+// ... (código anterior omitido)
+
 // --------------------------------------------------
-// DRAG & DROP – EXERCÍCIOS (mantido igual)
+// DRAG & DROP – EXERCÍCIOS (Solução Definitiva Contra Travamento)
 // --------------------------------------------------
 function attachDragExercicios() {
   const listas = Array.from(document.querySelectorAll(".lista-ex"));
   let arrastando = null;
 
+  // Função auxiliar para gerenciar a mensagem de 'vazio' na coluna
+  const toggleEmptyHint = (lista) => {
+      let hint = lista.querySelector(".hint-empty");
+      const hasItems = lista.querySelectorAll(".item-ex").length > 0;
+
+      if (hasItems) {
+          if (hint) hint.remove();
+      } else {
+          if (!hint) {
+              hint = document.createElement("div");
+              hint.className = "hint-empty";
+              hint.textContent = "Nenhum exercício. Clique no +.";
+              lista.appendChild(hint);
+          }
+      }
+  };
+
+
   listas.forEach(lista => {
+    // 1. ANEXAR LISTENERS AOS ITENS
     lista.querySelectorAll(".item-ex").forEach(item => {
-      item.addEventListener("dragstart", () => {
+      item.addEventListener("dragstart", (e) => {
         arrastando = item;
         item.classList.add("arrastando");
+        try { e.dataTransfer.setData("text/plain", ""); } catch (_) {}
       });
 
+      // 2. DRAGEND – ATUALIZAÇÃO SEM RENDER COMPLETO
       item.addEventListener("dragend", async () => {
         if (!arrastando) return;
+
         arrastando.classList.remove("arrastando");
 
         const novaLista = arrastando.closest(".lista-ex");
         const novoPadraoId = Number(novaLista.dataset.coluna);
-
+        const antigoPadraoId = Number(arrastando.dataset.padraoIdOriginal || novoPadraoId);
+        
+        // Obtém a nova ordem do DOM
         const ordem = Array.from(novaLista.querySelectorAll(".item-ex")).map((el, idx) => ({
           id: Number(el.dataset.id),
           ordem: idx
         }));
 
-        for (const o of ordem) {
-          await sb
+        // ATUALIZA ESTADO LOCAL E PREPARA PROMISES
+        const updatePromises = ordem.map(o => {
+          const localEx = exercicios.find(e => e.id === o.id);
+          if (localEx) {
+            // Atualiza o objeto no array local
+            localEx.ordem = o.ordem;
+            localEx.padrao_id = novoPadraoId;
+          }
+          return sb
             .from("exercicios")
             .update({ ordem: o.ordem, padrao_id: novoPadraoId })
             .eq("id", o.id);
-        }
+        });
 
-        await carregarExercicios();
-        renderKanban();
-        arrastando = null;
+        // 3. Limpeza do Hint
+        // Se o exercício mudou de coluna, precisamos checar a coluna antiga
+        if (antigoPadraoId !== novoPadraoId) {
+             const listaAntiga = document.querySelector(`.lista-ex[data-coluna="${antigoPadraoId}"]`);
+             if(listaAntiga) toggleEmptyHint(listaAntiga);
+        }
+        // Checa a nova coluna
+        toggleEmptyHint(novaLista);
+
+        // 4. Limpa referência e executa DB updates em background
+        arrastando = null; 
+        
+        // Dispara as atualizações do DB
+        Promise.all(updatePromises).catch(e => console.error("Erro ao salvar ordem dos exercícios:", e));
+        
+        // **IMPORTANTE: Não chama renderKanban() para evitar o travamento.**
       });
+      // Armazena o ID original para checagem do empty hint
+      item.dataset.padraoIdOriginal = item.closest(".lista-ex").dataset.coluna;
     });
 
+    // 5. DRAGOVER – Lógica de reposicionamento (mantida)
     lista.addEventListener("dragover", e => {
       e.preventDefault();
       if (!arrastando) return;
@@ -762,8 +846,14 @@ function attachDragExercicios() {
 
       if (apos && apos !== arrastando) {
         lista.insertBefore(arrastando, apos);
-      } else if (!apos) {
+      } else if (!apos && lista.querySelectorAll(".item-ex").length > 0) {
+        // Se não há elemento abaixo (no final da lista) e a lista já tem itens
         lista.appendChild(arrastando);
+      } else if (!apos && lista.querySelectorAll(".item-ex").length === 0) {
+        // Se a lista está vazia
+        const hint = lista.querySelector(".hint-empty");
+        if(hint) lista.insertBefore(arrastando, hint);
+        else lista.appendChild(arrastando);
       }
     });
   });
