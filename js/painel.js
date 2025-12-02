@@ -106,20 +106,62 @@ salvarIntervalSlots(treinosOrdenados);
 // Inicialização do painel (layout fixo)
 // -----------------------------------------------------------------------------
 function initPainel(colDireita) {
+  const PAINEL_DATA_KEY = "painel_data_protocolo_v1";
+
   painelRoot = colDireita;
+
   painelRoot.innerHTML = `
     <div id="painelTreino" class="painel-wrapper">
+
       <div class="painel-topo">
         <div class="painel-titulo">Distribuição por grupo muscular</div>
         <button id="btnAddIntervaloPainel" type="button" class="painel-btn-intervalo">Intervalo</button>
       </div>
+
       <div id="painelEmptyMsg" class="painel-empty" style="display:none;"></div>
+
       <div class="painel-tabela-wrapper">
         <table class="painel-tabela">
           <thead id="painelThead"></thead>
           <tbody id="painelTbody"></tbody>
         </table>
       </div>
+
+      <!-- BLOCO: DATA DO PROTOCOLO + DIAS ATIVO -->
+      <div id="painel-data-wrapper"
+        style="
+          width:fit-content;
+          margin-left:auto;
+          margin-top:30px;
+          display:flex;
+          align-items:baseline;
+          gap:10px;
+          font-size:12px;
+          color:#555;
+        "
+      >
+        <label style="font-size:12px; color:#666;">Data:</label>
+
+        <input 
+          type="date" 
+          id="painelDataInput"
+          style="
+            height:20px;          
+            padding:0 6px;
+            font-size:12px;
+            color:#444;
+            border:1px solid #ccc;
+            border-radius:6px;
+            background:#fff;
+            margin-bottom: 0px;
+          "
+        >
+
+        <span id="painelDiasAtivo"
+          style="font-size:12px; font-weight:600; color:#444; margin-left:4px; white-space:nowrap;">
+        </span>
+      </div>
+
     </div>
   `;
 
@@ -128,9 +170,46 @@ function initPainel(colDireita) {
   painelEmptyMsg = painelRoot.querySelector("#painelEmptyMsg");
 
   const btnAddIntervalo = painelRoot.querySelector("#btnAddIntervaloPainel");
-  btnAddIntervalo.addEventListener("click", () => {
-    adicionarIntervalo();
-  });
+  if (btnAddIntervalo) {
+    btnAddIntervalo.addEventListener("click", () => adicionarIntervalo());
+  }
+
+  // --- Persistência da data ---
+  function atualizarDiasAtivo() {
+    const inp = painelRoot.querySelector("#painelDataInput");
+    const out = painelRoot.querySelector("#painelDiasAtivo");
+
+    if (!inp || !out) return;
+
+    if (!inp.value) {
+      out.textContent = "";
+      return;
+    }
+
+    const hoje = new Date();
+    const data = new Date(inp.value + "T00:00:00");
+    const diff = Math.floor((hoje - data) / (1000 * 60 * 60 * 24));
+
+    out.textContent = diff + " dias ";
+  }
+
+  const inputData = painelRoot.querySelector("#painelDataInput");
+  const dataSalva = localStorage.getItem(PAINEL_DATA_KEY);
+
+  if (inputData && dataSalva) {
+    inputData.value = dataSalva;
+  }
+
+  atualizarDiasAtivo();
+
+  if (inputData) {
+    inputData.addEventListener("change", (e) => {
+      localStorage.setItem(PAINEL_DATA_KEY, e.target.value || "");
+      atualizarDiasAtivo();
+    });
+
+    inputData.addEventListener("input", atualizarDiasAtivo);
+  }
 
   painelInitialized = true;
 }
@@ -645,3 +724,50 @@ function removerIntervalo(idIntervalo) {
   atualizarPainel();
 }
 
+function removerIntervalo(idIntervalo) {
+  intervalSlots = intervalSlots.map(slot =>
+    slot.filter(x => x !== idIntervalo)
+  );
+  atualizarPainel();
+}
+
+// Bloqueia copiar, colar e recortar em QUALQUER elemento dentro do painel
+document.addEventListener("copy", e => {
+  if (e.target.closest("#painelContainer")) {
+    e.preventDefault();
+  }
+});
+
+document.addEventListener("paste", e => {
+  if (e.target.closest("#painelContainer")) {
+    e.preventDefault();
+  }
+});
+
+document.addEventListener("cut", e => {
+  if (e.target.closest("#painelContainer")) {
+    e.preventDefault();
+  }
+});
+
+
+// Calcula dias ativo do protocolo
+function atualizarDiasAtivo() {
+  const inp = document.querySelector("#painelDataInput");
+  const out = document.querySelector("#painelDiasAtivo");
+  if (!inp || !inp.value) {
+    out.textContent = "";
+    return;
+  }
+
+  const hoje = new Date();
+  const data = new Date(inp.value);
+
+  const diff = Math.floor((hoje - data) / (1000 * 60 * 60 * 24));
+  out.textContent = diff + " dias ativo";
+}
+
+// Listener
+document.addEventListener("input", e => {
+  if (e.target.id === "painelDataInput") atualizarDiasAtivo();
+});
