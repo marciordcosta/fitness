@@ -494,7 +494,7 @@ async function atualizarDetalhesComparacao(){
                       .sort((a,b) => parseLocalDate(b.data) - parseLocalDate(a.data));
 
     let col = `
-      <div style="font-weight:600; margin-bottom:6px; display:flex; align-items:center; gap:6px; font-size:20px;">
+      <div style="font-weight:600; margin-bottom:6px; display:flex; align-items:center; gap:6px; font-size:16px;">
         ${nome}
         <span style="cursor:pointer; font-size:16px;"
           onclick="window.dispatchEvent(new CustomEvent('abrirModalInserirRegistro',{detail:{exercicioId:${id}}}))">+</span>
