@@ -35,7 +35,7 @@ function atualizarPainel() {
     if (!painelInputListenerAttached) {
       painelInputListenerAttached = true;
 
-      // Recalcular somente quando o usuário CONFIRMAR a edição
+      // Recalcular somente quando o usuário CONFIRMAR a edição (via mudança de foco/blur)
       document.addEventListener("change", (e) => {
         const alvo = e.target;
         if (!alvo || !alvo.classList) return;
@@ -50,7 +50,7 @@ function atualizarPainel() {
         if (e.key === "Enter") {
           const alvo = e.target;
           if (alvo && alvo.classList && alvo.classList.contains("input-mini")) {
-            alvo.blur();       // força fechar o teclado
+            // alvo.blur();       // Mantido como REMOVIDO para que o teclado não feche no celular
             atualizarPainel(); // atualiza depois de confirmado
           }
         }
@@ -92,20 +92,20 @@ function atualizarPainel() {
     syncGrupoOrder(gruposAtual);
 
     const modelo = calcularDistribuicao(treinosOrdenados, gruposAtual);
-renderPainel(modelo);
+    renderPainel(modelo);
 
-// ativa botão P **DEPOIS** do renderPainel
-setTimeout(() => {
-  document.querySelectorAll(".btn-prog-painel").forEach(btn => {
-    btn.onclick = () => {
-      const grupo = btn.dataset.grupo;
-      abrirProgressoGrupo(grupo);
-    };
-  });
-}, 0);
+    // ativa botão P **DEPOIS** do renderPainel
+    setTimeout(() => {
+      document.querySelectorAll(".btn-prog-painel").forEach(btn => {
+        btn.onclick = () => {
+          const grupo = btn.dataset.grupo;
+          abrirProgressoGrupo(grupo);
+        };
+      });
+    }, 0);
 
-// salva intervalos após renderizar
-salvarIntervalSlots(treinosOrdenados);
+    // salva intervalos após renderizar
+    salvarIntervalSlots(treinosOrdenados);
 
 
   } catch (e) {
@@ -121,8 +121,16 @@ function initPainel(colDireita) {
 
   painelRoot = colDireita;
 
+  // FIX: Adicionado user-select: none para impedir a seleção de texto e melhorar o drag/drop
   painelRoot.innerHTML = `
-    <div id="painelTreino" class="painel-wrapper">
+    <div id="painelTreino" class="painel-wrapper"
+      style="
+        user-select: none;
+        -webkit-user-select: none; 
+        -moz-user-select: none;
+        -ms-user-select: none;
+      "
+    >
 
       <div class="painel-topo">
         <div class="painel-titulo">Distribuição por grupo muscular</div>
@@ -138,7 +146,6 @@ function initPainel(colDireita) {
         </table>
       </div>
 
-      <!-- BLOCO: DATA DO PROTOCOLO + DIAS ATIVO -->
       <div id="painel-data-wrapper"
         style="
           width:fit-content;
@@ -198,10 +205,12 @@ function initPainel(colDireita) {
     }
 
     const hoje = new Date();
-    const data = new Date(inp.value + "T00:00:00");
+    // Garante que a data seja interpretada no fuso horário local como 00:00:00
+    // Isso é importante para o cálculo de diferença em dias.
+    const data = new Date(inp.value + "T00:00:00"); 
     const diff = Math.floor((hoje - data) / (1000 * 60 * 60 * 24));
 
-    out.textContent = diff + " dias ";
+    out.textContent = diff + " dias ativo";
   }
 
   const inputData = painelRoot.querySelector("#painelDataInput");
@@ -223,6 +232,24 @@ function initPainel(colDireita) {
   }
 
   painelInitialized = true;
+  
+  // BLOQUEIO DE CÓPIA/COLA NO PAINEL (garante que, mesmo que algo seja selecionado, a cópia seja impedida)
+  // Usa a fase de captura (true) para interceptar o evento antes que os elementos internos o vejam.
+  const blockTextManipulation = (e) => {
+    // Exceção: Não bloqueia a manipulação de texto em campos de input,
+    // permitindo que o usuário interaja com a data, por exemplo.
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+    }
+    e.preventDefault();
+    e.stopPropagation(); 
+    return false;
+  };
+
+  // Anexa o handler aos eventos copy, paste e cut no elemento raiz do painel
+  painelRoot.addEventListener("copy", blockTextManipulation, true); 
+  painelRoot.addEventListener("paste", blockTextManipulation, true);
+  painelRoot.addEventListener("cut", blockTextManipulation, true);
 }
 
 // -----------------------------------------------------------------------------
@@ -253,6 +280,7 @@ function syncIntervalSlots(treinosCount) {
   } else if (intervalSlots.length > treinosCount + 1) {
     const extras = intervalSlots.splice(treinosCount + 1);
     extras.forEach(slot => {
+      // Move os IDs de intervalos excedentes para o último slot
       intervalSlots[treinosCount].push(...slot);
     });
   }
@@ -580,7 +608,8 @@ function abrirProgressoGrupo(grupoNome) {
     return;
   }
 
-  const idBase = lista[0].id;
+  // O ID do exercício base para o progresso é o do primeiro exercício encontrado
+  const idBase = lista[0].id; 
 
   localStorage.setItem("progresso_exercicio_id", idBase);
   window.location.href = "treino_progresso.html";
@@ -734,53 +763,3 @@ function removerIntervalo(idIntervalo) {
   );
   atualizarPainel();
 }
-
-function removerIntervalo(idIntervalo) {
-  intervalSlots = intervalSlots.map(slot =>
-    slot.filter(x => x !== idIntervalo)
-  );
-  atualizarPainel();
-}
-
-// Bloqueia copiar, colar e recortar em QUALQUER elemento dentro do painel
-document.addEventListener("copy", e => {
-  if (e.target.closest("#painelContainer")) {
-    e.preventDefault();
-  }
-});
-
-document.addEventListener("paste", e => {
-  if (e.target.closest("#painelContainer")) {
-    e.preventDefault();
-  }
-});
-
-document.addEventListener("cut", e => {
-  if (e.target.closest("#painelContainer")) {
-    e.preventDefault();
-  }
-});
-
-
-// Calcula dias ativo do protocolo
-function atualizarDiasAtivo() {
-  const inp = document.querySelector("#painelDataInput");
-  const out = document.querySelector("#painelDiasAtivo");
-  if (!inp || !inp.value) {
-    out.textContent = "";
-    return;
-  }
-
-  const hoje = new Date();
-  const data = new Date(inp.value);
-
-  const diff = Math.floor((hoje - data) / (1000 * 60 * 60 * 24));
-  out.textContent = diff + " dias ativo";
-}
-
-// Listener
-document.addEventListener("input", e => {
-  if (e.target.id === "painelDataInput") atualizarDiasAtivo();
-});
-
-
