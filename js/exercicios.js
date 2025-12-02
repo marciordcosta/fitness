@@ -637,34 +637,64 @@ function criarItemExercicioDOM(e) {
   detalhes.textContent = linhas.join(" · ");
 
   const actions = document.createElement("div");
-  actions.className = "item-actions";
+actions.className = "item-actions";
 
-  const btnEdit = document.createElement("button");
-  btnEdit.className = "icon-btn";
-  btnEdit.title = "Editar";
-  btnEdit.innerHTML = `
-    <svg width="12" height="12" viewBox="0 0 24 24">
-      <path d="M3 21v-3.75L14.8 5.4c.6-.6 1.6-.6 2.2 0l1.6 1.6c.6.6.6 1.6 0 2.2L6.8 21H3z"
-            stroke="#e5e5e5" stroke-width="1.8"/>
-    </svg>`;
-  btnEdit.onclick = () => abrirModalEditarExercicio(e.id);
+// Botão de 3 pontinhos
+const btnMenu = document.createElement("button");
+btnMenu.className = "icon-btn";
+btnMenu.title = "Opções";
+btnMenu.innerHTML = `
+  <svg width="18" height="18" viewBox="0 0 24 24">
+    <circle cx="12" cy="5" r="2"/>
+    <circle cx="12" cy="12" r="2"/>
+    <circle cx="12" cy="19" r="2"/>
+  </svg>
+`;
 
-  const btnDel = document.createElement("button");
-  btnDel.className = "icon-btn";
-  btnDel.title = "Excluir";
-  btnDel.innerHTML = `
-    <svg width="16" height="16" viewBox="0 0 24 24">
-      <path d="M6 6l12 12M18 6L6 18" stroke="rgba(252, 165, 165, 1)" stroke-width="2"/>
-    </svg>`;
-  btnDel.onclick = () => excluirExercicioDireto(e.id);
+btnMenu.onclick = (ev) => {
+  ev.stopPropagation();
+  fecharTodosMenus();
 
-  actions.appendChild(btnEdit);
-  actions.appendChild(btnDel);
+  const menu = document.createElement("div");
+  menu.className = "menu-popup";
+  menu.style.position = "absolute";
+  menu.style.right = "0px";
+  menu.style.top = "24px";
+  menu.style.background = "#fff";
+  menu.style.border = "1px solid #ddd";
+  menu.style.borderRadius = "8px";
+  menu.style.boxShadow = "0 4px 10px rgba(0,0,0,0.15)";
+  menu.style.padding = "6px 0";
+  menu.style.zIndex = 999999;
 
-  item.appendChild(nome);
-  item.appendChild(detalhes);
-  item.appendChild(actions);
-  return item;
+  const opt1 = document.createElement("div");
+  opt1.className = "menu-item";
+  opt1.textContent = "Editar";
+  opt1.onclick = () => {
+    fecharTodosMenus();
+    abrirModalEditarExercicio(e.id);
+  };
+
+  const opt2 = document.createElement("div");
+  opt2.className = "menu-item";
+  opt2.textContent = "Excluir";
+  opt2.onclick = () => {
+    fecharTodosMenus();
+    excluirExercicioDireto(e.id);
+  };
+
+  menu.appendChild(opt1);
+  menu.appendChild(opt2);
+
+  actions.appendChild(menu);
+};
+
+actions.appendChild(btnMenu);
+
+item.appendChild(nome);
+item.appendChild(detalhes);
+item.appendChild(actions);
+return item;
 }
 
 // --------------------------------------------------
@@ -890,3 +920,9 @@ function initDragColunas() {
     }
   });
 }
+
+function fecharTodosMenus() {
+  document.querySelectorAll(".menu-popup").forEach(m => m.remove());
+}
+
+document.addEventListener("click", () => fecharTodosMenus());
