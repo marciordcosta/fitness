@@ -258,11 +258,15 @@ button {
   cursor: pointer;
 }
 
-@media (max-width: 520px) {
+@media (max-width: 480px) {
   .medias-container {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
+  }
+
+  .main-content {
+    padding: 16px 8px 80px;
   }
 
   .media-bloco {
