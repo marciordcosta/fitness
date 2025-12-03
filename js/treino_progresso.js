@@ -331,18 +331,40 @@ async function montarListaECalcular(baseExercicioId){
   }
 }
 
+
 // ---------------------------------------------------
-// Funções que alimentam o gráfico
+// getMetricsByDateFull - retorna 1RM, volume total e média por rep
 // ---------------------------------------------------
 async function getMetricsByDateFull(registros){
-  const agrup = agruparPorData(registros);
-  const map = new Map();
-  agrup.forEach(a => {
-    const s1 = calcular1RM(lastValuePeso(a.regs), lastValueReps(a.regs));
-    const s2 = somaTonelagemPorData(a.regs);
-    map.set(a.data, { '1rm': (s1!=null? s1 : null), 'vol': (s2!=null? s2 : null) });
-  });
-  return map;
+    const agrup = agruparPorData(registros);
+    const map = new Map();
+
+    agrup.forEach(a => {
+        // 1RM do dia (maior por dia)
+        const s1 = calcular1RM(lastValuePeso(a.regs), lastValueReps(a.regs));
+
+        // volume total (peso * reps) do dia
+        const totalVol = somaTonelagemPorData(a.regs);
+
+        // reps totais do dia
+        const totalReps = a.regs.reduce((acc, r) => {
+            const rep = Number(r.repeticoes);
+            return (!isNaN(rep) ? acc + rep : acc);
+        }, 0);
+
+        // média por repetição (opcional, útil para outros usos)
+        const volAvg = (totalReps > 0 ? (totalVol / totalReps) : null);
+
+        // **IMPORTANTE**: grava tanto o volume total quanto a média.
+        // O gráfico de comparação (normalização por faixa) deverá usar o total (vol_total).
+        map.set(a.data, {
+            '1rm': (s1 != null ? s1 : null),
+            'vol_total': (totalVol != null ? totalVol : null),
+            'vol_avg': (volAvg != null ? volAvg : null)
+        });
+    });
+
+    return map;
 }
 
 async function buscarDatasUnion(ids, periodo){
@@ -387,48 +409,78 @@ async function atualizarGraficoComparacao(){
     if (!registros) { registros = await buscarRegistrosPeriodo(id, periodo); CACHE.registros[String(id)] = registros; }
     const metrics = await getMetricsByDateFull(registros);
     const aligned1 = datasUnion.map(d => metrics.get(d)?.['1rm'] ?? null);
-    const alignedVol = datasUnion.map(d => metrics.get(d)?.['vol'] ?? null);
+    const alignedVol = datasUnion.map(d => metrics.get(d)?.['vol_total'] ?? null);
     seriesList.push({ nome: exerciseMap.get(idStr) || `ID ${id}`, values1: aligned1, valuesVol: alignedVol });
   }
  
 // --------------------------------------------------------
-// NOVO TRECHO — SEM NORMALIZAÇÃO + DOIS EIXOS (1RM e Volume)
+// NORMALIZAÇÃO POR FAIXA (dentro do período) — 1RM e Volume
 // --------------------------------------------------------
 
-// Criar datasets REAIS (sem normalização)
+// coletar todos os valores válidos para calcular min/max por métrica
+const all1rm = seriesList.flatMap(s => (s.values1||[]).filter(v => v != null && !isNaN(v)).map(v => Number(v)));
+const allVol  = seriesList.flatMap(s => (s.valuesVol||[]).filter(v => v != null && !isNaN(v)).map(v => Number(v)));
+
+const has1 = all1rm.length > 0;
+const hasV = allVol.length > 0;
+
+const min1 = has1 ? Math.min(...all1rm) : 0;
+const max1 = has1 ? Math.max(...all1rm) : 1;
+const minV = hasV ? Math.min(...allVol) : 0;
+const maxV = hasV ? Math.max(...allVol) : 1;
+
+// evita divisão por zero; se min==max, coloca todos em 50 (centro)
+const range1 = (max1 - min1) || 0;
+const rangeV = (maxV - minV) || 0;
+
+function norm1rm(v){
+  if (v == null || isNaN(v)) return null;
+  if (range1 === 0) return 50;
+  return ((Number(v) - min1) / range1) * 100;
+}
+function normVol(v){
+  if (v == null || isNaN(v)) return null;
+  if (rangeV === 0) return 50;
+  return ((Number(v) - minV) / rangeV) * 100;
+}
+
+// montar datasets normalizados (todos no mesmo plano 0..100)
 const datasets = [];
 
 seriesList.forEach((s, idx) => {
     const hue = (idx * 60) % 360;
     const baseColor = `hsl(${hue} 70% 45%)`;
 
-    // Linha 1RM — sólida
+    const data1Norm = (s.values1||[]).map(norm1rm);
+    const dataVolNorm = (s.valuesVol||[]).map(normVol);
+
     datasets.push({
         label: `${s.nome} — 1RM`,
-        data: s.values1,
+        data: data1Norm,
         borderColor: baseColor,
         borderWidth: 2,
         tension: 0.3,
         fill: false,
-        yAxisID: `y${datasets.length}`,
+        yAxisID: 'y',          // único eixo compartilhado (invisível)
         pointRadius: 0,
         pointHoverRadius: 0,
-        spanGaps: true
+        spanGaps: true,
+        meta: { rawValues: s.values1 } // opcional: guarda valores brutos para tooltips/custom
     });
 
-    // Linha Volume — tracejada
     datasets.push({
         label: `${s.nome} — Vol`,
-        data: s.valuesVol,
+        data: dataVolNorm,
         borderColor: baseColor,
         borderWidth: 2,
         borderDash: [5, 4],
         tension: 0.3,
         fill: false,
-        yAxisID: `y${datasets.length}`,
+        yAxisID: 'y',          // mesmo eixo normalizado
         pointRadius: 0,
         pointHoverRadius: 0,
-        spanGaps: true
+        spanGaps: true,
+        meta: { rawValues: s.valuesVol } // opcional: guarda valores brutos para tooltips/custom
     });
 });
 
@@ -439,7 +491,7 @@ if (!chartCtx) chartCtx = canvas.getContext('2d');
 
 if (progressoChart) progressoChart.destroy();
 
-// Criar gráfico com eixos independentes invisíveis (um por linha)
+// Criar gráfico com escala única (0..100) invisível
 progressoChart = new Chart(chartCtx, {
     type: 'line',
     data: {
@@ -450,18 +502,19 @@ progressoChart = new Chart(chartCtx, {
         responsive: true,
         maintainAspectRatio: false,
 
-        // gera um eixo Y invisível para cada dataset
-        scales: Object.fromEntries(
-            datasets.map((d, i) => [
-                `y${i}`,
-                {
-                    type: 'linear',
-                    display: false,     // eixo invisível
-                    beginAtZero: false, // preserva forma real da linha
-                    offset: true        // evita sobreposição de escalas
-                }
-            ])
-        ),
+        // eixo Y único (normalizado 0..100), invisível
+        scales: {
+            y: {
+                type: 'linear',
+                display: false,
+                min: 0,
+                max: 100
+            },
+            x: { 
+                title: { display: false },
+                grid: { display: true }
+            }
+        },
 
         plugins: {
             legend: {
@@ -471,6 +524,19 @@ progressoChart = new Chart(chartCtx, {
                     boxWidth: 30,
                     boxHeight: 2,
                     padding: 10
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    // mostra valor real no tooltip (se disponível em meta.rawValues)
+                    label: function(context) {
+                        const ds = context.dataset;
+                        const idx = context.dataIndex;
+                        const raw = ds.meta && ds.meta.rawValues ? ds.meta.rawValues[idx] : null;
+                        const label = ds.label || '';
+                        if (raw == null || isNaN(raw)) return `${label}: -`;
+                        return `${label}: ${Number(raw).toFixed(1)} (norm:${Number(context.parsed.y).toFixed(1)})`;
+                    }
                 }
             }
         },
@@ -483,6 +549,7 @@ progressoChart = new Chart(chartCtx, {
         }
     }
 });
+
 
 }
 
