@@ -1,9 +1,3 @@
-/* painel_progresso.js
-   Painel flutuante — Séries por Grupo Muscular para uma data específica
-   Cria função global abrirPainelProgresso(exercicioId, data)
-   (data no formato 'YYYY-MM-DD' conforme usado pelo sistema)
-*/
-
 /* CONFIG */
 const FLOAT_PANEL_PROG_ID = "painel-flutuante-progresso";
 const FLOAT_PANEL_PROG_Z = 10000;
@@ -59,17 +53,32 @@ async function construirDadosPorData(exercicioId, data) {
 
   const gruposRef = [base.grupo1, base.grupo2, base.grupo3].filter(Boolean).map(g => String(g).trim());
 
-  // 2) buscar exercícios relacionados
-  let relacionados = [];
-  try {
-    if (typeof buscarExerciciosRelacionadosViaTreinoExs === 'function') {
-      const norm = gruposRef.map(g => (typeof normalizarTexto === 'function' ? normalizarTexto(g) : g));
-      relacionados = await buscarExerciciosRelacionadosViaTreinoExs(norm);
-    }
-  } catch {}
-  if (!relacionados?.length) {
-    try { relacionados = window.CACHE?.relacionados || []; } catch {}
+  // 2) buscar TODOS os exercícios que tiveram registros neste dia
+let relacionados = [];
+
+try {
+  const { data: registrosDoDia } = await sb
+    .from("treino_registros")
+    .select("exercicio_id")
+    .eq("data", data)
+    .eq("user_id", currentUserId);
+
+  const idsUnicos = [...new Set((registrosDoDia || []).map(r => r.exercicio_id))];
+
+  if (idsUnicos.length) {
+    const { data: exerciciosDoDia } = await sb
+      .from("exercicios")
+      .select("id, exercicio, grupo1, grupo2, grupo3")
+      .in("id", idsUnicos)
+      .eq("user_id", currentUserId);
+
+    relacionados = exerciciosDoDia || [];
   }
+
+} catch (err) {
+  console.error("Erro buscando exercícios do dia:", err);
+  relacionados = [];
+}
 
   // 3) processar
   for (const ex of relacionados || []) {
