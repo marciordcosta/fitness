@@ -1,4 +1,4 @@
- // --------- Estado/global -------------
+// --------- Estado/global -------------
 const sb = window.sb;
 let progressoChart = null;
 let chartCtx = null;
@@ -390,86 +390,100 @@ async function atualizarGraficoComparacao(){
     const alignedVol = datasUnion.map(d => metrics.get(d)?.['vol'] ?? null);
     seriesList.push({ nome: exerciseMap.get(idStr) || `ID ${id}`, values1: aligned1, valuesVol: alignedVol });
   }
+ 
+// --------------------------------------------------------
+// NOVO TRECHO — SEM NORMALIZAÇÃO + DOIS EIXOS (1RM e Volume)
+// --------------------------------------------------------
 
-  // Normaliza séries (mantendo pares: 1RM e Vol)
-  const allSeriesForNorm = [];
-  seriesList.forEach(s => {
-    allSeriesForNorm.push({ label: `${s.nome} — 1RM`, values: s.values1 });
-    allSeriesForNorm.push({ label: `${s.nome} — Vol`, values: s.valuesVol });
-  });
+// Criar datasets REAIS (sem normalização)
+const datasets = [];
 
-  const norm = normalizeSeries(allSeriesForNorm);
+seriesList.forEach((s, idx) => {
+    const hue = (idx * 60) % 360;
+    const baseColor = `hsl(${hue} 70% 45%)`;
 
-  // Cria datasets com cor por exercício (cada par compartilha cor). 1RM sólido, Vol tracejado.
-  const datasets = norm.map((n, idx) => {
-    const grp = Math.floor(idx / 2);
-    const hue = (grp * 60) % 360;
-    const color = `hsl(${hue} 80% 45%)`;
-    return {
-      label: n.label,
-      data: n.values,
-      tension: 0.3,
-      borderColor: color,
-      borderWidth: 2,
-      fill: false,
-      borderDash: (idx % 2 === 0) ? [] : [5, 4],
-      pointRadius: 0,
-      pointHoverRadius: 0,
-      spanGaps: true
-    };
-  });
+    // Linha 1RM — sólida
+    datasets.push({
+        label: `${s.nome} — 1RM`,
+        data: s.values1,
+        borderColor: baseColor,
+        borderWidth: 2,
+        tension: 0.3,
+        fill: false,
+        yAxisID: `y${datasets.length}`,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        spanGaps: true
+    });
 
-  // Inicializa canvas contexto se necessário
-  const canvas = document.getElementById('chartProgresso');
-  if (!canvas) { console.error('canvas #chartProgresso não encontrado'); return; }
-  if (!chartCtx) chartCtx = canvas.getContext('2d');
+    // Linha Volume — tracejada
+    datasets.push({
+        label: `${s.nome} — Vol`,
+        data: s.valuesVol,
+        borderColor: baseColor,
+        borderWidth: 2,
+        borderDash: [5, 4],
+        tension: 0.3,
+        fill: false,
+        yAxisID: `y${datasets.length}`,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        spanGaps: true
+    });
+});
 
-  if (progressoChart) progressoChart.destroy();
+// === Garantir canvas/contexto e ordem correta ===
+const canvas = document.getElementById('chartProgresso');
+if (!canvas) { console.error('canvas #chartProgresso não encontrado'); return; }
+if (!chartCtx) chartCtx = canvas.getContext('2d');
 
-  progressoChart = new Chart(chartCtx, {
+if (progressoChart) progressoChart.destroy();
+
+// Criar gráfico com eixos independentes invisíveis (um por linha)
+progressoChart = new Chart(chartCtx, {
     type: 'line',
     data: {
-      labels: datasUnion,
-      datasets
+        labels: datasUnion,
+        datasets
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+        responsive: true,
+        maintainAspectRatio: false,
 
-      plugins: {
-        legend: {
-          display: true,
-          position: 'bottom',
-          labels: {
-            usePointStyle: false,
-            boxWidth: 30,
-            boxHeight: 2,
-            padding: 10
-          }
-        }
-      },
+        // gera um eixo Y invisível para cada dataset
+        scales: Object.fromEntries(
+            datasets.map((d, i) => [
+                `y${i}`,
+                {
+                    type: 'linear',
+                    display: false,     // eixo invisível
+                    beginAtZero: false, // preserva forma real da linha
+                    offset: true        // evita sobreposição de escalas
+                }
+            ])
+        ),
 
-      scales: {
-        y: {
-          beginAtZero: true,
-          title: {
-            display: true,
-            text: 'Progresso Normalizado (0-100)'
-          }
+        plugins: {
+            legend: {
+                display: true,
+                position: 'bottom',
+                labels: {
+                    boxWidth: 30,
+                    boxHeight: 2,
+                    padding: 10
+                }
+            }
         },
-        x: {
-          title: { display: false }
-        }
-      },
 
-      elements: {
-        point: {
-          radius: 0,
-          hoverRadius: 0
+        elements: {
+            point: {
+                radius: 0,
+                hoverRadius: 0
+            }
         }
-      }
     }
-  });
+});
+
 }
 
 // Detalhes — histórico por data (colunas)
@@ -484,7 +498,8 @@ async function atualizarDetalhesComparacao(){
     return;
   }
 
-  let html = `<table style="width:100%; border-collapse:collapse;"><tbody><tr>`;
+  let html = `<table style="width:100%; border-collapse:collapse;
+"><tbody><tr>`;
 
   for (const id of selecionados) {
 
