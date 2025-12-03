@@ -414,150 +414,123 @@ async function atualizarGraficoComparacao(){
   }
  
 // --------------------------------------------------------
-// NORMALIZAÇÃO POR FAIXA (dentro do período) — 1RM e Volume
+// GRÁFICO REAL — sem normalização; um eixo Y independente por dataset (invisíveis)
 // --------------------------------------------------------
 
-// coletar todos os valores válidos para calcular min/max por métrica
-const all1rm = seriesList.flatMap(s => (s.values1||[]).filter(v => v != null && !isNaN(v)).map(v => Number(v)));
-const allVol  = seriesList.flatMap(s => (s.valuesVol||[]).filter(v => v != null && !isNaN(v)).map(v => Number(v)));
+  // montar datasets reais (1RM sólido, Vol tracejado). cada dataset recebe yAxisID = y{index}
+  const datasets = [];
 
-const has1 = all1rm.length > 0;
-const hasV = allVol.length > 0;
+  seriesList.forEach((s, idx) => {
+      const hue = (idx * 60) % 360;
+      const baseColor = `hsl(${hue} 70% 45%)`;
 
-const min1 = has1 ? Math.min(...all1rm) : 0;
-const max1 = has1 ? Math.max(...all1rm) : 1;
-const minV = hasV ? Math.min(...allVol) : 0;
-const maxV = hasV ? Math.max(...allVol) : 1;
+      // 1RM — sólida
+      datasets.push({
+          label: `${s.nome} — 1RM`,
+          data: s.values1.map(v => (v == null ? null : Number(v))),
+          borderColor: baseColor,
+          borderWidth: 2,
+          tension: 0.3,
+          fill: false,
+          yAxisID: `y${datasets.length}`,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          spanGaps: true,
+          meta: { rawValues: s.values1 }
+      });
 
-// margem de 10% para evitar curva "achatada"
-const margem1 = (max1 - min1) * 0.1;
-const margemV = (maxV - minV) * 0.1;
+      // Volume total — tracejada
+      datasets.push({
+          label: `${s.nome} — Vol`,
+          data: s.valuesVol.map(v => (v == null ? null : Number(v))),
+          borderColor: baseColor,
+          borderWidth: 2,
+          borderDash: [5, 4],
+          tension: 0.3,
+          fill: false,
+          yAxisID: `y${datasets.length}`,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          spanGaps: true,
+          meta: { rawValues: s.valuesVol }
+      });
+  });
 
-const adjMin1 = min1 - margem1;
-const adjMax1 = max1 + margem1;
+  // === Garantir canvas/contexto e ordem correta ===
+  const canvas = document.getElementById('chartProgresso');
+  if (!canvas) { console.error('canvas #chartProgresso não encontrado'); return; }
+  if (!chartCtx) chartCtx = canvas.getContext('2d');
 
-const adjMinV = minV - margemV;
-const adjMaxV = maxV + margemV;
+  if (progressoChart) progressoChart.destroy();
 
-const adjRange1 = (adjMax1 - adjMin1) || 1;
-const adjRangeV = (adjMaxV - adjMinV) || 1;
+  // criar um objeto scales com um eixo Y para cada dataset (todos invisíveis),
+  // e manter o eixo X com grid visível para linhas verticais de data.
+  const scales = datasets.reduce((acc, ds, i) => {
+      acc[`y${i}`] = {
+          type: 'linear',
+          display: false,        // eixo invisível
+          beginAtZero: false,
+          ticks: { display: false },
+          grid: { drawOnChartArea: false } // evita desenhar grids vindos desses eixos
+      };
+      return acc;
+  }, {});
 
-function norm1rm(v){
-  if (v == null || isNaN(v)) return null;
-  return ((Number(v) - adjMin1) / adjRange1) * 100;
-}
+  // eixo X
+  scales.x = {
+      title: { display: false },
+      grid: { display: true, drawOnChartArea: true, drawTicks: true }
+  };
 
-function normVol(v){
-  if (v == null || isNaN(v)) return null;
-  return ((Number(v) - adjMinV) / adjRangeV) * 100;
-}
+  // animação: manter fade (evita "deslocamento" ao trocar escalas)
+  const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: {
+          duration: 400,
+          easing: 'easeOutQuad',
+          animations: {
+              y: { type: 'number', duration: 0 },
+              x: { type: 'number', duration: 0 },
+              tension: { duration: 300 }
+          }
+      },
+      transitions: {
+          active: { animation: { duration: 0 } },
+          resize: { animation: { duration: 0 } }
+      },
+      scales,
+      plugins: {
+          legend: {
+              display: true,
+              position: 'bottom',
+              labels: { boxWidth: 30, boxHeight: 2, padding: 10 }
+          },
+          tooltip: {
+              callbacks: {
+                  label: function(context) {
+                      const ds = context.dataset;
+                      const idx = context.dataIndex;
+                      const raw = ds.meta && ds.meta.rawValues ? ds.meta.rawValues[idx] : null;
+                      const label = ds.label || '';
+                      if (raw == null || isNaN(raw)) return `${label}: -`;
+                      // mostrar valor real (kg) no tooltip
+                      // se quiser também mostrar unidade/descrição, ajuste aqui
+                      return `${label}: ${Number(raw).toFixed(1)}kg`;
+                  }
+              }
+          }
+      },
+      elements: {
+          point: { radius: 0, hoverRadius: 0 }
+      }
+  };
 
-// montar datasets normalizados (todos no mesmo plano 0..100)
-const datasets = [];
-
-seriesList.forEach((s, idx) => {
-    const hue = (idx * 60) % 360;
-    const baseColor = `hsl(${hue} 70% 45%)`;
-
-    const data1Norm = (s.values1||[]).map(norm1rm);
-    const dataVolNorm = (s.valuesVol||[]).map(normVol);
-
-    datasets.push({
-        label: `${s.nome} — 1RM`,
-        data: data1Norm,
-        borderColor: baseColor,
-        borderWidth: 2,
-        tension: 0.3,
-        fill: false,
-        yAxisID: 'y',          // único eixo compartilhado (invisível)
-        pointRadius: 0,
-        pointHoverRadius: 0,
-        spanGaps: true,
-        meta: { rawValues: s.values1 } // opcional: guarda valores brutos para tooltips/custom
-    });
-
-    datasets.push({
-        label: `${s.nome} — Vol`,
-        data: dataVolNorm,
-        borderColor: baseColor,
-        borderWidth: 2,
-        borderDash: [5, 4],
-        tension: 0.3,
-        fill: false,
-        yAxisID: 'y',          // mesmo eixo normalizado
-        pointRadius: 0,
-        pointHoverRadius: 0,
-        spanGaps: true,
-        meta: { rawValues: s.valuesVol } // opcional: guarda valores brutos para tooltips/custom
-    });
-});
-
-// === Garantir canvas/contexto e ordem correta ===
-const canvas = document.getElementById('chartProgresso');
-if (!canvas) { console.error('canvas #chartProgresso não encontrado'); return; }
-if (!chartCtx) chartCtx = canvas.getContext('2d');
-
-if (progressoChart) progressoChart.destroy();
-
-// Criar gráfico com escala única (0..100) invisível
-progressoChart = new Chart(chartCtx, {
-    type: 'line',
-    data: {
-        labels: datasUnion,
-        datasets
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-
-        // eixo Y único (normalizado 0..100), invisível
-        scales: {
-            y: {
-                type: 'linear',
-                display: false,
-                min: 0,
-                max: 100
-            },
-            x: { 
-                title: { display: false },
-                grid: { display: true }
-            }
-        },
-
-        plugins: {
-            legend: {
-                display: true,
-                position: 'bottom',
-                labels: {
-                    boxWidth: 30,
-                    boxHeight: 2,
-                    padding: 10
-                }
-            },
-            tooltip: {
-                callbacks: {
-                    // mostra valor real no tooltip (se disponível em meta.rawValues)
-                    label: function(context) {
-                        const ds = context.dataset;
-                        const idx = context.dataIndex;
-                        const raw = ds.meta && ds.meta.rawValues ? ds.meta.rawValues[idx] : null;
-                        const label = ds.label || '';
-                        if (raw == null || isNaN(raw)) return `${label}: -`;
-                        return `${label}: ${Number(raw).toFixed(1)} (norm:${Number(context.parsed.y).toFixed(1)})`;
-                    }
-                }
-            }
-        },
-
-        elements: {
-            point: {
-                radius: 0,
-                hoverRadius: 0
-            }
-        }
-    }
-});
-
+  progressoChart = new Chart(chartCtx, {
+      type: 'line',
+      data: { labels: datasUnion, datasets },
+      options: chartOptions
+  });
 
 }
 
