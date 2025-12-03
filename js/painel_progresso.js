@@ -1,3 +1,9 @@
+/* painel_progresso.js
+   Painel flutuante — Séries por Grupo Muscular para uma data específica
+   Cria função global abrirPainelProgresso(exercicioId, data)
+   (data no formato 'YYYY-MM-DD' conforme usado pelo sistema)
+*/
+
 /* CONFIG */
 const FLOAT_PANEL_PROG_ID = "painel-flutuante-progresso";
 const FLOAT_PANEL_PROG_Z = 10000;
@@ -54,31 +60,31 @@ async function construirDadosPorData(exercicioId, data) {
   const gruposRef = [base.grupo1, base.grupo2, base.grupo3].filter(Boolean).map(g => String(g).trim());
 
   // 2) buscar TODOS os exercícios que tiveram registros neste dia
-let relacionados = [];
+  let relacionados = [];
 
-try {
-  const { data: registrosDoDia } = await sb
-    .from("treino_registros")
-    .select("exercicio_id")
-    .eq("data", data)
-    .eq("user_id", currentUserId);
-
-  const idsUnicos = [...new Set((registrosDoDia || []).map(r => r.exercicio_id))];
-
-  if (idsUnicos.length) {
-    const { data: exerciciosDoDia } = await sb
-      .from("exercicios")
-      .select("id, exercicio, grupo1, grupo2, grupo3")
-      .in("id", idsUnicos)
+  try {
+    const { data: registrosDoDia } = await sb
+      .from("treino_registros")
+      .select("exercicio_id")
+      .eq("data", data)
       .eq("user_id", currentUserId);
 
-    relacionados = exerciciosDoDia || [];
-  }
+    const idsUnicos = [...new Set((registrosDoDia || []).map(r => r.exercicio_id))];
 
-} catch (err) {
-  console.error("Erro buscando exercícios do dia:", err);
-  relacionados = [];
-}
+    if (idsUnicos.length) {
+      const { data: exerciciosDoDia } = await sb
+        .from("exercicios")
+        .select("id, exercicio, grupo1, grupo2, grupo3")
+        .in("id", idsUnicos)
+        .eq("user_id", currentUserId);
+
+      relacionados = exerciciosDoDia || [];
+    }
+
+  } catch (err) {
+    console.error("Erro buscando exercícios do dia:", err);
+    relacionados = [];
+  }
 
   // 3) processar
   for (const ex of relacionados || []) {
@@ -249,19 +255,43 @@ async function abrirPainelProgresso(exercicioId, data) {
     painelProgressoState.root = root;
 
     const header = document.createElement("div");
-    header.style.cssText = `display:flex;justify-content:space-between;align-items:center;cursor:grab;`;
+    header.style.cssText = `display:flex;justify-content:space-between;align-items:center;cursor:grab;padding:0 4px;`;
 
     const titulo = document.createElement("div");
     titulo.textContent = `Séries por grupo — ${data}`;
     titulo.style.cssText = `font-size:15px;font-weight:700;`;
 
+    /* === ÍCONE ABRIR ORDEM DO TREINO (criado antes de usar) === */
+    const btnOrdem = document.createElement("div");
+    btnOrdem.innerHTML = "≡";
+    btnOrdem.style.cssText = `
+      cursor:pointer;
+      font-size:17px;
+      padding:4px 6px;
+      opacity:0.75;
+      margin-right:6px;
+      user-select:none;
+    `;
+    btnOrdem.onmouseenter = () => btnOrdem.style.opacity = "1";
+    btnOrdem.onmouseleave = () => btnOrdem.style.opacity = "0.7";
+    btnOrdem.onclick = async () => {
+      await abrirMiniPainelOrdemTreino(data);
+    };
+
     const btnX = document.createElement("button");
     btnX.textContent = "✕";
-    btnX.style.cssText = `background:none;border:none;cursor:pointer;font-size:16px;`;
+    btnX.style.cssText = `background:none;border:none;cursor:pointer;font-size:16px;padding:4px;`;
+    btnX.addEventListener("pointerdown", ev => ev.stopPropagation());
     btnX.onclick = () => cleanupPainelProgresso();
 
+    // grupo correto (ícone antes do X)
+    const rightBox = document.createElement("div");
+    rightBox.style.cssText = `display:flex;align-items:center;gap:4px;`;
+    rightBox.appendChild(btnOrdem);
+    rightBox.appendChild(btnX);
+
     header.appendChild(titulo);
-    header.appendChild(btnX);
+    header.appendChild(rightBox);
 
     const wrap = document.createElement("div");
     wrap.style.cssText = "flex:1;display:flex;";
@@ -344,4 +374,192 @@ window.addEventListener("abrirPainelProgresso", ev => {
   if (d.exercicioId && d.data) abrirPainelProgresso(d.exercicioId, d.data);
 });
 
-/* FIM */
+
+//Mini painel//
+async function abrirMiniPainelOrdemTreino(dataSelecionada) {
+
+  // remover se já existir
+  const old = document.getElementById("painel-ordem-treino");
+  if (old) old.remove();
+
+  // GARANTIR user
+  const uid = (typeof currentUserId !== 'undefined') ? currentUserId : (window.currentUserId || null);
+
+  // 1) tentar obter treino_id a partir de registros do dia (filtrando por usuário)
+  let treinoId = null;
+  let registrosDoDia = [];
+  try {
+    const q = sb.from("treino_registros").select("treino_id, exercicio_id").eq("data", dataSelecionada);
+    if (uid) q.eq("user_id", uid);
+    const resp = await q.limit(1);
+    treinoId = resp?.data?.[0]?.treino_id || null;
+  } catch (_) { treinoId = null; }
+
+  // 1b) também carregar todos os registros do dia (usaremos no fallback)
+  try {
+    const q2 = sb.from("treino_registros").select("treino_id, exercicio_id").eq("data", dataSelecionada);
+    if (uid) q2.eq("user_id", uid);
+    const resp2 = await q2;
+    registrosDoDia = resp2?.data || [];
+  } catch (_) { registrosDoDia = []; }
+
+  // 2) se tiver treinoId, tentar buscar ordem cadastrada no treino_exercicios
+  let lista = [];
+  if (treinoId) {
+    try {
+      const { data } = await sb
+        .from("treino_exercicios")
+        .select("ordem, validas, exercicios(id, exercicio)")
+        .eq("treino_id", treinoId)
+        .order("ordem", { ascending: true });
+
+
+      lista = (data || []).map(r => ({
+        ordem: r.ordem,
+        nome: r.exercicios?.exercicio || "Exercício",
+        series: r.validas 
+      }));
+      
+    } catch (err) {
+      console.error("Erro ao buscar treino_exercicios:", err);
+      lista = [];
+    }
+  }
+
+  // 3) Fallback: se não encontrou ordem cadastrada, montar lista a partir dos registros do dia
+  if (!lista.length && registrosDoDia.length) {
+    try {
+      const ids = [...new Set(registrosDoDia.map(r => r.exercicio_id).filter(Boolean))];
+      if (ids.length) {
+        const { data: exercs } = await sb
+          .from("exercicios")
+          .select("id, exercicio")
+          .in("id", ids)
+          .eq("user_id", uid);
+
+        // mapear na ordem em que aparecem os ids nos registros (mantém sentido do dia)
+        const idPos = ids;
+        lista = idPos.map((id, idx) => {
+          const e = (exercs || []).find(x => Number(x.id) === Number(id));
+          return {
+            ordem: idx, // 0-based; ajustaremos ao exibir
+            series: null,
+            nome: e?.exercicio || `#${id}`
+          };
+        });
+      }
+    } catch (err) {
+      console.error("Fallback montar lista por registros:", err);
+      lista = [];
+    }
+  }
+
+  // 4) Se ainda não encontrou nada, avisar (não quebrar)
+  if (!lista.length) {
+    alert("Não foi possível identificar ordem do treino para esta data.");
+    return;
+  }
+
+  // criar painel flutuante
+  const mini = document.createElement("div");
+  mini.id = "painel-ordem-treino";
+  mini.style.cssText = `
+    position:fixed;
+    right:30px;
+    top:30px;
+    width:260px;
+    background:white;
+    border-radius:10px;
+    box-shadow:0 5px 25px rgba(0,0,0,0.25);
+    padding:12px;
+    z-index: ${FLOAT_PANEL_PROG_Z + 5};
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  `;
+
+  // header
+  const h = document.createElement("div");
+  h.style.cssText = `display:flex;justify-content:space-between;align-items:center;font-weight:700;`;
+
+  const tt = document.createElement("div");
+  tt.textContent = "Ordem do treino";
+
+  const fechar = document.createElement("div");
+  fechar.textContent = "✕";
+  fechar.style.cssText = "cursor:pointer;font-size:15px;";
+  fechar.addEventListener("pointerdown", e => e.stopPropagation());
+  fechar.addEventListener("click", e => {
+    e.stopPropagation();
+    mini.remove();
+  });
+
+  h.appendChild(tt);
+  h.appendChild(fechar);
+  mini.appendChild(h);
+
+  // corpo
+  lista.forEach(item => {
+    const l = document.createElement("div");
+    l.style.cssText = `
+      font-size:14px;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    `;
+
+    const ordemLabel = document.createElement("div");
+    ordemLabel.style.cssText = `
+      width:28px;
+      text-align:right;
+      opacity:0.85;
+    `;
+    ordemLabel.textContent = `${(Number(item.ordem) || 0) + 1}º`;
+
+    const nomeLabel = document.createElement("div");
+    nomeLabel.style.cssText = `
+      flex:1;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    `;
+    nomeLabel.textContent = item.nome;
+
+    const seriesLabel = document.createElement("div");
+    seriesLabel.style.cssText = `
+      opacity:0.7;
+      white-space:nowrap;
+    `;
+    seriesLabel.textContent =
+      item.series != null ? `${item.series} séries` : "";
+
+    l.appendChild(ordemLabel);
+    l.appendChild(nomeLabel);
+    l.appendChild(seriesLabel);
+
+    mini.appendChild(l);
+});
+
+  document.body.appendChild(mini);
+
+  // tornar arrastável (mesma regra dos painéis)
+  let down = false, offX = 0, offY = 0;
+
+  h.addEventListener("pointerdown", (e) => {
+    down = true;
+    offX = e.clientX - mini.offsetLeft;
+    offY = e.clientY - mini.offsetTop;
+    try { h.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+
+  window.addEventListener("pointermove", e => {
+    if (!down) return;
+    mini.style.left = (e.clientX - offX) + "px";
+    mini.style.top = (e.clientY - offY) + "px";
+  });
+
+  window.addEventListener("pointerup", e => {
+    down = false;
+    try { h.releasePointerCapture(e.pointerId); } catch (_) {}
+  });
+}
