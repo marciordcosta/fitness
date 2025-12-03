@@ -1,5 +1,4 @@
 // Painel de distribuição por grupo muscular
-// Depende de: TREINOS, TREINO_EXS, BASE_EXERCICIOS (definidos em treino.js)
 
 let painelInitialized = false;
 let painelRoot = null;
@@ -93,16 +92,6 @@ function atualizarPainel() {
 
     const modelo = calcularDistribuicao(treinosOrdenados, gruposAtual);
     renderPainel(modelo);
-
-    // ativa botão P **DEPOIS** do renderPainel
-    setTimeout(() => {
-      document.querySelectorAll(".btn-prog-painel").forEach(btn => {
-        btn.onclick = () => {
-          const grupo = btn.dataset.grupo;
-          abrirProgressoGrupo(grupo);
-        };
-      });
-    }, 0);
 
     // salva intervalos após renderizar
     salvarIntervalSlots(treinosOrdenados);
@@ -528,22 +517,6 @@ function renderPainel(modelo) {
     tdGrupo.innerHTML = `
       <span class="painel-grupo-handle">⠿</span>
       <span style="flex:1">${grupo}</span>
-      <button class="btn-prog-painel" data-grupo="${grupo}" 
-        style="
-          cursor:pointer;
-          padding:4px;
-          margin-left:8px;
-          height:24px;
-          width:26px;
-          border-radius:6px;
-          background:#fff;
-          border:1px solid #ffffffff;
-          font-size:13px;
-          font-weight:bold;
-          color:#bad8f2;
-        ">
-        P
-      </button>
     `;
 
     tr.appendChild(tdGrupo);
@@ -553,6 +526,11 @@ function renderPainel(modelo) {
     const tdSemana = document.createElement("td");
     tdSemana.className = "painel-td-num painel-td-semana";
     tdSemana.textContent = semana[grupo] ? semana[grupo] : "";
+
+    // clique abre treino_progresso
+    tdSemana.style.cursor = "pointer";
+    tdSemana.onclick = () => abrirProgressoGrupo(grupo);
+
     tr.appendChild(tdSemana);
 
     // Demais células dinâmicas (treinos + intervalos)
