@@ -429,19 +429,27 @@ const max1 = has1 ? Math.max(...all1rm) : 1;
 const minV = hasV ? Math.min(...allVol) : 0;
 const maxV = hasV ? Math.max(...allVol) : 1;
 
-// evita divisão por zero; se min==max, coloca todos em 50 (centro)
-const range1 = (max1 - min1) || 0;
-const rangeV = (maxV - minV) || 0;
+// margem de 10% para evitar curva "achatada"
+const margem1 = (max1 - min1) * 0.1;
+const margemV = (maxV - minV) * 0.1;
+
+const adjMin1 = min1 - margem1;
+const adjMax1 = max1 + margem1;
+
+const adjMinV = minV - margemV;
+const adjMaxV = maxV + margemV;
+
+const adjRange1 = (adjMax1 - adjMin1) || 1;
+const adjRangeV = (adjMaxV - adjMinV) || 1;
 
 function norm1rm(v){
   if (v == null || isNaN(v)) return null;
-  if (range1 === 0) return 50;
-  return ((Number(v) - min1) / range1) * 100;
+  return ((Number(v) - adjMin1) / adjRange1) * 100;
 }
+
 function normVol(v){
   if (v == null || isNaN(v)) return null;
-  if (rangeV === 0) return 50;
-  return ((Number(v) - minV) / rangeV) * 100;
+  return ((Number(v) - adjMinV) / adjRangeV) * 100;
 }
 
 // montar datasets normalizados (todos no mesmo plano 0..100)
