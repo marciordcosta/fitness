@@ -331,7 +331,6 @@ async function montarListaECalcular(baseExercicioId){
   }
 }
 
-
 // ---------------------------------------------------
 // getMetricsByDateFull - retorna 1RM, volume total e média por rep
 // ---------------------------------------------------
@@ -340,27 +339,19 @@ async function getMetricsByDateFull(registros){
     const map = new Map();
 
     agrup.forEach(a => {
-        // 1RM do dia (maior por dia)
-        const s1 = calcular1RM(lastValuePeso(a.regs), lastValueReps(a.regs));
 
-        // volume total (peso * reps) do dia
-        const totalVol = somaTonelagemPorData(a.regs);
-
-        // reps totais do dia
-        const totalReps = a.regs.reduce((acc, r) => {
-            const rep = Number(r.repeticoes);
-            return (!isNaN(rep) ? acc + rep : acc);
+        // === 1RM EXATAMENTE COMO NO HISTÓRICO ===
+        const rmDia = a.regs.reduce((m, r) => {
+            const x = calcular1RM(r.peso, r.repeticoes);
+            return x > m ? x : m;
         }, 0);
 
-        // média por repetição (opcional, útil para outros usos)
-        const volAvg = (totalReps > 0 ? (totalVol / totalReps) : null);
+        // === VOLUME TOTAL EXATAMENTE COMO NO HISTÓRICO ===
+        const volDia = somaTonelagemPorData(a.regs);
 
-        // **IMPORTANTE**: grava tanto o volume total quanto a média.
-        // O gráfico de comparação (normalização por faixa) deverá usar o total (vol_total).
         map.set(a.data, {
-            '1rm': (s1 != null ? s1 : null),
-            'vol_total': (totalVol != null ? totalVol : null),
-            'vol_avg': (volAvg != null ? volAvg : null)
+            '1rm': rmDia,
+            'vol_total': volDia
         });
     });
 
