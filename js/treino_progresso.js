@@ -592,14 +592,20 @@ async function atualizarDetalhesComparacao(){
       if (pctVolSign === '') pctVolSign = formatSignPct(pctVol);
 
       col += `
-      <div 
-        onclick="abrirModalProgresso(${id}, '${atual.data}')"
-        class="historico-registro">
-        <span class="data-registro">${atual.data}</span>
-        — 1RM: ${formatNum(rmAtual)}kg ${pctRMSign}
-        | Vol: ${formatNum(volAtual)}kg ${pctVolSign}
-      </div>
-    `;
+        <div 
+          onclick="abrirModalProgresso(${id}, '${atual.data}')"
+          class="historico-registro">
+
+          <span style="cursor:pointer; margin-right:6px;"
+            onclick="event.stopPropagation(); abrirPainelProgresso(${id}, '${atual.data}')">
+            📊
+          </span>
+
+          <span class="data-registro">${atual.data}</span>
+          — 1RM: ${formatNum(rmAtual)}kg ${pctRMSign}
+          | Vol: ${formatNum(volAtual)}kg ${pctVolSign}
+        </div>
+      `;
 
     }
 
