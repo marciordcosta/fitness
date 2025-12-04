@@ -227,17 +227,33 @@ async function visualizarTreino(treinoId, nomeTreino) {
       const gruposText = grupos.length ? ' · ' + grupos.join(' / ') : '';
 
       item.innerHTML = `
-  <div style="display:flex;justify-content:space-between;align-items:center;">
-    <strong style="display:block;">${idx + 1}. ${nomeEx}</strong>
-    <small style="color:#666;font-size:12px;">Descanso: ${resto(descanso)}</small>
-  </div>
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    
+    <div style="display:flex; flex-direction:column;">
+        <strong>${nomeEx}</strong>
+        <small style="color:#666;font-size:12px;">Descanso: ${resto(descanso)}</small>
+    </div>
 
+    <!-- BOTÃO X PARA REMOVER EXERCÍCIO EXISTENTE -->
+    <button class="btn-remove-ex"
+            style="width:26px;height:26px;border-radius:6px;
+                   border:none;background:none;
+                   display:flex;align-items:center;justify-content:center;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="#c33" stroke-width="2" stroke-linecap="round">
+            <line x1="5" y1="5" x2="19" y2="19" />
+            <line x1="5" y1="19" x2="19" y2="5" />
+        </svg>
+    </button>
+
+  </div>
+  
   <div class="series-container"
        style="display:flex; flex-direction:column; gap:0px; margin-top:0px;"></div>
 
   <button class="btn-add-serie"
-          style="margin-top:6px;width:26px;height:26px;border-radius:6px;
-                 border:1px solid #ccc;background:#fafafa;
+          style="margin-bottom:10px;width:26px;height:26px;border-radius:6px;
+                 border:none;background:#ededed;
                  display:flex;justify-content:center;align-items:center;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
            stroke="#444" stroke-width="2" stroke-linecap="round">
@@ -249,6 +265,13 @@ async function visualizarTreino(treinoId, nomeTreino) {
 
 item.dataset.exercicioId = e.exercicio_id;
 const containerSeries = item.querySelector('.series-container');
+
+const btnRemove = item.querySelector(".btn-remove-ex");
+btnRemove.onclick = () => {
+    if (confirm("Remover este exercício do treino de hoje?")) {
+        item.remove();
+    }
+};
 
 const registrosDoExercicio = registrosExistentes?.filter(r => r.exercicio_id === e.exercicio_id) || [];
 
@@ -292,7 +315,7 @@ function criarLinhaSerie() {
     <button class="remover-linha"
             style="width:22px;height:22px;border-radius:6px;
                    display:flex;justify-content:center;align-items:center;
-                   border:1px solid #d0d0d0;background:#fafafa;">
+                   border:none;background:none;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
              stroke="#c33" stroke-width="2" stroke-linecap="round">
             <line x1="5" y1="12" x2="19" y2="12" />
@@ -995,4 +1018,138 @@ function atualizarMetaExibicao() {
           titulo.innerHTML = `Meta <span style="color:${cor}; font-weight:500;">(${dif > 0 ? "+" : ""}${dif} kg)</span>`;
       }
   }
+}
+
+/* ============================================
+   ADICIONAR / REMOVER EXERCÍCIOS NO MODAL TREINO
+   ============================================ */
+
+// cache de todos os exercícios globais
+let exerciciosGlobaisCache = [];
+
+// Carrega exercícios de exercicios.js (tabela exercicios)
+async function carregarTodosExerciciosGlobais() {
+    if (exerciciosGlobaisCache.length) return exerciciosGlobaisCache;
+
+    const { data, error } = await sb
+        .from("exercicios")
+        .select("id, exercicio")
+        .order("exercicio", { ascending: true });
+
+    if (error) {
+        console.error("Erro ao carregar exercícios globais:", error);
+        return [];
+    }
+
+    exerciciosGlobaisCache = data || [];
+    return exerciciosGlobaisCache;
+}
+
+// Mini-modal simples para escolher exercício
+function abrirSelectorExercicio() {
+
+    const wrap = document.createElement("div");
+    wrap.className = "modal";
+    wrap.setAttribute("aria-hidden", "false");
+    wrap.style.zIndex = 99999;
+
+    wrap.addEventListener("click", (ev) => ev.stopPropagation());
+
+    wrap.innerHTML = `
+        <div class="modal-backdrop" onclick="this.closest('.modal').remove()"></div>
+        <div class="modal-box" style="max-height:80vh; overflow:auto;">
+            <h3>Adicionar Exercício</h3>
+            <div id="listaExSelector" style="display:flex; flex-direction:column; gap:6px;"></div>
+            <button class="btn-primary" onclick="this.closest('.modal').remove()">Sair</button>
+        </div>
+    `;
+
+    document.body.appendChild(wrap);
+
+    carregarTodosExerciciosGlobais().then(lista => {
+        const box = wrap.querySelector("#listaExSelector");
+
+        lista.forEach(ex => {
+            const btn = document.createElement("button");
+            btn.className = "btn-secondary";
+            btn.style.marginTop = "4px";
+            btn.textContent = ex.exercicio;
+            btn.onclick = () => {
+                adicionarExercicioAoTreino(ex.id, ex.exercicio);
+                wrap.remove();
+            };
+            box.appendChild(btn);
+        });
+    });
+}
+
+// Insere o exercício no painel, com 2 linhas iniciais
+function adicionarExercicioAoTreino(exercicioId, nomeEx) {
+    const lista = document.getElementById("listaExerciciosTreino");
+    if (!lista) return;
+
+    const item = document.createElement("div");
+    item.className = "treino-item";
+    item.dataset.exercicioId = exercicioId;
+    item.style.display = "flex";
+    item.style.flexDirection = "column";
+    item.style.gap = "6px";
+    item.style.position = "relative";
+
+    item.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong>${nomeEx}</strong>
+
+            <!-- botão X para remover -->
+            <button class="btn-remove-ex"
+                    style="width:26px;height:26px;border-radius:6px;
+                           border:none;background:none;
+                           display:flex;align-items:center;justify-content:center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                     stroke="#c33" stroke-width="2" stroke-linecap="round">
+                    <line x1="5" y1="5" x2="19" y2="19" />
+                    <line x1="5" y1="19" x2="19" y2="5" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="series-container" style="display:flex; flex-direction:column; gap:0px;">
+        </div>
+
+        <button class="btn-add-serie"
+                style="margin-bottom:10px;width:26px;height:26px;border-radius:6px;
+                       border:none;background:#ededed;
+                       display:flex;justify-content:center;align-items:center;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="#444" stroke-width="2" stroke-linecap="round">
+                <line x1="12" y1="5"  x2="12" y2="19" />
+                <line x1="5"  y1="12" x2="19" y2="12" />
+            </svg>
+        </button>
+    `;
+
+    // cria duas séries automáticas
+    const cont = item.querySelector(".series-container");
+    cont.appendChild(criarLinhaSerie());
+    cont.appendChild(criarLinhaSerie());
+
+    // botão adicionar série
+    item.querySelector(".btn-add-serie").onclick = () => {
+        cont.appendChild(criarLinhaSerie());
+    };
+
+    // botão remover exercício
+    item.querySelector(".btn-remove-ex").onclick = () => {
+        if (confirm("Remover este exercício do treino de hoje?")) {
+            item.remove();
+        }
+    };
+
+    lista.appendChild(item);
+}
+
+// evento do botão "Adicionar exercício"
+const btnAdd = document.getElementById("btnAddExercicioTreino");
+if (btnAdd) {
+    btnAdd.onclick = abrirSelectorExercicio;
 }
