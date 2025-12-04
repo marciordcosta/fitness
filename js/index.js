@@ -1,4 +1,4 @@
-// index.js — versão com correções de duplicidade e bugs
+// index.js — versão com correções de duplicidade, bugs e Ordem do Treino
 const sb = window.sb;
 let listaFiltradaGlobal = [];
 let grafico;
@@ -142,6 +142,7 @@ async function carregarRotinasDeTreino() {
 }
   
 async function carregarExerciciosPorPadrao(treinoId) {
+  // CORREÇÃO: Usamos o nome 'exercicios' na coluna do join (supostamente o nome da tabela)
   const { data, error } = await sb
     .from("treino_exercicios")
     .select("*, exercicios(id, exercicio, grupo1, grupo2, grupo3, descanso)")
@@ -219,8 +220,7 @@ function criarElementoExercicioBase(exercicioId, nomeEx) {
         </button>
     `;
     
-    // Configura o handler de remoção. O confirm é adicionado em adicionarExercicioAoTreino
-    // e o simples remove em visualizarTreino, mantendo a consistência do fluxo.
+    // Configura o handler de remoção simples (item.remove())
     item.querySelector(".btn-remove-ex").onclick = () => item.remove();
     
     return item;
@@ -230,7 +230,10 @@ async function visualizarTreino(treinoId, nomeTreino) {
   treinoSelecionado = treinoId;
   const dataHoje = dataFotoSelecionada || hojeISO();
 
-  // ===== 1) BUSCA REGISTROS EXISTENTES DO DIA =====
+  // ===== 1) CARREGA O PADRÃO DE EXERCÍCIOS PARA OBTER A ORDEM CORRETA =====
+  const padrao = await carregarExerciciosPorPadrao(treinoId);
+  
+  // 2) BUSCA REGISTROS EXISTENTES DO DIA (se houver)
   const { data: regs, error: erroReg } = await sb
     .from("treino_registros")
     .select("*")
@@ -246,66 +249,45 @@ async function visualizarTreino(treinoId, nomeTreino) {
   const titulo = document.getElementById("treinoDetalheTitulo");
 
   lista.innerHTML = "";
-  // CORREÇÃO: Adicionando a data ao título para referência
   titulo.textContent = `Treino: ${nomeTreino} (${formatarData(dataHoje)})`; 
 
-  // ===============================================
-  // 2) SE EXISTE REGISTRO SALVO → CARREGA SOMENTE ELE
-  // ===============================================
-  if (regs && regs.length > 0) {
-      const ids = [...new Set(regs.map(r => r.exercicio_id))];
+  // ====================================================
+  // 3) CONSTROI A LISTA BASEADA NO PADRÃO (ORDEM CORRETA)
+  // ====================================================
 
-      for (const exId of ids) {
-          const { data: exInfo } = await sb
-              .from("exercicios")
-              .select("*")
-              .eq("id", exId)
-              .single();
+  padrao.forEach(e => {
+      const exercicioId = e.exercicios?.id || e.exercicio_id;
+      const nomeEx = e.exercicios?.exercicio || "Exercício";
 
-          const nomeEx = exInfo?.exercicio || "Exercício";
+      // 3.1) Cria o elemento HTML base, usando a ordem do padrão
+      const item = criarElementoExercicioBase(exercicioId, nomeEx);
+      const cont = item.querySelector(".series-container");
 
-          // *** REFATORADO: Uso de criarElementoExercicioBase ***
-          const item = criarElementoExercicioBase(exId, nomeEx); 
-          // O handler de remoção simples (item.remove()) já está no base
-
-          const cont = item.querySelector(".series-container");
-
-          const linhasDoEx = regs.filter(r => r.exercicio_id === exId);
+      let linhasDoEx = [];
+      if (regs && regs.length > 0) {
+          // Filtra os registros salvos para este exercício
+          linhasDoEx = regs.filter(r => r.exercicio_id === exercicioId);
+      }
+      
+      // 3.2) Popula com dados salvos ou com 2 linhas vazias (padrão)
+      if (linhasDoEx.length > 0) {
           linhasDoEx.forEach(r => {
               const linha = criarLinhaSerie();
               linha.querySelector(".serie-peso").value = r.peso ?? "";
               linha.querySelector(".serie-rep").value = r.repeticoes ?? "";
               cont.appendChild(linha);
           });
-
-          item.querySelector(".btn-add-serie").onclick = () => cont.appendChild(criarLinhaSerie());
-          
-          lista.appendChild(item);
+      } else {
+          // Se não há registro (ou se o registro for vazio), adiciona 2 linhas para preenchimento
+          cont.appendChild(criarLinhaSerie());
+          cont.appendChild(criarLinhaSerie());
       }
-  }
 
-  // ====================================================
-  // 3) SE NÃO EXISTE REGISTRO SALVO → USA O PADRÃO DO TREINO
-  // ====================================================
-  else {
-      const padrao = await carregarExerciciosPorPadrao(treinoId);
-
-      padrao.forEach(e => {
-          const nomeEx = e.exercicios?.exercicio || "Exercício";
-
-          // *** REFATORADO: Uso de criarElementoExercicioBase ***
-          const item = criarElementoExercicioBase(e.exercicio_id, nomeEx);
-          // O handler de remoção simples (item.remove()) já está no base
-
-          const cont = item.querySelector(".series-container");
-          cont.appendChild(criarLinhaSerie());
-          cont.appendChild(criarLinhaSerie());
-
-          item.querySelector(".btn-add-serie").onclick = () => cont.appendChild(criarLinhaSerie());
-          
-          lista.appendChild(item);
-      });
-  }
+      // 3.3) Configura o botão de adicionar série
+      item.querySelector(".btn-add-serie").onclick = () => cont.appendChild(criarLinhaSerie());
+      
+      lista.appendChild(item);
+  });
 
   painelSelecao.style.display = "none";
   painelDetalhe.style.display = "block";
@@ -1151,6 +1133,7 @@ function adicionarExercicioAoTreino(exercicioId, nomeEx) {
         cont.appendChild(criarLinhaSerie());
     };
 
+    // O novo exercício é inserido no final da lista do treino
     lista.appendChild(item);
 }
 
