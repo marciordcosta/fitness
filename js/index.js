@@ -178,124 +178,130 @@ function renderBotoesTreino() {
 
 async function visualizarTreino(treinoId, nomeTreino) {
   treinoSelecionado = treinoId;
-
   const dataHoje = dataFotoSelecionada || hojeISO();
 
-  const { data: registrosExistentes, error: erroReg } = await sb
+  // ===== 1) BUSCA REGISTROS EXISTENTES DO DIA =====
+  const { data: regs, error: erroReg } = await sb
     .from("treino_registros")
     .select("*")
     .eq("data", dataHoje)
     .eq("treino_id", treinoId)
     .order("exercicio_id, serie", { ascending: true });
 
-  if (erroReg) {
-    console.error("Erro ao carregar registros do treino:", erroReg);
-  }
-
-  const exercicios = await carregarExerciciosPorPadrao(treinoId);
+  if (erroReg) console.error("Erro ao carregar registros do treino:", erroReg);
 
   const painelDetalhe = document.getElementById("painelTreinoDetalhe");
-  const titulo = document.getElementById("treinoDetalheTitulo");
-  const lista = document.getElementById("listaExerciciosTreino");
   const painelSelecao = document.getElementById("painelTreinoSelecao");
+  const lista = document.getElementById("listaExerciciosTreino");
+  const titulo = document.getElementById("treinoDetalheTitulo");
 
-  if (!painelDetalhe || !titulo || !lista || !painelSelecao) {
-      console.error("ERRO: Elementos de detalhe de treino não encontrados para renderização.");
-      return; 
-  }
-
-  titulo.textContent = `Treino: ${nomeTreino}`;
   lista.innerHTML = "";
+  titulo.textContent = `Treino: ${nomeTreino}`;
 
-  if (!exercicios.length) {
-    lista.innerHTML = `Nenhum exercício configurado para o Treino ${nomeTreino}.`;
-  } else {
-    exercicios.forEach((e, idx) => {
-      const item = document.createElement("div");
-      item.className = "treino-item";
-      item.style.display = "flex";
-      item.style.flexDirection = "column";
-      item.style.gap = "6px";
+  // ===============================================
+  // 2) SE EXISTE REGISTRO SALVO → CARREGA SOMENTE ELE
+  // ===============================================
+  if (regs && regs.length > 0) {
+      const ids = [...new Set(regs.map(r => r.exercicio_id))];
 
-      const nomeEx = e.exercicios?.exercicio || e.exercicio || 'Exercício';
-      const descanso = e.exercicios?.descanso ?? e.descanso ?? '--';
-      const grupos = [];
-      if (e.exercicios?.grupo1) grupos.push(`${e.exercicios.grupo1}`);
-      if (e.exercicios?.grupo2) grupos.push(`${e.exercicios.grupo2}`);
-      if (e.exercicios?.grupo3) grupos.push(`${e.exercicios.grupo3}`);
+      for (const exId of ids) {
+          const { data: exInfo } = await sb
+              .from("exercicios")
+              .select("*")
+              .eq("id", exId)
+              .single();
 
-      const gruposText = grupos.length ? ' · ' + grupos.join(' / ') : '';
+          const nomeEx = exInfo?.exercicio || "Exercício";
 
-      item.innerHTML = `
-  <div style="display:flex; justify-content:space-between; align-items:center;">
-    
-    <div style="display:flex; flex-direction:column;">
-        <strong>${nomeEx}</strong>
-        <small style="color:#666;font-size:12px;">Descanso: ${resto(descanso)}</small>
-    </div>
+          const item = document.createElement("div");
+          item.className = "treino-item";
+          item.dataset.exercicioId = exId;
 
-    <!-- BOTÃO X PARA REMOVER EXERCÍCIO EXISTENTE -->
-    <button class="btn-remove-ex"
-            style="width:26px;height:26px;border-radius:6px;
-                   border:none;background:none;
-                   display:flex;align-items:center;justify-content:center;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-             stroke="#c33" stroke-width="2" stroke-linecap="round">
-            <line x1="5" y1="5" x2="19" y2="19" />
-            <line x1="5" y1="19" x2="19" y2="5" />
-        </svg>
-    </button>
+          item.innerHTML = `
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <strong>${nomeEx}</strong>
+                  <button class="btn-remove-ex" style="width:26px;height:26px;background:none;border:none;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" stroke="#c33" stroke-width="2">
+                          <line x1="5" y1="5" x2="19" y2="19" />
+                          <line x1="5" y1="19" x2="19" y2="5" />
+                      </svg>
+                  </button>
+              </div>
 
-  </div>
-  
-  <div class="series-container"
-       style="display:flex; flex-direction:column; gap:0px; margin-top:0px;"></div>
+              <div class="series-container" style="display:flex;flex-direction:column;gap:0px;"></div>
 
-  <button class="btn-add-serie"
-          style="margin-bottom:10px;width:26px;height:26px;border-radius:6px;
-                 border:none;background:#ededed;
-                 display:flex;justify-content:center;align-items:center;">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-           stroke="#444" stroke-width="2" stroke-linecap="round">
-          <line x1="12" y1="5"  x2="12" y2="19" />
-          <line x1="5"  y1="12" x2="19" y2="12" />
-      </svg>
-  </button>
-`;
+              <button class="btn-add-serie" style="margin-bottom:10px; width:26px; height:26px; border-radius:6px;border:none; background:#ededed;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" stroke="#444" stroke-width="2">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+              </button>
+          `;
 
-item.dataset.exercicioId = e.exercicio_id;
-const containerSeries = item.querySelector('.series-container');
+          const cont = item.querySelector(".series-container");
 
-const btnRemove = item.querySelector(".btn-remove-ex");
-btnRemove.onclick = () => {
-    if (confirm("Remover este exercício do treino de hoje?")) {
-        item.remove();
-    }
-};
+          const linhasDoEx = regs.filter(r => r.exercicio_id === exId);
+          linhasDoEx.forEach(r => {
+              const linha = criarLinhaSerie();
+              linha.querySelector(".serie-peso").value = r.peso ?? "";
+              linha.querySelector(".serie-rep").value = r.repeticoes ?? "";
+              cont.appendChild(linha);
+          });
 
-const registrosDoExercicio = registrosExistentes?.filter(r => r.exercicio_id === e.exercicio_id) || [];
+          item.querySelector(".btn-add-serie").onclick = () => cont.appendChild(criarLinhaSerie());
+          item.querySelector(".btn-remove-ex").onclick = () => item.remove();
 
-if (registrosDoExercicio.length > 0) {
-    registrosDoExercicio.forEach(reg => {
-        const linha = criarLinhaSerie();
-        linha.querySelector(".serie-peso").value = reg.peso ?? "";
-        linha.querySelector(".serie-rep").value = reg.repeticoes ?? "";
-        containerSeries.appendChild(linha);
-    });
-} else {
-    containerSeries.appendChild(criarLinhaSerie());
-    containerSeries.appendChild(criarLinhaSerie());
-}
-
-item.querySelector('.btn-add-serie').onclick = () => {
-    containerSeries.appendChild(criarLinhaSerie());
-};
-lista.appendChild(item);
-    });
+          lista.appendChild(item);
+      }
   }
 
-  painelSelecao.style.display = 'none';
-  painelDetalhe.style.display = 'block';
+  // ====================================================
+  // 3) SE NÃO EXISTE REGISTRO SALVO → USA O PADRÃO DO TREINO
+  // ====================================================
+  else {
+      const padrao = await carregarExerciciosPorPadrao(treinoId);
+
+      padrao.forEach(e => {
+          const nomeEx = e.exercicios?.exercicio || "Exercício";
+
+          const item = document.createElement("div");
+          item.className = "treino-item";
+          item.dataset.exercicioId = e.exercicio_id;
+
+          item.innerHTML = `
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <strong>${nomeEx}</strong>
+                  <button class="btn-remove-ex" style="width:26px;height:26px;background:none;border:none;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" stroke="#c33" stroke-width="2">
+                          <line x1="5" y1="5" x2="19" y2="19" />
+                          <line x1="5" y1="19" x2="19" y2="5" />
+                      </svg>
+                  </button>
+              </div>
+
+              <div class="series-container" style="display:flex;flex-direction:column;gap:0px;"></div>
+
+              <button class="btn-add-serie" style="margin-bottom:10px; width:26px; height:26px; border-radius:6px;border:none; background:#ededed;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" stroke="#444" stroke-width="2">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+              </button>
+          `;
+
+          const cont = item.querySelector(".series-container");
+          cont.appendChild(criarLinhaSerie());
+          cont.appendChild(criarLinhaSerie());
+
+          item.querySelector(".btn-add-serie").onclick = () => cont.appendChild(criarLinhaSerie());
+          item.querySelector(".btn-remove-ex").onclick = () => item.remove();
+
+          lista.appendChild(item);
+      });
+  }
+
+  painelSelecao.style.display = "none";
+  painelDetalhe.style.display = "block";
 }
 
 function criarLinhaSerie() {
@@ -309,7 +315,7 @@ function criarLinhaSerie() {
     <input type="number" class="serie-peso" step="0.5" placeholder="Peso"
            style="width:70px;margin-bottom:5px;padding:6px;border-radius:6px;border:1px solid #ddd;">
 
-    <input type="number" class="serie-rep" step="1" placeholder="Reps"
+    <input type="number" class="serie-rep" step="1" min="0" placeholder="Reps"
            style="width:70px;margin-bottom:5px;padding:6px;border-radius:6px;border:1px solid #ddd;">
 
     <button class="remover-linha"
@@ -780,35 +786,29 @@ function gerarLinhasMensais(lista) {
     if (periodoAtual === 30) {
         return gerarLinhasSemanais(lista);
     }
-    
+
     // se filtro <= 30 dias, não desenhar as linhas
-    if (periodoAtual <= 30 || !lista || lista.length < 2) return {};
+    if (periodoAtual <= 30) return {};
 
     const anotacoes = {};
     const sorted = [...lista].sort((a, b) => parseISODateLocal(a.data) - parseISODateLocal(b.data));
 
-    let primeira = parseISODateLocal(sorted[0].data);
-    let ultima = parseISODateLocal(sorted[sorted.length - 1].data);
+    for (let i = 1; i < sorted.length; i++) {
+        const dAnt = parseISODateLocal(sorted[i - 1].data);
+        const dAtu = parseISODateLocal(sorted[i].data);
 
-    // começa a partir do primeiro ponto
-    let atual = new Date(primeira);
+        // mudou de mês?
+        if (dAnt.getMonth() !== dAtu.getMonth() || dAnt.getFullYear() !== dAtu.getFullYear()) {
 
-    while (atual < ultima) {
-        // avança 30 dias como critério de “mês”
-        atual.setDate(atual.getDate() + 30);
-
-        const alvoISO = atual.toISOString().substring(0, 10);
-        const idx = sorted.findIndex(p => p.data === alvoISO);
-        if (idx === -1) continue;
-
-        anotacoes["linha_" + atual.getTime()] = {
-            type: "line",
-            xMin: idx,
-            xMax: idx,
-            borderColor: "rgba(150,150,150,0.35)",
-            borderWidth: 1,
-            borderDash: [4, 4]
-        };
+            anotacoes["mes_" + i] = {
+                type: "line",
+                xMin: i,
+                xMax: i,
+                borderColor: "rgba(150,150,150,0.35)",
+                borderWidth: 1,
+                borderDash: [4,4]
+            };
+        }
     }
 
     return anotacoes;
@@ -1076,7 +1076,6 @@ async function carregarTodosExerciciosGlobais() {
     const { data, error } = await sb
         .from("exercicios")
         .select("id, exercicio")
-        .order("exercicio", { ascending: true });
 
     if (error) {
         console.error("Erro ao carregar exercícios globais:", error);
