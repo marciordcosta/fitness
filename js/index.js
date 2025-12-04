@@ -1075,6 +1075,7 @@ async function carregarTodosExerciciosGlobais() {
     const { data, error } = await sb
         .from("exercicios")
         .select("id, exercicio")
+        .order("exercicio", { ascending: true });
 
     if (error) {
         console.error("Erro ao carregar exercícios globais:", error);
