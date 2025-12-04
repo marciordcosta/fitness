@@ -774,6 +774,13 @@ function montarGrafico(lista) {
 }
 
 function gerarLinhasMensais(lista) {
+    if (!lista || lista.length < 2) return {};
+
+    // 1 mês → separar semanas
+    if (periodoAtual === 30) {
+        return gerarLinhasSemanais(lista);
+    }
+    
     // se filtro <= 30 dias, não desenhar as linhas
     if (periodoAtual <= 30 || !lista || lista.length < 2) return {};
 
