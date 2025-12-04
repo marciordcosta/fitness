@@ -814,6 +814,29 @@ function gerarLinhasMensais(lista) {
     return anotacoes;
 }
 
+function gerarLinhasSemanais(lista) {
+    const anotacoes = {};
+    const sorted = [...lista].sort((a, b) => parseISODateLocal(a.data) - parseISODateLocal(b.data));
+
+    for (let i = 1; i < sorted.length; i++) {
+        const dAnt = parseISODateLocal(sorted[i - 1].data);
+        const dAtu = parseISODateLocal(sorted[i].data);
+
+        // Segunda-feira → início de nova semana (getDay() === 1)
+        if (dAtu.getDay() === 1) {
+            anotacoes["semana_" + i] = {
+                type: "line",
+                xMin: i,
+                xMax: i,
+                borderColor: "rgba(120,120,120,0.35)",
+                borderWidth: 1,
+                borderDash: [4,4]
+            };
+        }
+    }
+
+    return anotacoes;
+}
 
 /* ======= CÁLCULO DE SEMANAS E MÉDIAS ======= */
 function calcularSemanasEMedias() {
