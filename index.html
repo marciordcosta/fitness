@@ -214,9 +214,17 @@
         <div id="painelTreinoDetalhe" style="display:none; padding: 0 0 10px;">
             <h4 id="treinoDetalheTitulo" style="margin: 0 0 8px;"></h4>
             <div id="listaExerciciosTreino" style="display:flex; flex-direction:column; gap:8px; border:none; padding:8px; border-radius:8px;">
-                </div>
+        </div>
 
-        <div style="margin-top:12px; display:flex; justify-content:space-between; gap: 12px;">
+        <!-- NOVO: Botão para adicionar exercício -->
+        <button id="btnAddExercicioTreino"
+            class="btn-secondary"
+            style="margin-top: 8px;">
+        Adicionar exercício
+        </button>
+
+
+        <div style="margin-top:0px; display:flex; justify-content:space-between; gap: 12px;">
           <button class="btn-secondary" onclick="voltarSelecaoTreino()">Cancelar</button>
           <button class="btn-primary" onclick="salvarTreinoDoDia()">Salvar</button>
         </div>
