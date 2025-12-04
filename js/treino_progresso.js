@@ -6,10 +6,6 @@ const selecionadosParaComparacao = new Set();
 let currentUserId = null;
 const CACHE = { baseExercicio: null, relacionados: [], registros: {} };
 
-// ----- Modal Progresso (edição/inserção) -----
-let PROG_exercicioId = null;
-let PROG_dataOriginal = null;
-
 // --------- utilitários -------------
 function removerAcento(str){ if(!str) return str; return str.normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
 function normalizarTexto(str){ if(!str) return null; return removerAcento(String(str).trim().toLowerCase()); }
@@ -89,16 +85,6 @@ function parseLocalDate(dateStr) {
   // se já vier com hora, tenta usar diretamente
   if (dateStr.includes('T')) return new Date(dateStr);
   return new Date(`${dateStr}T00:00:00`);
-}
-
-function criarLinhaSerie(i, peso="", reps="") {
-  return `
-    <div class="prog-serie" data-i="${i}">
-      <input type="number" class="prog-peso" placeholder="Peso" value="${peso}">
-      <input type="number" class="prog-reps" placeholder="Reps" value="${reps}">
-      <button class="btn-del-serie">X</button>
-    </div>
-  `;
 }
 
 // ------------------------------------------
@@ -547,11 +533,10 @@ async function atualizarDetalhesComparacao(){
     const agrupado = agruparPorData(CACHE.registros[String(id)] || [])
                       .sort((a,b) => parseLocalDate(b.data) - parseLocalDate(a.data));
 
+    // Removed the '+' that opened modal; kept name display
     let col = `
       <div style="font-weight:600; margin-bottom:6px; display:flex; align-items:center; gap:6px; font-size:16px;">
         ${nome}
-        <span style="cursor:pointer; font-size:16px;"
-          onclick="window.dispatchEvent(new CustomEvent('abrirModalInserirRegistro',{detail:{exercicioId:${id}}}))">+</span>
       </div>
     `;
 
@@ -591,10 +576,9 @@ async function atualizarDetalhesComparacao(){
       if (pctRMSign === '') pctRMSign = formatSignPct(pctRM);
       if (pctVolSign === '') pctVolSign = formatSignPct(pctVol);
 
+      // Removed onclick that opened modal; kept the small span to open painel de progresso (gráfico)
       col += `
-        <div 
-          onclick="abrirModalProgresso(${id}, '${atual.data}')"
-          class="historico-registro">
+        <div class="historico-registro">
 
           <span style="cursor:pointer; margin-right:6px;"
             onclick="event.stopPropagation(); abrirPainelProgresso(${id}, '${atual.data}')">
@@ -616,188 +600,10 @@ async function atualizarDetalhesComparacao(){
   painel.innerHTML = html;
 }
 
-// =================================================
-// ABRIR MODAL DE EDIÇÃO/INSERÇÃO
-// =================================================
-async function abrirModalProgresso(exercicioId, data=null) {
-  PROG_exercicioId = exercicioId;
-  PROG_dataOriginal = data;
-
-  const modal = document.getElementById("modalProgresso");
-  const titulo = document.getElementById("modalProgressoTitulo");
- 
-  // Busca o nome do exercício direto no Supabase (mais seguro)
-  let nomeEx = "";
-  try {
-    const { data: exData } = await sb
-      .from("exercicios")
-      .select("exercicio")
-      .eq("id", exercicioId)
-      .maybeSingle();
-
-    nomeEx = exData?.exercicio || "";
-  } catch (_) {}
-
-  // Determina título una única vez (corrigido: antes havia atribuições conflitantes)
-  if (titulo) {
-    titulo.textContent = data ? `Editar Registro — ${nomeEx}` : `Novo Registro — ${nomeEx}`;
-  }
-
-  const inputData = document.getElementById("progData");
-  const contSeries = document.getElementById("progSeriesContainer");
-  const btnExcluir = document.getElementById("btnProgressoExcluir");
-
-  if (contSeries) contSeries.innerHTML = "";
-
-  if (data) {
-    if (titulo) titulo.textContent = `Editar Registro — ${nomeEx}`;
-    if (inputData) {
-      inputData.value = data;
-      // BLOQUEAR A DATA NO MODO EDITAR
-      inputData.readOnly = true;
-      inputData.style.pointerEvents = "none";
-      inputData.style.opacity = "0.6";
-    }
-    if (btnExcluir) btnExcluir.style.display = "inline-block";
-
-    const registros = (CACHE.registros[String(exercicioId)] || []).filter(r => r.data === data);
-
-    registros.forEach((r, i) => {
-      if (contSeries) contSeries.insertAdjacentHTML("beforeend",
-        criarLinhaSerie(i, r.peso, r.repeticoes)
-      );
-    });
-
-  } else {
-    // MODO NOVO REGISTRO — LIBERAR DATA
-    if (inputData) {
-      inputData.readOnly = false;
-      inputData.style.pointerEvents = "auto";
-      inputData.style.opacity = "1";
-      try { inputData.valueAsDate = new Date(); } catch(e){ /* ignore se tipo diferente */ }
-    }
-    if (btnExcluir) btnExcluir.style.display = "none";
-
-    if (contSeries) contSeries.insertAdjacentHTML("beforeend", criarLinhaSerie(0));
-  }
-
-  if (modal) modal.style.display = "flex"; 
-}
-
-const btnFecharModal = document.getElementById("modalProgressoFechar");
-if (btnFecharModal) {
-  btnFecharModal.onclick = () => {
-    const m = document.getElementById("modalProgresso");
-    if (m) m.style.display = "none";
-  };
-}
-
-const btnAddSerie = document.getElementById("btnProgressoAddSerie");
-if (btnAddSerie) {
-  btnAddSerie.onclick = () => {
-    const cont = document.getElementById("progSeriesContainer");
-    if (!cont) return;
-    const i = cont.querySelectorAll(".prog-serie").length;
-    cont.insertAdjacentHTML("beforeend", criarLinhaSerie(i));
-  };
-}
-
-document.addEventListener("click", (e) => {
-  if (e.target.classList && e.target.classList.contains("btn-del-serie")) {
-    const row = e.target.closest(".prog-serie");
-    if (row) row.remove();
-  }
-});
-
-const btnSalvarProg = document.getElementById("btnProgressoSalvar");
-if (btnSalvarProg) {
-  btnSalvarProg.onclick = async () => {
-    const data = document.getElementById("progData")?.value;
-    const cont = document.getElementById("progSeriesContainer");
-    const linhas = cont ? [...cont.querySelectorAll(".prog-serie")] : [];
-
-    if (!data || !linhas.length) {
-      alert("Preencha data e séries.");
-      return;
-    }
-
-    if (PROG_dataOriginal) {
-      // incluir treino_id na deleção para evitar apagar registros de outros treinos
-      await sb.from("treino_registros")
-        .delete()
-        .eq("exercicio_id", PROG_exercicioId)
-        .eq("data", PROG_dataOriginal)
-        .eq("user_id", currentUserId)
-        .eq("treino_id", Number(localStorage.getItem("progresso_treino_id")));
-    }
-
-    const payload = linhas
-      .map((div, idx) => {
-        const peso = Number(div.querySelector(".prog-peso").value);
-        const repeticoes = Number(div.querySelector(".prog-reps").value);
-        
-        // Garante que só insere linhas com dados válidos
-        if (peso > 0 || repeticoes > 0) {
-            return {
-              exercicio_id: PROG_exercicioId,
-              user_id: currentUserId,
-              treino_id: Number(localStorage.getItem("progresso_treino_id")), // <-- inserido aqui
-              data,
-              serie: idx + 1,
-              peso: peso,
-              repeticoes: repeticoes
-            };
-        }
-        return null;
-      })
-      .filter(r => r !== null); // Filtra as linhas vazias
-
-    console.log("PAYLOAD ENVIADO:", JSON.stringify(payload, null, 2));
-
-    if (payload.length > 0) {
-        await sb.from("treino_registros").insert(payload);
-    } else if (!PROG_dataOriginal) {
-        // Se era um novo registro e estava vazio
-        alert("Nenhuma série válida para salvar.");
-        return; 
-    }
-
-    const modal = document.getElementById("modalProgresso");
-    if (modal) modal.style.display = "none";
-
-    // Recarregar UI
-    CACHE.registros = {};
-    const id = Number(localStorage.getItem("progresso_exercicio_id"));
-    await montarListaECalcular(id);
-    await atualizarGraficoComparacao();
-    await atualizarDetalhesComparacao();
-  };
-}
-
-const btnExcluirProg = document.getElementById("btnProgressoExcluir");
-if (btnExcluirProg) {
-  btnExcluirProg.onclick = async () => {
-    if (!PROG_dataOriginal) return;
-
-    if (!confirm("Excluir todas as séries deste dia?")) return;
-
-    await sb.from("treino_registros")
-      .delete()
-      .eq("exercicio_id", PROG_exercicioId)
-      .eq("data", PROG_dataOriginal)
-      .eq("user_id", currentUserId)
-      .eq("treino_id", Number(localStorage.getItem("progresso_treino_id")));
-
-    const modal = document.getElementById("modalProgresso");
-    if (modal) modal.style.display = "none";
-
-    CACHE.registros = {};
-    const id = Number(localStorage.getItem("progresso_exercicio_id"));
-    await montarListaECalcular(id);
-    await atualizarGraficoComparacao();
-    await atualizarDetalhesComparacao();
-  };
-}
+// ---------------------------------------------------
+// NOTE: Modal/progresso de criação/edição/exclusão removidos conforme solicitado.
+// Funções e handlers relacionados foram eliminados do arquivo.
+// ---------------------------------------------------
 
 // ---------------------------------------------------
 // Inicialização
@@ -834,28 +640,21 @@ window.addEventListener('load', async () => {
   }
 });
 
+// ---------------------------------------------------
+// Mantive os listeners genéricos que não estavam abrindo o modal.
+// Removi explicitamente o listener que disparava a abertura do modal.
+// ---------------------------------------------------
 
-// ---------------------------------------------------
-// BOTÃO + AO LADO DO EXERCÍCIO → ABRIR MODAL
-// ---------------------------------------------------
-window.addEventListener("abrirModalInserirRegistro", (ev) => {
-  const id = ev.detail.exercicioId;
-  // Chama a função central que trata tanto edição quanto inserção (data=null for novo registro)
-  abrirModalProgresso(id, null); 
+window.addEventListener('editarRegistro', async (ev) => {
+  // Mantido para compatibilidade; atualmente não faz ação adicional
+  console.log('editarRegistro', ev.detail);
 });
 
-
-  window.addEventListener('editarRegistro', async (ev) => {
-    // Mantido para compatibilidade; atualmente não faz ação adicional
-    console.log('editarRegistro', ev.detail);
-    
-  });
-
-  window.addEventListener('excluirRegistro', async (ev) => {
-    // Mantido para compatibilidade; atualmente não faz ação adicional
-    console.log('excluirRegistro', ev.detail);
-    const { data } = ev.detail || {};
-  });
+window.addEventListener('excluirRegistro', async (ev) => {
+  // Mantido para compatibilidade; atualmente não faz ação adicional
+  console.log('excluirRegistro', ev.detail);
+  const { data } = ev.detail || {};
+});
 
 document.addEventListener('DOMContentLoaded', () => {
   const btn = document.getElementById('btnVoltarProgresso');
