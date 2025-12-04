@@ -118,7 +118,7 @@ button {
 }
 
 .btn-primary { background: var(--primary); }
-.btn-secondary { background: var(--secondary); }
+.btn-secondary { background: #e1e1e1; color: #000;}
 .btn-accent { background: var(--accent); color:#0b3d1f; }
 .btn-danger { background: var(--danger); }
 
