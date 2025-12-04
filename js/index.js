@@ -129,9 +129,8 @@ function fecharModalTreino() {
 async function carregarRotinasDeTreino() {
   const { data, error } = await sb
     .from("treinos")
-    .select("id, nome_treino, ordem")
+    .select("id, nome_treino")
     .order("ordem", { ascending: true });
-  
 
   if (error) {
     console.error("Erro ao carregar treinos:", error);
@@ -140,7 +139,6 @@ async function carregarRotinasDeTreino() {
   }
 
   padroesTreinoCache = data || [];
-  return padroesTreinoCache;
 }
   
 async function carregarExerciciosPorPadrao(treinoId) {
@@ -182,72 +180,79 @@ async function visualizarTreino(treinoId, nomeTreino) {
   treinoSelecionado = treinoId;
   const dataHoje = dataFotoSelecionada || hojeISO();
 
-    // 1) Ordem base do treino (ordem real)
-    const ordemBase = await carregarExerciciosPorPadrao(treinoId); 
-    // ordemBase já vem ordenado por "ordem"
+  // ===== 1) BUSCA REGISTROS EXISTENTES DO DIA =====
+  const { data: regs, error: erroReg } = await sb
+    .from("treino_registros")
+    .select("*")
+    .eq("data", dataHoje)
+    .eq("treino_id", treinoId)
+    .order("exercicio_id, serie", { ascending: true });
 
-    // 2) IDs usados no dia
-    const usadosHoje = regs.length
-      ? [...new Set(regs.map(r => r.exercicio_id))]
-      : [];
+  if (erroReg) console.error("Erro ao carregar registros do treino:", erroReg);
 
-    // 3) Exercícios que pertencem ao treino E também estão no dia
-    let exerciciosDoTreinoHoje = ordemBase.filter(e =>
-      usadosHoje.includes(e.exercicio_id)
-    );
+  const painelDetalhe = document.getElementById("painelTreinoDetalhe");
+  const painelSelecao = document.getElementById("painelTreinoSelecao");
+  const lista = document.getElementById("listaExerciciosTreino");
+  const titulo = document.getElementById("treinoDetalheTitulo");
 
-    // 4) Exercícios novos adicionados pelo usuário (estão no dia mas não no treino base)
-    const novos = usadosHoje.filter(id =>
-      !ordemBase.some(e => e.exercicio_id === id)
-    );
+  lista.innerHTML = "";
+  titulo.textContent = `Treino: ${nomeTreino}`;
 
-    // 5) Adicionar novos no final
-    for (const exId of novos) {
-      const info = await sb.from("exercicios").select("*").eq("id", exId).single();
-      exerciciosDoTreinoHoje.push({
-        exercicio_id: exId,
-        exercicios: info.data
-      });
-    }
+  // ===============================================
+  // 2) SE EXISTE REGISTRO SALVO → CARREGA SOMENTE ELE
+  // ===============================================
+  if (regs && regs.length > 0) {
+      const ids = [...new Set(regs.map(r => r.exercicio_id))];
 
-    // 6) Montar o modal com a ordem final
-    for (const e of exerciciosDoTreinoHoje) {
+      for (const exId of ids) {
+          const { data: exInfo } = await sb
+              .from("exercicios")
+              .select("*")
+              .eq("id", exId)
+              .single();
 
-      const exId = e.exercicio_id;
-      const nomeEx = e.exercicios?.exercicio || "Exercício";
+          const nomeEx = exInfo?.exercicio || "Exercício";
 
-      const item = document.createElement("div");
-      item.className = "treino-item";
-      item.dataset.exercicioId = exId;
+          const item = document.createElement("div");
+          item.className = "treino-item";
+          item.dataset.exercicioId = exId;
 
-      item.innerHTML = `
-        <div style="display:flex; justify-content:space-between;">
-          <strong>${nomeEx}</strong>
-          <button class="btn-remove-ex">X</button>
-        </div>
-        <div class="series-container"></div>
-        <button class="btn-add-serie">+</button>
-      `;
+          item.innerHTML = `
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <strong>${nomeEx}</strong>
+                  <button class="btn-remove-ex" style="width:26px;height:26px;background:none;border:none;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" stroke="#c33" stroke-width="2">
+                          <line x1="5" y1="5" x2="19" y2="19" />
+                          <line x1="5" y1="19" x2="19" y2="5" />
+                      </svg>
+                  </button>
+              </div>
 
-      const cont = item.querySelector(".series-container");
+              <div class="series-container" style="display:flex;flex-direction:column;gap:0px;"></div>
 
-      // carregar séries salvas
-      const linhasDoEx = regs.filter(r => r.exercicio_id === exId);
-      if (linhasDoEx.length) {
-        linhasDoEx.forEach(r => {
-          const linha = criarLinhaSerie();
-          linha.querySelector(".serie-peso").value = r.peso ?? "";
-          linha.querySelector(".serie-rep").value = r.repeticoes ?? "";
-          cont.appendChild(linha);
-        });
-      } else {
-        // treino novo → cria 2 linhas
-        cont.appendChild(criarLinhaSerie());
-        cont.appendChild(criarLinhaSerie());
+              <button class="btn-add-serie" style="margin-bottom:10px; width:26px; height:26px; border-radius:6px;border:none; background:#ededed;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" stroke="#444" stroke-width="2">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+              </button>
+          `;
+
+          const cont = item.querySelector(".series-container");
+
+          const linhasDoEx = regs.filter(r => r.exercicio_id === exId);
+          linhasDoEx.forEach(r => {
+              const linha = criarLinhaSerie();
+              linha.querySelector(".serie-peso").value = r.peso ?? "";
+              linha.querySelector(".serie-rep").value = r.repeticoes ?? "";
+              cont.appendChild(linha);
+          });
+
+          item.querySelector(".btn-add-serie").onclick = () => cont.appendChild(criarLinhaSerie());
+          item.querySelector(".btn-remove-ex").onclick = () => item.remove();
+
+          lista.appendChild(item);
       }
-
-      lista.appendChild(item);
-    }
   }
 
   // ====================================================
@@ -1071,7 +1076,6 @@ async function carregarTodosExerciciosGlobais() {
     const { data, error } = await sb
         .from("exercicios")
         .select("id, exercicio")
-        .order("exercicio", { ascending: true });
 
     if (error) {
         console.error("Erro ao carregar exercícios globais:", error);
