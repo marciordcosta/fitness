@@ -129,16 +129,18 @@ function fecharModalTreino() {
 async function carregarRotinasDeTreino() {
   const { data, error } = await sb
     .from("treinos")
-    .select("id, nome_treino")
+    .select("id, nome_treino, ordem")
+    .order("ordem", { ascending: true });
 
-    if (error) {
+  if (error) {
     console.error("Erro ao carregar treinos:", error);
     padroesTreinoCache = [];
     return;
   }
 
-    padroesTreinoCache = ordenarTreinosPorDia(data || []);
+    padroesTreinoCache = data || [];
   }
+
 
   if (error) {
     console.error("Erro ao carregar treinos:", error);
