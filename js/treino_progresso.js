@@ -245,6 +245,8 @@ async function montarListaECalcular(baseExercicioId){
 
     const div = document.createElement('div');
     div.className = 'ex-item';
+    // Removido a abertura do painel daqui (agora é via o histórico na direita)
+    // div.onclick = () => {abrirPainelProgresso(null, item.data);};
     div.style.display = 'flex';
     div.style.alignItems = 'center';
     div.style.gap = '8px';
@@ -576,14 +578,11 @@ async function atualizarDetalhesComparacao(){
       if (pctRMSign === '') pctRMSign = formatSignPct(pctRM);
       if (pctVolSign === '') pctVolSign = formatSignPct(pctVol);
 
-      // Removed onclick that opened modal; kept the small span to open painel de progresso (gráfico)
+      // CORREÇÃO: Removido o span de ícone e o clique movido para o container principal (div.historico-registro)
       col += `
-        <div class="historico-registro">
-
-          <span style="cursor:pointer; margin-right:6px;"
-            onclick="event.stopPropagation(); abrirPainelProgresso(${id}, '${atual.data}')">
-            📊
-          </span>
+        <div class="historico-registro" 
+          style="cursor:pointer;"
+          onclick="abrirPainelProgresso(${id}, '${atual.data}')">
 
           <span class="data-registro">${atual.data}</span>
           — 1RM: ${formatNum(rmAtual)}kg ${pctRMSign}
