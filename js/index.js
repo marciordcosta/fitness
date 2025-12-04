@@ -822,21 +822,25 @@ function gerarLinhasSemanais(lista) {
         const dAnt = parseISODateLocal(sorted[i - 1].data);
         const dAtu = parseISODateLocal(sorted[i].data);
 
-        // Segunda-feira → início de nova semana (getDay() === 1)
-        if (dAtu.getDay() === 1) {
+        // mudou de semana? (comparação ISO real)
+        const semanaAnt = `${dAnt.getFullYear()}-${dAnt.getWeek?.() ?? ''}`;
+        const semanaAtu = `${dAtu.getFullYear()}-${dAtu.getWeek?.() ?? ''}`;
+
+        if (semanaAnt !== semanaAtu) {
             anotacoes["semana_" + i] = {
                 type: "line",
                 xMin: i,
                 xMax: i,
                 borderColor: "rgba(120,120,120,0.35)",
                 borderWidth: 1,
-                borderDash: [4,4]
+                borderDash: [4, 4]
             };
         }
     }
 
     return anotacoes;
 }
+
 
 /* ======= CÁLCULO DE SEMANAS E MÉDIAS ======= */
 function calcularSemanasEMedias() {
