@@ -130,17 +130,7 @@ async function carregarRotinasDeTreino() {
   const { data, error } = await sb
     .from("treinos")
     .select("id, nome_treino, ordem")
-    .order("ordem", { ascending: true });
-
-  if (error) {
-    console.error("Erro ao carregar treinos:", error);
-    padroesTreinoCache = [];
-    return;
-  }
-
-    padroesTreinoCache = data || [];
-  }
-
+  
 
   if (error) {
     console.error("Erro ao carregar treinos:", error);
