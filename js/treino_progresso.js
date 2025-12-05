@@ -412,8 +412,9 @@ async function atualizarGraficoComparacao(){
           tension: 0.3,
           fill: false,
           yAxisID: `y${datasets.length}`,
-          pointRadius: 0,
-          pointHoverRadius: 0,
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          hitRadius: 8, 
           spanGaps: true,
           meta: { rawValues: s.values1 }
       });
@@ -434,6 +435,17 @@ async function atualizarGraficoComparacao(){
           meta: { rawValues: s.valuesVol }
       });
   });
+
+  //Apagar linha vol na comparação//
+  const multiple = ids.length > 1;
+    if (multiple) {
+      datasets.forEach(ds => {
+        if (ds.label.includes("Vol")) {
+            ds.hidden = true;
+        }
+    });
+  }
+
 
   // === Garantir canvas/contexto e ordem correta ===
   const canvas = document.getElementById('chartProgresso');
@@ -486,19 +498,70 @@ async function atualizarGraficoComparacao(){
               labels: { boxWidth: 30, boxHeight: 2, padding: 10 }
           },
           tooltip: {
-              callbacks: {
-                  label: function(context) {
-                      const ds = context.dataset;
-                      const idx = context.dataIndex;
-                      const raw = ds.meta && ds.meta.rawValues ? ds.meta.rawValues[idx] : null;
-                      const label = ds.label || '';
-                      if (raw == null || isNaN(raw)) return `${label}: -`;
-                      // mostrar valor real (kg) no tooltip
-                      // se quiser também mostrar unidade/descrição, ajuste aqui
-                      return `${label}: ${Number(raw).toFixed(1)}kg`;
-                  }
-              }
-          }
+    usePointStyle: true,
+    padding: 6,
+    titleColor: "#000000",                      // título preto
+    bodyColor: "#000000",                       // texto do corpo preto   
+    backgroundColor: 'rgba(125, 125, 125, 0.13)',
+    titleFont: { size: 11, weight: 'normal' },
+    bodyFont: { size: 11, weight: '600' },
+    boxPadding: 3,
+    caretSize: 4,
+    displayColors: true,
+
+    yAlign: (ctx) => {
+        const chart = ctx.chart;
+        const tooltip = ctx.tooltip;
+
+        if (!tooltip || !tooltip.dataPoints?.length) return 'bottom';
+
+        const point = tooltip.dataPoints[0].element;
+
+        // Ponto muito no topo → tooltip deve ir para baixo
+        if (point.y < 50) return 'bottom';
+
+        // Ponto muito no fundo → tooltip deve ir para cima
+        if (point.y > chart.height - 50) return 'top';
+
+        // Caso normal → tooltip abaixo da linha
+        return 'bottom';
+    },
+
+    xAlign: 'center',
+
+    filter: function(item) {
+    const active = item.chart.getActiveElements();
+    if (!active || !active.length) return false;
+
+    const activeDataset = active[0].datasetIndex;
+    return item.datasetIndex === activeDataset;
+    },
+
+    callbacks: {
+        title: (items) => {
+            // só a data
+            return items[0].label;
+        },
+        label: (context) => {
+    const ds = context.dataset;
+
+    // Se for dataset de Volume → NÃO mostrar no tooltip
+    if (ds.label.includes("Vol")) return "";
+
+    const idx = context.dataIndex;
+    const raw = ds.meta?.rawValues?.[idx] ?? null;
+
+    // Nome base do exercício (antes de "— 1RM")
+    const nome = ds.label.split("—")[0].trim();
+
+    if (raw == null || isNaN(raw)) return `${nome}: -`;
+
+    return `${nome}: ${Number(raw).toFixed(1)}kg`;
+}
+
+    }
+}
+
       },
       elements: {
           point: { radius: 0, hoverRadius: 0 }
@@ -582,7 +645,10 @@ async function atualizarDetalhesComparacao(){
       col += `
         <div class="historico-registro" 
           style="cursor:pointer;"
-          onclick="abrirPainelProgresso(${id}, '${atual.data}')">
+          onclick="abrirPainelProgresso(${id}, '${atual.data}')"
+
+          onmouseover="hoverDataNoGrafico('${atual.data}')"
+          onmouseout="clearHoverGrafico()">
 
           <span class="data-registro">${atual.data}</span>
           — 1RM: ${formatNum(rmAtual)}kg ${pctRMSign}
@@ -598,6 +664,47 @@ async function atualizarDetalhesComparacao(){
   html += `</tr></tbody></table>`;
   painel.innerHTML = html;
 }
+
+// (fim da função atualizarDetalhesComparacao)
+
+// === Hover programático no gráfico pela data ===
+window.hoverDataNoGrafico = function (dataStr) {
+    if (!progressoChart) return;
+
+    const labels = progressoChart.data.labels;
+    const idx = labels.indexOf(dataStr);
+    if (idx === -1) return;
+
+    const active = [];
+    const tooltipActive = [];
+
+    progressoChart.data.datasets.forEach((ds, dsIndex) => {
+        // ignorar datasets de Volume
+        if (ds.label.includes("Vol")) return;
+        // ignorar datasets hidden
+        if (ds.hidden) return;
+
+        const val = ds.data[idx];
+        if (val == null || isNaN(val)) return;
+
+        active.push({ datasetIndex: dsIndex, index: idx });
+        tooltipActive.push({ datasetIndex: dsIndex, index: idx });
+    });
+
+    if (active.length === 0) return;
+
+    progressoChart.setActiveElements(active);
+    const point = progressoChart.getDatasetMeta(tooltipActive[0].datasetIndex).data[idx];
+    const pos = point.getProps(['x', 'y'], true);
+
+progressoChart.tooltip.setActiveElements(tooltipActive, {
+    x: pos.x,
+    y: pos.y
+});
+
+    progressoChart.update();
+};
+
 
 // ---------------------------------------------------
 // NOTE: Modal/progresso de criação/edição/exclusão removidos conforme solicitado.
