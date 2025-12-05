@@ -498,16 +498,16 @@ async function atualizarGraficoComparacao(){
               labels: { boxWidth: 30, boxHeight: 2, padding: 10 }
           },
           tooltip: {
-    usePointStyle: true,
+    usePointStyle: false,
     padding: 6,
     titleColor: "#000000",                      // título preto
     bodyColor: "#000000",                       // texto do corpo preto   
     backgroundColor: 'rgba(125, 125, 125, 0.13)',
-    titleFont: { size: 11, weight: 'normal' },
-    bodyFont: { size: 11, weight: '600' },
+    titleFont: { size: 11, weight: '600' },
+    bodyFont: { size: 11, weight: 'normal' },
     boxPadding: 3,
     caretSize: 4,
-    displayColors: true,
+    displayColors: false,
 
     yAlign: (ctx) => {
         const chart = ctx.chart;
@@ -529,37 +529,46 @@ async function atualizarGraficoComparacao(){
 
     xAlign: 'center',
 
+    titleColor: (ctx) => {
+    const item = ctx.tooltip?.dataPoints?.[0];
+    if (!item) return '#000'; // fallback
+
+    const ds = item.dataset;
+    return ds.borderColor || '#000'; // mesma cor da linha
+    },
+
     filter: function(item) {
     const active = item.chart.getActiveElements();
     if (!active || !active.length) return false;
 
     const activeDataset = active[0].datasetIndex;
     return item.datasetIndex === activeDataset;
+    }, 
+  
+     
+    callbacks: {
+      title: (items) => {
+      const ds = items[0].dataset;
+      const nome = ds.label.split("—")[0].trim();
+      return nome;     // primeira linha → NOME
     },
 
-    callbacks: {
-        title: (items) => {
-            // só a data
-            return items[0].label;
-        },
-        label: (context) => {
-    const ds = context.dataset;
+      label: (context) => {
+      const ds = context.dataset;
 
-    // Se for dataset de Volume → NÃO mostrar no tooltip
-    if (ds.label.includes("Vol")) return "";
+      // Ignorar volume sempre
+      if (ds.label.includes("Vol")) return "";
 
-    const idx = context.dataIndex;
-    const raw = ds.meta?.rawValues?.[idx] ?? null;
+      const idx = context.dataIndex;
+      const raw = ds.meta?.rawValues?.[idx] ?? null;
 
-    // Nome base do exercício (antes de "— 1RM")
-    const nome = ds.label.split("—")[0].trim();
+      const data = context.label; // a data da posição
 
-    if (raw == null || isNaN(raw)) return `${nome}: -`;
+      if (raw == null || isNaN(raw)) return `${data}: -`;
 
-    return `${nome}: ${Number(raw).toFixed(1)}kg`;
-}
-
-    }
+      return `${data} — 1RM: ${Number(raw).toFixed(1)}kg`;
+    },
+  }
 }
 
       },
