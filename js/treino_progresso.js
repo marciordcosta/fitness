@@ -577,11 +577,34 @@ async function atualizarGraficoComparacao(){
       }
   };
 
+  
   progressoChart = new Chart(chartCtx, {
       type: 'line',
       data: { labels: datasUnion, datasets },
       options: chartOptions
   });
+
+  canvas.addEventListener("mousemove", (ev) => {
+    if (!progressoChart) return;
+
+    const points = progressoChart.getElementsAtEventForMode(
+        ev,
+        'nearest',
+        { intersect: false },
+        true
+    );
+
+    if (!points.length) {
+        clearHoverHistorico();
+        return;
+    }
+
+    const dp = points[0];
+    const date = progressoChart.data.labels[dp.index];
+
+    hoverHistorico(date);
+});
+
 
 }
 
@@ -712,6 +735,24 @@ progressoChart.tooltip.setActiveElements(tooltipActive, {
 });
 
     progressoChart.update();
+};
+
+// === Hover vindo DO GRÁFICO para o histórico ===
+window.hoverHistorico = function(dateStr) {
+    const elems = document.querySelectorAll(".historico-registro");
+
+    elems.forEach(el => {
+        if (el.textContent.includes(dateStr)) {
+            el.classList.add("hover-ativo");
+        } else {
+            el.classList.remove("hover-ativo");
+        }
+    });
+};
+
+window.clearHoverHistorico = function() {
+    document.querySelectorAll(".historico-registro")
+        .forEach(el => el.classList.remove("hover-ativo"));
 };
 
 
