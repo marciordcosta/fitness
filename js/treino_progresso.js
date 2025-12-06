@@ -577,12 +577,45 @@ async function atualizarGraficoComparacao(){
       }
   };
 
-  
+  //Bolinha do Gráfico abre painel//
   progressoChart = new Chart(chartCtx, {
       type: 'line',
       data: { labels: datasUnion, datasets },
       options: chartOptions
   });
+
+  canvas.addEventListener("click", (ev) => {
+    if (!progressoChart) return;
+
+    const points = progressoChart.getElementsAtEventForMode(
+        ev,
+        "nearest",
+        { intersect: true },
+        true
+    );
+
+    if (!points.length) return;
+
+    const p = points[0];
+    const datasetIndex = p.datasetIndex;
+    const index = p.index;
+
+    const ds = progressoChart.data.datasets[datasetIndex];
+    const date = progressoChart.data.labels[index];
+
+    // ignorar clique em dataset de Volume
+    if (ds.label.includes("Vol")) return;
+
+    // pegar nome do exercício
+    const nome = ds.label.split("—")[0].trim();
+
+    // achar exercício na CACHE
+    const ex = CACHE.relacionados.find(e => e.exercicio === nome);
+    if (!ex) return;
+
+    setTimeout(() => abrirPainelProgresso(ex.id, date), 50);
+});
+
 
   canvas.addEventListener("mousemove", (ev) => {
     if (!progressoChart) return;
