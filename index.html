@@ -44,6 +44,19 @@
     .media-bloco .meta-valor { font-weight:600; font-size:20px; }
     .medias-container {box-shadow: none !important;}
 
+    .btn-x-treino {
+      position:absolute;
+      top:8px;
+      right:10px;
+      background:none;
+      border:none;
+      font-size:20px;
+      color:#444;
+      cursor:pointer;
+      padding:0;
+      line-height:1;
+    }
+
   </style>
 </head>
 <body>
@@ -203,6 +216,7 @@
     <div class="modal-backdrop" onclick="fecharModalTreino()"></div>
 
     <div class="modal-box">
+      <button class="btn-x-treino" onclick="fecharModalTreino()">✕</button>
         <h3>Seleção de Treino</h3>
         
         <div id="painelTreinoSelecao">
@@ -223,11 +237,14 @@
         Adicionar exercício
         </button>
 
+        <!-- BOTÃO X PARA FECHAR O MODAL -->
+        <button class="btn-x-treino" onclick="fecharModalTreino()">✕</button>
 
         <div style="margin-top:0px; display:flex; justify-content:space-between; gap: 12px;">
-          <button class="btn-secondary" onclick="voltarSelecaoTreino()">Cancelar</button>
+          <button class="btn-danger" onclick="excluirTreinoDoDia()">Excluir tudo</button>
           <button class="btn-primary" onclick="salvarTreinoDoDia()">Salvar</button>
         </div>
+
 
         </div>
         
