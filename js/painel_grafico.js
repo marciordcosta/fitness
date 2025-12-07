@@ -370,7 +370,7 @@ function renderGraficoPorTreino(wrap) {
         scales: { 
           y: { beginAtZero: true } ,
           x: { ticks: {
-            font: { size: 12 }}
+            font: { size: 9 }}
           }
         },
         plugins:{
@@ -604,6 +604,7 @@ function makeElementDraggable(box, handle) {
   const mo = new MutationObserver(() => adicionarBotaoGraficoAoTopo());
   mo.observe(obs, { childList: true, subtree: true });
 })();
+
 
 
 
