@@ -81,7 +81,7 @@ function construirDadosSemanaPorGrupo() {
  /* ==== FUSÃO DE GRUPOS ==== */
 const fusoes = {
   "Peito": ["Peito Superior", "Peito Inferior"],
-  "Costas": ["Escapular", "Latissimo"]
+  "Costas": ["Costas Superior", "Costas Latissimo"]
 };
 
 for (const novoNome in fusoes) {
@@ -604,6 +604,7 @@ function makeElementDraggable(box, handle) {
   const mo = new MutationObserver(() => adicionarBotaoGraficoAoTopo());
   mo.observe(obs, { childList: true, subtree: true });
 })();
+
 
 
 
