@@ -197,10 +197,10 @@ function criarElementoExercicioBase(exercicioId, nomeEx) {
             <strong>${nomeEx}</strong>
             <button class="btn-remove-ex"
                     style="width:26px;height:26px;border-radius:6px;
-                           border:none;background:#ffb1b1;
+                           border:none;background:none;
                            display:flex;align-items:center;justify-content:center;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                     stroke="#fff" stroke-width="2" stroke-linecap="round">
+                     stroke="#c33" stroke-width="2" stroke-linecap="round">
                     <line x1="5" y1="5" x2="19" y2="19" />
                     <line x1="5" y1="19" x2="19" y2="5" />
                 </svg>
@@ -384,6 +384,43 @@ async function salvarTreinoDoDia() {
     alert("Erro inesperado ao salvar treino.");
   }
 }
+
+async function excluirTreinoDoDia() {
+  try {
+      const u = await sb.auth.getUser();
+      const userId = u?.data?.user?.id;
+      if (!userId || !treinoSelecionado) {
+          alert("Erro: treino não selecionado.");
+          return;
+      }
+
+      const dataHoje = dataFotoSelecionada || hojeISO();
+
+      if (!confirm("Excluir todos os registros deste treino na data?")) {
+          return;
+      }
+
+      const { error } = await sb
+          .from("treino_registros")
+          .delete()
+          .eq("user_id", userId)
+          .eq("treino_id", treinoSelecionado)
+          .eq("data", dataHoje);
+
+      if (error) {
+          console.error(error);
+          alert("Erro ao excluir.");
+          return;
+      }
+
+      fecharModalTreino();
+      alert("Registros excluídos.");
+  } catch (err) {
+      console.error(err);
+      alert("Erro inesperado ao excluir treino.");
+  }
+}
+
 
 function voltarSelecaoTreino() {
   const painelDetalhe = document.getElementById("painelTreinoDetalhe");
