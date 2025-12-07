@@ -78,26 +78,43 @@ function construirDadosSemanaPorGrupo() {
     });
   });
 
-  /* ==== FUSÃO DE GRUPOS ==== */
-  const fusoes = {
-    "Peito": ["Peito Superior", "Peito Inferior"],
-    "Costas": ["Costas Superior", "Costas Latíssimo"]
-  };
+ /* ==== FUSÃO DE GRUPOS ==== */
+const fusoes = {
+  "Peito": ["Peito Superior", "Peito Inferior"],
+  "Costas": ["Escapular", "Latissimo"]
+};
 
-  for (const novoNome in fusoes) {
-    const originais = fusoes[novoNome];
-    let total = 0;
+for (const novoNome in fusoes) {
+  const originais = fusoes[novoNome];
 
-    originais.forEach(grp => {
-      if (semanaMap[grp]) {
-        total += semanaMap[grp];
-        delete semanaMap[grp];
-      }
-    });
+  let somaTotal = 0;
+  let somaDetalhe = {};
 
-    if (total > 0) semanaMap[novoNome] = total;
+  // 1. somar totais
+  originais.forEach(grp => {
+    if (semanaMap[grp]) {
+      somaTotal += semanaMap[grp];
+      delete semanaMap[grp];
+    }
+  });
+
+  // 2. somar detalhes
+  originais.forEach(grp => {
+    if (detalhe[grp]) {
+      Object.entries(detalhe[grp]).forEach(([exercicio, series]) => {
+        somaDetalhe[exercicio] = (somaDetalhe[exercicio] || 0) + series;
+      });
+      delete detalhe[grp];
+    }
+  });
+
+  // 3. salvar nova fusão
+  if (somaTotal > 0) {
+    semanaMap[novoNome] = somaTotal;
+    detalhe[novoNome] = somaDetalhe;
   }
-//Fim da fusão//
+}
+
 
   const lista = Object.keys(semanaMap).map(g => ({
     grupo: g,
@@ -587,6 +604,7 @@ function makeElementDraggable(box, handle) {
   const mo = new MutationObserver(() => adicionarBotaoGraficoAoTopo());
   mo.observe(obs, { childList: true, subtree: true });
 })();
+
 
 
 
