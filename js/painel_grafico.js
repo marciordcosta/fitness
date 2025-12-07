@@ -335,7 +335,12 @@ function renderGraficoPorTreino(wrap) {
         animation: false,
         responsive: true,
         maintainAspectRatio: false,
-        scales: { y: { beginAtZero: true } },
+        scales: { 
+          y: { beginAtZero: true } ,
+          x: { ticks: {
+            font: { size: 12 }}
+          }
+        },
         plugins:{
           legend: { display:false },   // REMOVE A LEGENDA
           tooltip:{ enabled:false }
@@ -567,3 +572,4 @@ function makeElementDraggable(box, handle) {
   const mo = new MutationObserver(() => adicionarBotaoGraficoAoTopo());
   mo.observe(obs, { childList: true, subtree: true });
 })();
+
