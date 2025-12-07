@@ -294,9 +294,21 @@ async function abrirPainelProgresso(exercicioId, data) {
     header.appendChild(rightBox);
 
     const wrap = document.createElement("div");
-    wrap.style.cssText = "flex:1;display:flex;";
+    wrap.style.cssText = `
+      flex: 1;
+      display: flex;
+      height: 370px;        /* DEFINA A ALTURA AQUI */
+      width: 100%;          /* opcional */
+    `;
+
     const canvas = document.createElement("canvas");
     canvas.id = "chartProgressoPorData";
+    canvas.style.cssText = `
+      width: 100%;
+      height: 100%;         /* CANVAS SEMPRE PREENCHENDO O WRAP */
+      display: block;
+    `;
+
     wrap.appendChild(canvas);
 
     const tt = document.createElement("div");
@@ -346,7 +358,10 @@ async function abrirPainelProgresso(exercicioId, data) {
         maintainAspectRatio:false,
         animation:false,
         scales:{ y:{ beginAtZero:true }},
-        plugins:{ tooltip:{ enabled:false }},
+        plugins:{
+          legend: { display:false },   // REMOVE A LEGENDA
+          tooltip:{ enabled:false }
+        },
         onHover:(event, elements)=>{
           const e = elements?.[0];
           if (!e) return hideCustomTooltip_Progresso(tt);
