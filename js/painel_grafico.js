@@ -1,6 +1,6 @@
 /* ================================================================
    Painel flutuante — Gráfico de Séries Semanais (colunas)
-   Corrigido: botão fechar funcionando e limpeza adequada
+   Versão estendida: modo “Agregado” + modo “Por Treino”
    ================================================================ */
 
 /* CONFIG */
@@ -49,7 +49,7 @@ function adicionarBotaoGraficoAoTopo() {
   }
 }
 
-/* ========= Coletar dados do painel principal ========= */
+/* ========= Coletar dados para modo AGREGADO ========= */
 function construirDadosSemanaPorGrupo() {
   const semanaMap = {};
   const detalhe = {};
@@ -78,6 +78,27 @@ function construirDadosSemanaPorGrupo() {
     });
   });
 
+  /* ==== FUSÃO DE GRUPOS ==== */
+  const fusoes = {
+    "Peito": ["Peito Superior", "Peito Inferior"],
+    "Costas": ["Costa Superior", "Costa Latíssimo"]
+  };
+
+  for (const novoNome in fusoes) {
+    const originais = fusoes[novoNome];
+    let total = 0;
+
+    originais.forEach(grp => {
+      if (semanaMap[grp]) {
+        total += semanaMap[grp];
+        delete semanaMap[grp];
+      }
+    });
+
+    if (total > 0) semanaMap[novoNome] = total;
+  }
+//Fim da fusão//
+
   const lista = Object.keys(semanaMap).map(g => ({
     grupo: g,
     total: semanaMap[g]
@@ -99,15 +120,242 @@ function construirDadosSemanaPorGrupo() {
   return { labels, values, details };
 }
 
-/* ========= Criar Painel Flutuante ========= */
+/* ========= NOVO: Coletar dados PARA CADA TREINO SEPARADO ========= */
+function construirDadosSemanaPorTreino() {
+  const resultados = [];
+
+  const treinosOrdenados = (TREINOS || []).slice()
+    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+
+  treinosOrdenados.forEach(t => {
+    const semanaMap = {};
+    const detalhe = {};
+
+    const exsDoTreino = (TREINO_EXS || [])
+      .filter(ex => Number(ex.treino_id) === Number(t.id));
+
+    exsDoTreino.forEach(ex => {
+      const base = BASE_EXERCICIOS.find(b => b.id === ex.exercicio_id);
+      if (!base) return;
+
+      const seriesEx = Number(ex.validas) || 0;
+      if (!seriesEx) return;
+
+      [
+        { g: base.grupo1, p: base.validas1 },
+        { g: base.grupo2, p: base.validas2 },
+        { g: base.grupo3, p: base.validas3 },
+      ].forEach(entry => {
+        if (!entry.g || !entry.p) return;
+        const grupo = entry.g.trim();
+        const qtd = Math.round(seriesEx * Number(entry.p));
+
+        semanaMap[grupo] = (semanaMap[grupo] || 0) + qtd;
+
+        if (!detalhe[grupo]) detalhe[grupo] = {};
+        const nome = base.exercicio || `#${base.id}`;
+        detalhe[grupo][nome] = (detalhe[grupo][nome] || 0) + qtd;
+      });
+    });
+
+    const lista = Object.keys(semanaMap).map(g => ({
+      grupo: g,
+      total: semanaMap[g]
+    })).sort((a, b) => b.total - a.total);
+
+    const labels = lista.map(i => i.grupo);
+    const values = lista.map(i => i.total);
+
+    const details = {};
+    labels.forEach(g => {
+      const exs = detalhe[g] || {};
+      const itens = Object.keys(exs).map(k => ({
+        exercicio: k,
+        series: exs[k]
+      })).sort((a, b) => b.series - a.series);
+      details[g] = itens;
+    });
+
+    resultados.push({
+      treinoId: t.id,
+      nomeTreino: t.nome_treino || `Treino ${t.id}`,
+      labels,
+      values,
+      details
+    });
+  });
+
+  return resultados;
+}
+
+/* ========= STATE ========= */
 let painelState = {
-  chart: null,
+  charts: [],
   tooltip: null,
-  root: null,
-  boundWindowMove: null,
-  boundWindowUp: null
+  root: null
 };
 
+function destruirChartsAtuais() {
+  painelState.charts.forEach(c => {
+    try { c.destroy(); } catch (_) {}
+  });
+  painelState.charts = [];
+}
+
+/* ========= RENDER: AGREGADO ========= */
+function renderGraficoAgregado(wrap) {
+  wrap.innerHTML = "";
+  const canvas = document.createElement("canvas");
+  canvas.style.cssText = "width:100%; height:100%;";
+  wrap.appendChild(canvas);
+
+  const dados = construirDadosSemanaPorGrupo();
+  if (!dados.labels.length) {
+    wrap.innerHTML = "<div style='margin:auto;color:#666'>Sem dados.</div>";
+    return;
+  }
+
+  const ctx = canvas.getContext("2d");
+  const chart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: dados.labels,
+      datasets: [{
+        label: "Séries",
+        data: dados.values,
+        backgroundColor: "rgba(54,162,235,0.9)",
+        hoverBackgroundColor: "rgba(40,140,210,0.9)",
+        borderRadius: 6
+      }]
+    },
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true } },
+      plugins:{
+          legend: { display:false },   // REMOVE A LEGENDA
+          tooltip:{ enabled:false }
+        },
+      onHover: (event, elements) => {
+        const e = elements && elements[0];
+        if (!e) return hideCustomTooltip();
+
+        const i = e.index;
+        const label = dados.labels[i];
+        showCustomTooltip(label, dados.values[i], dados.details[label], event.x, event.y);
+      }
+    }
+  });
+
+  painelState.charts.push(chart);
+}
+
+/* ========= RENDER: POR TREINO ========= */
+function renderGraficoPorTreino(wrap) {
+  const dados = construirDadosSemanaPorTreino();
+  wrap.innerHTML = "";
+
+  if (!dados.length) {
+    wrap.innerHTML = "<div style='margin:auto;color:#666'>Sem dados.</div>";
+    return;
+  }
+
+  const n = dados.length;
+
+  // sempre 2 colunas — igual ao layout dos exercícios
+  const cols = 2;
+  const rows = Math.ceil(n / cols);
+
+  const grid = document.createElement("div");
+  grid.style.cssText = `
+    display: grid;
+    grid-template-columns: repeat(${cols}, 1fr);
+    grid-template-rows: repeat(${rows}, 1fr);
+    gap: 10px;
+    width: 100%;
+    height: 100%;        /* ESSENCIAL: dentro do painel */
+    overflow: hidden;    /* impede extravasar */
+  `;
+  wrap.appendChild(grid);
+
+  dados.forEach(item => {
+    const bloco = document.createElement("div");
+    bloco.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      padding: 6px;
+      background: transparent;
+      border-radius: 8px;
+      overflow: hidden;   /* segura o canvas dentro */
+      min-height: 0;      /* ESSENCIAL para flexbox + charts */
+    `;
+
+    const title = document.createElement("div");
+    title.textContent = item.nomeTreino;
+    title.style.cssText = `
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      flex: 0 0 auto;
+    `;
+
+    const canvasWrap = document.createElement("div");
+    canvasWrap.style.cssText = `
+      flex: 1 1 auto;
+      min-height: 0;      /* impede estouro */
+      display: flex;
+    `;
+
+    const canvas = document.createElement("canvas");
+    canvas.style.cssText = `
+      width: 100%;
+      height: 100%;
+    `;
+    canvasWrap.appendChild(canvas);
+
+    bloco.appendChild(title);
+    bloco.appendChild(canvasWrap);
+    grid.appendChild(bloco);
+
+    const ctx = canvas.getContext("2d");
+    const chart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: item.labels,
+        datasets: [{
+          label: "Séries",
+          data: item.values,
+          backgroundColor: "rgba(54,162,235,0.9)",
+          hoverBackgroundColor: "rgba(40,140,210,0.9)",
+          borderRadius: 6
+        }]
+      },
+      options: {
+        animation: false,
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true } },
+        plugins:{
+          legend: { display:false },   // REMOVE A LEGENDA
+          tooltip:{ enabled:false }
+        },
+        onHover: (event, elements) => {
+          const e = elements && elements[0];
+          if (!e) return hideCustomTooltip();
+          const idx = e.index;
+          const label = item.labels[idx];
+          showCustomTooltip(label, item.values[idx], item.details[label], event.x, event.y);
+        }
+      }
+    });
+
+    painelState.charts.push(chart);
+  });
+}
+
+
+/* ========= Painel principal ========= */
 async function abrirPainelFlutuanteSeries() {
   try {
     if (document.getElementById(FLOAT_PANEL_ID)) {
@@ -123,10 +371,10 @@ async function abrirPainelFlutuanteSeries() {
     root.id = FLOAT_PANEL_ID;
     root.style.cssText = `
       position:fixed;
-      left: calc(50% - 320px);
-      top: calc(50% - 210px);
+      left:calc(50% - 320px);
+      top:calc(50% - 280px);
       width:640px;
-      height:420px;
+      height:550px;
       background:#fff;
       box-shadow:0 8px 30px rgba(0,0,0,0.18);
       border-radius:12px;
@@ -138,7 +386,7 @@ async function abrirPainelFlutuanteSeries() {
     `;
     painelState.root = root;
 
-    /* CABEÇALHO */
+    /* HEADER */
     const header = document.createElement("div");
     header.style.cssText = `
       display:flex;
@@ -152,36 +400,65 @@ async function abrirPainelFlutuanteSeries() {
     titulo.textContent = "Séries semanais";
     titulo.style.cssText = `font-size:15px; font-weight:700;`;
 
+    /* BOTÃO TOGGLE */
+    let modo = "agregado";
+
+    const btnToggle = document.createElement("button");
+    btnToggle.textContent = "Por treino";
+    btnToggle.style.cssText = `
+      padding:4px 8px;
+      border-radius:8px;
+      border:1px solid #ddd;
+      background:#f5f7fb;
+      cursor:pointer;
+      font-size:12px;
+      margin-right:10px;
+    `;
+
+    btnToggle.onclick = () => {
+      destruirChartsAtuais();
+      if (modo === "agregado") {
+        modo = "porTreino";
+        btnToggle.textContent = "Agregado";
+        renderGraficoPorTreino(wrap);
+      } else {
+        modo = "agregado";
+        btnToggle.textContent = "Por treino";
+        renderGraficoAgregado(wrap);
+      }
+    };
+
+    /* BOTÃO FECHAR */
     const btnX = document.createElement("button");
     btnX.textContent = "✕";
-    btnX.setAttribute("aria-label", "Fechar");
     btnX.style.cssText = `
-      background:none; border:none; cursor:pointer;
-      font-size:16px; padding:4px;
+      background:none;border:none;
+      font-size:16px;cursor:pointer;
     `;
-    // evita que o pointerdown do header capture o clique do botão
-    btnX.addEventListener("pointerdown", (ev) => {
-      ev.stopPropagation();
-    });
-    // ação de fechar: destrói chart, tooltip e remove root
-    btnX.addEventListener("click", () => {
-      cleanupPainelFlutuante();
-    });
+    btnX.onclick = cleanupPainelFlutuante;
+
+    const headerRight = document.createElement("div");
+    headerRight.style.cssText = "display:flex;gap:8px;";
+    headerRight.appendChild(btnToggle);
+    headerRight.appendChild(btnX);
 
     header.appendChild(titulo);
-    header.appendChild(btnX);
+    header.appendChild(headerRight);
 
-    /* CANVAS */
+    /* WRAP */
     const wrap = document.createElement("div");
-    wrap.style.cssText = "flex:1; display:flex;";
-    const canvas = document.createElement("canvas");
-    wrap.appendChild(canvas);
+    wrap.style.cssText = `
+      flex: 0 0 auto;    /* deixa de esticar automaticamente */
+      display: flex;
+      width: 100%;
+      height: 90%;     /* <<< DEFINA A ALTURA AQUI */
+    `;
 
-    /* Tooltip custom */
+    /* Tooltip */
     const tt = document.createElement("div");
     tt.style.cssText = `
       position:fixed;
-      background:rgba(15, 15, 15, 0.92);
+      background:rgba(15,15,15,0.92);
       color:#fff;
       padding:8px;
       border-radius:8px;
@@ -194,84 +471,32 @@ async function abrirPainelFlutuanteSeries() {
     document.body.appendChild(tt);
     painelState.tooltip = tt;
 
-    /* Montar tudo */
+    /* Montagem */
     root.appendChild(header);
     root.appendChild(wrap);
     document.body.appendChild(root);
 
-    /* Torna arrastável */
     makeElementDraggable(root, header);
 
-    const dados = construirDadosSemanaPorGrupo();
-    if (!dados.labels.length) {
-      wrap.innerHTML = "<div style='margin:auto;color:#666'>Sem dados.</div>";
-      return;
-    }
-
-    /* Gráfico */
-    const ctx = canvas.getContext("2d");
-    painelState.chart = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: dados.labels,
-        datasets: [{
-          label: "Séries",
-          data: dados.values,
-          backgroundColor: "rgba(54,162,235,0.9)",
-          hoverBackgroundColor: "rgba(40,140,210,0.9)",
-          borderRadius: 6
-        }]
-      },
-      options: {
-        animation: false,
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: { beginAtZero: true }
-        },
-        plugins: {
-          tooltip: { enabled: false }
-        },
-        onHover: (event, elements) => {
-          const e = elements && elements[0];
-          if (!e) {
-            hideCustomTooltip();
-            return;
-          }
-
-          const i = e.index;
-          const label = dados.labels[i];
-          const total = dados.values[i];
-          const det = dados.details[label];
-
-          // event.x/event.y são fornecidos pelo Chart.js v4
-          showCustomTooltip(label, total, det, event.x, event.y);
-        }
-      }
-    });
+    /* Render inicial (AGREGADO) */
+    renderGraficoAgregado(wrap);
 
   } catch (err) {
     console.error(err);
   }
 }
 
-/* ========= Cleanup: destruir chart, tooltip, remover root ========= */
+/* ========= Cleanup ========= */
 function cleanupPainelFlutuante() {
-  try {
-    if (painelState.chart) {
-      try { painelState.chart.destroy(); } catch (_) {}
-      painelState.chart = null;
-    }
-    if (painelState.tooltip) {
-      try { painelState.tooltip.remove(); } catch (_) {}
-      painelState.tooltip = null;
-    }
-    if (painelState.root) {
-      try { painelState.root.remove(); } catch (_) {}
-      painelState.root = null;
-    }
-  } catch (e) {
-    console.error("Erro cleanup painel:", e);
+  destruirChartsAtuais();
+
+  if (painelState.tooltip) {
+    try { painelState.tooltip.remove(); } catch (_) {}
+    painelState.tooltip = null;
+  }
+  if (painelState.root) {
+    try { painelState.root.remove(); } catch (_) {}
+    painelState.root = null;
   }
 }
 
@@ -314,32 +539,24 @@ function makeElementDraggable(box, handle) {
   let down = false, offX = 0, offY = 0;
 
   handle.addEventListener("pointerdown", (e) => {
-    // ignore pointerdown coming from a button inside header
-    if (e.target && (e.target.tagName === "BUTTON" || e.target.closest("button"))) return;
+    if (e.target.tagName === "BUTTON" || e.target.closest("button")) return;
     down = true;
     offX = e.clientX - box.offsetLeft;
     offY = e.clientY - box.offsetTop;
     try { handle.setPointerCapture(e.pointerId); } catch (_) {}
   });
 
-  function onMove(e) {
+  window.addEventListener("pointermove", e => {
     if (!down) return;
     box.style.left = (e.clientX - offX) + "px";
     box.style.top = (e.clientY - offY) + "px";
-  }
+  });
 
-  function onUp(e) {
+  window.addEventListener("pointerup", e => {
     if (!down) return;
     down = false;
     try { handle.releasePointerCapture(e.pointerId); } catch (_) {}
-  }
-
-  window.addEventListener("pointermove", onMove);
-  window.addEventListener("pointerup", onUp);
-
-  // guardar referências caso precise remover listeners futuramente
-  painelState.boundWindowMove = onMove;
-  painelState.boundWindowUp = onUp;
+  });
 }
 
 /* ========= Inicialização ========= */
