@@ -197,10 +197,10 @@ function criarElementoExercicioBase(exercicioId, nomeEx) {
             <strong>${nomeEx}</strong>
             <button class="btn-remove-ex"
                     style="width:26px;height:26px;border-radius:6px;
-                           border:none;background:none;
+                           border:none;background:#ffb1b1;
                            display:flex;align-items:center;justify-content:center;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                     stroke="#c33" stroke-width="2" stroke-linecap="round">
+                     stroke="#fff" stroke-width="2" stroke-linecap="round">
                     <line x1="5" y1="5" x2="19" y2="19" />
                     <line x1="5" y1="19" x2="19" y2="5" />
                 </svg>
