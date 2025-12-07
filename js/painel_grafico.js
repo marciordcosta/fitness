@@ -223,8 +223,23 @@ function renderGraficoAgregado(wrap) {
       datasets: [{
         label: "Séries",
         data: dados.values,
-        backgroundColor: "rgba(54,162,235,0.9)",
-        hoverBackgroundColor: "rgba(40,140,210,0.9)",
+         
+        backgroundColor: function(ctx) {
+        const v = ctx.raw;  // valor da barra
+
+        if (v < 6)   return "#91a4f8ff";  
+        if (v < 10)  return "#5f78e6ff";  
+        return "#3145fdff";               
+      },
+
+        hoverBackgroundColor: function(ctx) {
+        const v = ctx.raw;
+
+        if (v < 6)   return ("#738bf5ff");
+        if (v < 10)  return ("#2e4fe4ff");
+        return ("#152cfdff");
+      },
+         
         borderRadius: 6
       }]
     },
@@ -572,4 +587,5 @@ function makeElementDraggable(box, handle) {
   const mo = new MutationObserver(() => adicionarBotaoGraficoAoTopo());
   mo.observe(obs, { childList: true, subtree: true });
 })();
+
 
