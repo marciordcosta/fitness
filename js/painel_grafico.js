@@ -8,6 +8,8 @@ const FLOAT_PANEL_ID = "painel-flutuante-series-semanais";
 const FLOAT_PANEL_Z = 9999;
 const CHART_CDN = "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js";
 
+let FUSOES = null;
+
 /* ========= Carregar Chart.js somente se necessário ========= */
 function ensureChartJsLoaded() {
   return new Promise((resolve, reject) => {
@@ -177,11 +179,8 @@ function construirDadosSemanaPorTreino() {
 
      /* ==== FUSÃO DE GRUPOS POR TREINO ==== */
       
-     const fusoes = {
-        "Peito": ["Peito Superior", "Peito Inferior"],
-        "Costas": ["Costas Superior", "Costas Latíssimo"]
-      }; 
-     
+     const fusoes = FUSOES;
+             
      for (const novoNome in fusoes) {
         const originais = fusoes[novoNome];
 
@@ -642,6 +641,7 @@ function makeElementDraggable(box, handle) {
   const mo = new MutationObserver(() => adicionarBotaoGraficoAoTopo());
   mo.observe(obs, { childList: true, subtree: true });
 })();
+
 
 
 
