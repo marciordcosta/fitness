@@ -144,12 +144,7 @@ async function construirDadosPorData(exercicioId, data) {
     }
   }
 
-   /* ==== FUSÃO DE GRUPOS ==== */
-const fusoes = {
-  "Peito": ["Peito Superior", "Peito Inferior"],
-  "Costas": ["Costas Superior", "Costas Latíssimo"]
-};
-
+  /* ==== FUSÃO ROBUSTA ==== */
 for (const novoNome in fusoes) {
   const originais = fusoes[novoNome];
 
@@ -157,20 +152,17 @@ for (const novoNome in fusoes) {
   let somaDetalhe = {};
 
   originais.forEach(grp => {
-    if (semanaMap[grp]) {
-      somaTotal += semanaMap[grp];
-      delete semanaMap[grp];
-    }
-  });
+    somaTotal += semanaMap[grp] || 0;
 
-  originais.forEach(grp => {
     if (detalhe[grp]) {
       Object.entries(detalhe[grp]).forEach(([exercicio, series]) => {
         somaDetalhe[exercicio] =
           (somaDetalhe[exercicio] || 0) + series;
       });
-      delete detalhe[grp];
     }
+
+    delete semanaMap[grp];
+    delete detalhe[grp];
   });
 
   if (somaTotal > 0) {
@@ -613,4 +605,5 @@ async function abrirMiniPainelOrdemTreino(dataSelecionada) {
     try { h.releasePointerCapture(e.pointerId); } catch (_) {}
   });
 }
+
 
