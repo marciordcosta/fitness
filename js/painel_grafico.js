@@ -78,7 +78,7 @@ function construirDadosSemanaPorGrupo() {
     });
   });
 
- /* ==== FUSÃO DE GRUPOS ==== */
+ /* ==== FUSÃO DE GRUPOS (SÉRIES TOTAIS) ==== */
 const fusoes = {
   "Peito": ["Peito Superior", "Peito Inferior"],
   "Costas": ["Costas Superior", "Costas Latíssimo"]
@@ -177,7 +177,12 @@ function construirDadosSemanaPorTreino() {
 
      /* ==== FUSÃO DE GRUPOS POR TREINO ==== */
       
-      for (const novoNome in fusoes) {
+     const fusoes = {
+        "Peito": ["Peito Superior", "Peito Inferior"],
+        "Costas": ["Costas Superior", "Costas Latíssimo"]
+      }; 
+     
+     for (const novoNome in fusoes) {
         const originais = fusoes[novoNome];
 
         let somaTotal = 0;
@@ -637,6 +642,7 @@ function makeElementDraggable(box, handle) {
   const mo = new MutationObserver(() => adicionarBotaoGraficoAoTopo());
   mo.observe(obs, { childList: true, subtree: true });
 })();
+
 
 
 
