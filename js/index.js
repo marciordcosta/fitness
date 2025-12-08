@@ -196,7 +196,7 @@ function criarElementoExercicioBase(exercicioId, nomeEx) {
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <strong>${nomeEx}</strong>
             <button class="btn-remove-ex"
-                    style="width:26px;height:26px;border-radius:6px;
+                    style="width:24px;height:24px;border-radius:6px;
                            border:none;background:#ffb1b1;
                            display:flex;align-items:center;justify-content:center;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
