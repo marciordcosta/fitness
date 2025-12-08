@@ -142,8 +142,43 @@ async function construirDadosPorData(exercicioId, data) {
       detalhe[g] = detalhe[g] || {};
       detalhe[g][nome] = (detalhe[g][nome] || 0) + totalSeries;
     }
-
   }
+
+   /* ==== FUSÃO DE GRUPOS ==== */
+const fusoes = {
+  "Peito": ["Peito Superior", "Peito Inferior"],
+  "Costas": ["Costas Superior", "Costas Latíssimo"]
+};
+
+for (const novoNome in fusoes) {
+  const originais = fusoes[novoNome];
+
+  let somaTotal = 0;
+  let somaDetalhe = {};
+
+  originais.forEach(grp => {
+    if (semanaMap[grp]) {
+      somaTotal += semanaMap[grp];
+      delete semanaMap[grp];
+    }
+  });
+
+  originais.forEach(grp => {
+    if (detalhe[grp]) {
+      Object.entries(detalhe[grp]).forEach(([exercicio, series]) => {
+        somaDetalhe[exercicio] =
+          (somaDetalhe[exercicio] || 0) + series;
+      });
+      delete detalhe[grp];
+    }
+  });
+
+  if (somaTotal > 0) {
+    semanaMap[novoNome] = somaTotal;
+    detalhe[novoNome] = somaDetalhe;
+  }
+}
+
   const lista = Object.keys(semanaMap)
     .map(g => ({ grupo: g, total: semanaMap[g] }))
     .sort((a,b)=>b.total - a.total);
@@ -578,3 +613,4 @@ async function abrirMiniPainelOrdemTreino(dataSelecionada) {
     try { h.releasePointerCapture(e.pointerId); } catch (_) {}
   });
 }
+
