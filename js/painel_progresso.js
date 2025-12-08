@@ -144,7 +144,7 @@ async function construirDadosPorData(exercicioId, data) {
     }
   }
 
-  /* ==== FUSÃO ROBUSTA ==== */
+  /* ==== FUSÃO ==== */
 for (const novoNome in fusoes) {
   const originais = fusoes[novoNome];
 
@@ -605,5 +605,6 @@ async function abrirMiniPainelOrdemTreino(dataSelecionada) {
     try { h.releasePointerCapture(e.pointerId); } catch (_) {}
   });
 }
+
 
 
