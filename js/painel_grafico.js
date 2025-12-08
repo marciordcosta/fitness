@@ -176,8 +176,7 @@ function construirDadosSemanaPorTreino() {
     });
 
      /* ==== FUSÃO DE GRUPOS POR TREINO ==== */
-      const fusoes = FUSOES;
-
+      
       for (const novoNome in fusoes) {
         const originais = fusoes[novoNome];
 
@@ -638,6 +637,7 @@ function makeElementDraggable(box, handle) {
   const mo = new MutationObserver(() => adicionarBotaoGraficoAoTopo());
   mo.observe(obs, { childList: true, subtree: true });
 })();
+
 
 
 
