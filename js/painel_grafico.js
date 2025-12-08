@@ -175,6 +175,43 @@ function construirDadosSemanaPorTreino() {
       });
     });
 
+     /* ==== FUSÃO DE GRUPOS POR TREINO ==== */
+      const fusoes = {
+        "Peito": ["Peito Superior", "Peito Inferior"],
+        "Costas": ["Costas Superior", "Costas Latíssimo"]
+      };
+
+      for (const novoNome in fusoes) {
+        const originais = fusoes[novoNome];
+
+        let somaTotal = 0;
+        let somaDetalhe = {};
+
+        // totais
+        originais.forEach(grp => {
+          if (semanaMap[grp]) {
+            somaTotal += semanaMap[grp];
+            delete semanaMap[grp];
+          }
+        });
+
+        // detalhes
+        originais.forEach(grp => {
+          if (detalhe[grp]) {
+            Object.entries(detalhe[grp]).forEach(([exercicio, series]) => {
+              somaDetalhe[exercicio] = (somaDetalhe[exercicio] || 0) + series;
+            });
+            delete detalhe[grp];
+          }
+        });
+
+        // grava grupo fundido
+        if (somaTotal > 0) {
+          semanaMap[novoNome] = somaTotal;
+          detalhe[novoNome] = somaDetalhe;
+        }
+      }
+     
     const lista = Object.keys(semanaMap).map(g => ({
       grupo: g,
       total: semanaMap[g]
@@ -604,6 +641,7 @@ function makeElementDraggable(box, handle) {
   const mo = new MutationObserver(() => adicionarBotaoGraficoAoTopo());
   mo.observe(obs, { childList: true, subtree: true });
 })();
+
 
 
 
