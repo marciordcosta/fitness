@@ -251,43 +251,76 @@ async function visualizarTreino(treinoId, nomeTreino) {
   lista.innerHTML = "";
   titulo.textContent = `Treino: ${nomeTreino} (${formatarData(dataHoje)})`; 
 
-  // ====================================================
-  // 3) CONSTROI A LISTA BASEADA NO PADRÃO (ORDEM CORRETA)
-  // ====================================================
 
-  padrao.forEach(e => {
-      const exercicioId = e.exercicios?.id || e.exercicio_id;
-      const nomeEx = e.exercicios?.exercicio || "Exercício";
+// ==============================================
+// 3) SE EXISTE REGISTRO NO DIA → RECONSTRUIR EXATO
+// ==============================================
 
-      // 3.1) Cria o elemento HTML base, usando a ordem do padrão
-      const item = criarElementoExercicioBase(exercicioId, nomeEx);
-      const cont = item.querySelector(".series-container");
+if (regs && regs.length > 0) {
 
-      let linhasDoEx = [];
-      if (regs && regs.length > 0) {
-          // Filtra os registros salvos para este exercício
-          linhasDoEx = regs.filter(r => r.exercicio_id === exercicioId);
-      }
-      
-      // 3.2) Popula com dados salvos ou com 2 linhas vazias (padrão)
-      if (linhasDoEx.length > 0) {
-          linhasDoEx.forEach(r => {
-              const linha = criarLinhaSerie();
-              linha.querySelector(".serie-peso").value = r.peso ?? "";
-              linha.querySelector(".serie-rep").value = r.repeticoes ?? "";
-              cont.appendChild(linha);
-          });
-      } else {
-          // Se não há registro (ou se o registro for vazio), adiciona 2 linhas para preenchimento
-          cont.appendChild(criarLinhaSerie());
-          cont.appendChild(criarLinhaSerie());
-      }
+    // garantir IDs únicos em ordem de salvamento
+    const ordemExercicios = [...new Set(regs.map(r => String(r.exercicio_id)))];
 
-      // 3.3) Configura o botão de adicionar série
-      item.querySelector(".btn-add-serie").onclick = () => cont.appendChild(criarLinhaSerie());
-      
-      lista.appendChild(item);
-  });
+    // buscar nomes faltantes na tabela exercicios
+    const idsParaBuscar = ordemExercicios.filter(id => !!id);
+    let exerciciosNomeMap = {};
+    if (idsParaBuscar.length) {
+        const { data: exData, error: exErr } = await sb
+            .from("exercicios")
+            .select("id, exercicio")
+            .in("id", idsParaBuscar);
+        if (!exErr && exData) {
+            exData.forEach(x => { exerciciosNomeMap[String(x.id)] = x.exercicio; });
+        } else {
+            console.warn("Não foi possível buscar nomes de exercícios:", exErr);
+        }
+    }
+
+    for (const exIdRaw of ordemExercicios) {
+        const exId = exIdRaw; // string form
+        const linhas = regs.filter(r => String(r.exercicio_id) === exId);
+
+        // prioridade: campo nome salvo no registro > nome vindo da tabela exercicios > nome no padrão
+        const nomeEx =
+            (linhas[0] && (linhas[0].nome_exercicio || linhas[0].nome)) ||
+            exerciciosNomeMap[exId] ||
+            (padrao.find(p => String(p.exercicios?.id || p.exercicio_id) === exId)?.exercicios?.exercicio) ||
+            "Exercício";
+
+        const item = criarElementoExercicioBase(exId, nomeEx);
+        const cont = item.querySelector(".series-container");
+
+        linhas.forEach(r => {
+            const linha = criarLinhaSerie();
+            linha.querySelector(".serie-peso").value = r.peso ?? "";
+            linha.querySelector(".serie-rep").value = r.repeticoes ?? "";
+            cont.appendChild(linha);
+        });
+
+        item.querySelector(".btn-add-serie").onclick =
+            () => cont.appendChild(criarLinhaSerie());
+
+        lista.appendChild(item);
+    }
+
+} else {
+    // sem registros → usar padrão (mantém seu comportamento atual)
+    padrao.forEach(e => {
+        const exercicioId = e.exercicios?.id || e.exercicio_id;
+        const nomeEx = e.exercicios?.exercicio || "Exercício";
+
+        const item = criarElementoExercicioBase(exercicioId, nomeEx);
+        const cont = item.querySelector(".series-container");
+
+        cont.appendChild(criarLinhaSerie());
+        cont.appendChild(criarLinhaSerie());
+
+        item.querySelector(".btn-add-serie").onclick =
+            () => cont.appendChild(criarLinhaSerie());
+
+        lista.appendChild(item);
+    });
+}
 
   painelSelecao.style.display = "none";
   painelDetalhe.style.display = "block";
