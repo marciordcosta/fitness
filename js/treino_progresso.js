@@ -554,19 +554,27 @@ async function atualizarGraficoComparacao(){
     },
 
       label: (context) => {
-      const ds = context.dataset;
+        const ds = context.dataset;
 
-      // Ignorar volume sempre
-      if (ds.label.includes("Vol")) return "";
+        // ignorar volume
+        if (ds.label.includes("Vol")) return "";
 
-      const idx = context.dataIndex;
-      const raw = ds.meta?.rawValues?.[idx] ?? null;
+        const idx = context.dataIndex;
+        const dateStr = context.label;
 
-      const data = context.label; // a data da posição
+        // nome do exercício
+        const nome = ds.label.split("—")[0].trim();
 
-      if (raw == null || isNaN(raw)) return `${data}: -`;
+        // achar exercício no cache
+        const ex = CACHE.relacionados.find(e => e.exercicio === nome);
+        if (!ex) return `${dateStr}: -`;
 
-      return `${data} — 1RM: ${Number(raw).toFixed(1)}kg`;
+        // registros daquele exercício na data
+        const regs = (CACHE.registros[String(ex.id)] || []).filter(r => r.data === dateStr);
+
+        const totalSeries = regs.length || 0;
+
+        return `${dateStr} — Séries: ${totalSeries}`;
     },
   }
 }
