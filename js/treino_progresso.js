@@ -663,12 +663,21 @@ async function atualizarDetalhesComparacao(){
     const agrupado = agruparPorData(CACHE.registros[String(id)] || [])
                       .sort((a,b) => parseLocalDate(b.data) - parseLocalDate(a.data));
 
-    // Removed the '+' that opened modal; kept name display
+   
+    // achar dataset correspondente ao exercício (linha 1RM)
+    const ds = progressoChart.data.datasets.find(d =>
+      d.label.startsWith(nome + " — 1RM")
+    );
+
+    const cor = ds?.borderColor || "#000";
+
+    // título com a cor da linha
     let col = `
-      <div style="font-weight:600; margin-bottom:6px; display:flex; align-items:center; gap:6px; font-size:16px;">
+      <div style="font-weight:600; margin-bottom:6px; display:flex; align-items:center; gap:6px; font-size:16px; color:${cor};">
         ${nome}
       </div>
     `;
+
 
     for (let i = 0; i < agrupado.length; i++) {
 
