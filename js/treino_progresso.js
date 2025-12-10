@@ -665,18 +665,30 @@ async function atualizarDetalhesComparacao(){
 
     // Removed the '+' that opened modal; kept name display
     // achar dataset correspondente ao exercício (linha 1RM)
-const ds = progressoChart.data.datasets.find(d =>
-  d.label.startsWith(nome + " — 1RM")
-);
+    const ds = progressoChart.data.datasets.find(d =>
+      d.label.startsWith(nome + " — 1RM")
+    );
 
-const cor = ds?.borderColor || "#000";
+    const cor = ds?.borderColor || "#000";
 
     // título com a cor da linha
     let col = `
-      <div style="font-weight:600; margin-bottom:6px; display:flex; align-items:center; gap:6px; font-size:16px; color:${cor};">
+      <div style="font-weight:600; margin-bottom:6px; display:flex; align-items:center; gap:8px; font-size:16px;">
+    
+        <!-- bolinha da cor da linha -->
+        <span style="
+          width:12px;
+          height:12px;
+          border-radius:50%;
+          background:${cor};
+          display:inline-block;
+          flex-shrink:0;
+        "></span>
+
         ${nome}
       </div>
     `;
+
 
     for (let i = 0; i < agrupado.length; i++) {
 
