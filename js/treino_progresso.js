@@ -663,13 +663,13 @@ async function atualizarDetalhesComparacao(){
     const agrupado = agruparPorData(CACHE.registros[String(id)] || [])
                       .sort((a,b) => parseLocalDate(b.data) - parseLocalDate(a.data));
 
-   
+    // Removed the '+' that opened modal; kept name display
     // achar dataset correspondente ao exercício (linha 1RM)
-    const ds = progressoChart.data.datasets.find(d =>
-      d.label.startsWith(nome + " — 1RM")
-    );
+const ds = progressoChart.data.datasets.find(d =>
+  d.label.startsWith(nome + " — 1RM")
+);
 
-    const cor = ds?.borderColor || "#000";
+const cor = ds?.borderColor || "#000";
 
     // título com a cor da linha
     let col = `
@@ -677,7 +677,6 @@ async function atualizarDetalhesComparacao(){
         ${nome}
       </div>
     `;
-
 
     for (let i = 0; i < agrupado.length; i++) {
 
@@ -719,9 +718,9 @@ async function atualizarDetalhesComparacao(){
       col += `
         <div class="historico-registro" 
           style="cursor:pointer;"
+          data-exercicio="${nome}"
           onclick="abrirPainelProgresso(${id}, '${atual.data}')"
-
-          onmouseover="hoverDataNoGrafico('${atual.data}')"
+          onmouseover="hoverDataNoGrafico('${atual.data}', '${nome}')"
           onmouseout="clearHoverGrafico()">
 
           <span class="data-registro">${atual.data}</span>
@@ -742,7 +741,7 @@ async function atualizarDetalhesComparacao(){
 // (fim da função atualizarDetalhesComparacao)
 
 // === Hover programático no gráfico pela data ===
-window.hoverDataNoGrafico = function (dataStr) {
+window.hoverDataNoGrafico = function (dataStr, exercicioNome) {
     if (!progressoChart) return;
 
     const labels = progressoChart.data.labels;
@@ -753,10 +752,9 @@ window.hoverDataNoGrafico = function (dataStr) {
     const tooltipActive = [];
 
     progressoChart.data.datasets.forEach((ds, dsIndex) => {
-        // ignorar datasets de Volume
-        if (ds.label.includes("Vol")) return;
-        // ignorar datasets hidden
-        if (ds.hidden) return;
+
+        // apenas o dataset do exercício correto (1RM)
+        if (!ds.label.startsWith(exercicioNome + " — 1RM")) return;
 
         const val = ds.data[idx];
         if (val == null || isNaN(val)) return;
@@ -765,19 +763,21 @@ window.hoverDataNoGrafico = function (dataStr) {
         tooltipActive.push({ datasetIndex: dsIndex, index: idx });
     });
 
-    if (active.length === 0) return;
+    if (!active.length) return;
 
     progressoChart.setActiveElements(active);
-    const point = progressoChart.getDatasetMeta(tooltipActive[0].datasetIndex).data[idx];
+
+    const point = progressoChart.getDatasetMeta(active[0].datasetIndex).data[idx];
     const pos = point.getProps(['x', 'y'], true);
 
-progressoChart.tooltip.setActiveElements(tooltipActive, {
-    x: pos.x,
-    y: pos.y
-});
+    progressoChart.tooltip.setActiveElements(tooltipActive, {
+        x: pos.x,
+        y: pos.y
+    });
 
     progressoChart.update();
 };
+
 
 // === Hover vindo DO GRÁFICO para o histórico ===
 window.hoverHistorico = function(dateStr) {
