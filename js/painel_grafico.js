@@ -282,16 +282,16 @@ function renderGraficoAgregado(wrap) {
         backgroundColor: function(ctx) {
         const v = ctx.raw;  // valor da barra
 
-        if (v < 6)   return "#91a4f8ff";  
-        if (v < 10)  return "#5f78e6ff";  
+        if (v < 6)   return "#ff0e00";  
+        if (v < 10)  return "#259441";  
         return "#3145fdff";               
       },
 
         hoverBackgroundColor: function(ctx) {
         const v = ctx.raw;
 
-        if (v < 6)   return ("#738bf5ff");
-        if (v < 10)  return ("#2e4fe4ff");
+        if (v < 6)   return ("#cf0b00");
+        if (v < 10)  return ("#1e7834");
         return ("#152cfdff");
       },
          
@@ -642,6 +642,7 @@ function makeElementDraggable(box, handle) {
   const mo = new MutationObserver(() => adicionarBotaoGraficoAoTopo());
   mo.observe(obs, { childList: true, subtree: true });
 })();
+
 
 
 
