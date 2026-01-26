@@ -53,7 +53,7 @@ body{margin:0;background:#000;overflow:hidden;touch-action:none}
 <body>
 
 <script>
-supabase.auth.getUser().then(({ data }) => {
+sb.auth.getUser().then(({ data }) => {
   if (!data.user) window.location.href = "login.html";
 });
 </script>
@@ -241,7 +241,7 @@ function voltar(){ window.location="galeria.html"; }
 async function editarFoto(){
   const nova=prompt("Nova data (AAAA-MM-DD):");
   if(!nova) return;
-  await supabase.from("fotos").update({data_foto:nova}).eq("id",fotos[index].id);
+  await sb.from("fotos").update({data_foto:nova}).eq("id",fotos[index].id);
   alert("Data atualizada.");
 }
 
@@ -252,9 +252,9 @@ async function excluirFoto(){
   if(!confirm("Excluir esta foto?")) return;
 
   const nome=fotos[index].arquivo;
-  if(nome) await supabase.storage.from("fotos").remove([nome]);
+  if(nome) await sb.storage.from("fotos").remove([nome]);
 
-  await supabase.from("fotos").delete().eq("id",fotos[index].id);
+  await sb.from("fotos").delete().eq("id",fotos[index].id);
 
   fotos.splice(index,1);
   if(!fotos.length) return voltar();
@@ -267,4 +267,5 @@ async function excluirFoto(){
 
 </body>
 </html>
+
 
