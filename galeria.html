@@ -227,7 +227,7 @@ async function enviarMultiplas(){
   for (let file of files){
     const nome = `${Date.now()}-${file.name}`;
     await sb.storage.from("fotos").upload(nome, file);
-    const { data:pub } = supabase.storage.from("fotos").getPublicUrl(nome);
+    const { data: pub } = sb.storage.from("fotos").getPublicUrl(nome);
     await sb.from("fotos").insert({
       data_foto: data,
       url: pub.publicUrl
@@ -571,6 +571,7 @@ carregarGaleria();
 
 </body>
 </html>
+
 
 
 
