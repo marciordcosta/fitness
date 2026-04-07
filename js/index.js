@@ -666,18 +666,17 @@ function renderHistorico(lista) {
     div.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;">
        <div class="item-title">${item.peso.toFixed(1)} kg</div>
+       <div class="item-sub">${formatarData(item.data)}</div>
+      </div>
 
-       ${temTreino ? `<div style="
-        width:8px;
-        height:8px;
-        background:#00c853;
-        border-radius:50%;
-      "></div>` : ""}
-
-    <div class="item-sub">${formatarData(item.data)}</div>
-  </div>
-
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        ${temTreino ? `<div style="
+          width:8px;
+          height:8px;
+          background:#00c853;
+          border-radius:50%;
+        "></div>` : ""}
+        
         <button class="btn-mini menu-trigger" style="border:1px solid #ffffffff;background:#fff" aria-label="Mais opções"> 
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
             <circle cx="12" cy="5" r="1.5" fill="#1c1c1e"></circle>
