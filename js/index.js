@@ -5,6 +5,7 @@ let grafico;
 let dadosPesos = [];
 let periodoAtual = 7;
 let idEditar = null;
+let datasComTreino = new Set();
 
 // Meta: persistida em localStorage
 const META_KEY = "meta_config";
@@ -544,6 +545,7 @@ async function carregarPesos(filtrar = false) {
   if (error) return console.error(error);
 
   dadosPesos = data || [];
+  await carregarDatasComTreino();
 
   if (filtrar) {
     aplicarPeriodo();
@@ -552,6 +554,20 @@ async function carregarPesos(filtrar = false) {
     renderHistorico(dadosPesos);
     calcularSemanasEMedias();
   }
+}
+
+async function carregarDatasComTreino() {
+  const { data, error } = await sb
+    .from("treino_registros")
+    .select("data");
+
+  if (error) {
+    console.error("Erro ao carregar treinos:", error);
+    datasComTreino = new Set();
+    return;
+  }
+
+  datasComTreino = new Set((data || []).map(r => r.data));
 }
 
 function aplicarPeriodo() {
@@ -641,6 +657,7 @@ function renderHistorico(lista) {
   el.innerHTML = "";
 
   lista.forEach(item => {
+    const temTreino = datasComTreino.has(item.data);
     const div = document.createElement("div");
     div.className = "item";
     div.style.justifyContent = "space-between";
@@ -648,9 +665,17 @@ function renderHistorico(lista) {
 
     div.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;">
-        <div class="item-title">${item.peso.toFixed(1)} kg</div>
-        <div class="item-sub">${formatarData(item.data)}</div>
-      </div>
+       <div class="item-title">${item.peso.toFixed(1)} kg</div>
+
+       ${temTreino ? `<div style="
+        width:8px;
+        height:8px;
+        background:#00c853;
+        border-radius:50%;
+      "></div>` : ""}
+
+    <div class="item-sub">${formatarData(item.data)}</div>
+  </div>
 
       <div style="display:flex;gap:8px;">
         <button class="btn-mini menu-trigger" style="border:1px solid #ffffffff;background:#fff" aria-label="Mais opções"> 
