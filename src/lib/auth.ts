@@ -5,7 +5,7 @@ import { supabase } from "./supabase";
  * Fonte única da allowlist — antes só era checada em index.html,
  * deixando as outras telas acessíveis a qualquer conta Google autenticada.
  */
-const ALLOWED_EMAILS = ["marciordcosta@gmail.com", "teste@teste.com"];
+export const ALLOWED_EMAILS = ["marciordcosta@gmail.com", "teste@teste.com"];
 
 /**
  * Garante sessão válida e autorizada antes de renderizar uma página.
