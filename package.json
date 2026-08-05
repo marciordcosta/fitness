@@ -1,0 +1,25 @@
+{
+  "name": "fitness",
+  "version": "1.0.0",
+  "private": true,
+  "description": "App de treino/fitness",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marciordcosta/fitness.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/marciordcosta/fitness/issues"
+  },
+  "homepage": "https://github.com/marciordcosta/fitness#readme",
+  "devDependencies": {
+    "vite": "^8.2.0"
+  }
+}
