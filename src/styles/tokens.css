@@ -54,6 +54,17 @@
   --radius-lg: 16px;
   --shadow-card: 0 4px 14px rgba(0, 0, 0, 0.08);
   --shadow-float: 0 6px 20px rgba(0, 0, 0, 0.12);
+
+  /* --- navegação --- */
+  --bottom-nav-height: 64px;
+}
+
+/*
+  Aplicar no container de conteúdo das páginas que usam <BottomNav> ,
+  para o conteúdo não ficar escondido atrás da barra fixa.
+*/
+.has-bottom-nav {
+  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + var(--space-4));
 }
 
 /* Escopo da seção "viewer" (galeria, carrossel, comparação de fotos) */

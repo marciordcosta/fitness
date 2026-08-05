@@ -18,6 +18,7 @@ export default defineConfig({
         comparacao: resolve(root, "comparacao.html"),
         galeria: resolve(root, "galeria.html"),
         carrossel: resolve(root, "carrossel.html"),
+        dieta: resolve(root, "dieta.html"),
       },
     },
   },
