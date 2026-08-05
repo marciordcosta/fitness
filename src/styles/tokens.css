@@ -1,0 +1,76 @@
+/*
+  Design system único do app — substitui os 3 estilos que coexistiam
+  (cards claros estilo iOS, cinza/Inter ad-hoc das telas de treino,
+  viewer preto das telas de fotos).
+
+  Uso:
+  - :root define os tokens da superfície padrão (telas de conteúdo/formulário).
+  - .theme-viewer é um escopo alternativo para as telas de visualização de
+    fotos (galeria/carrossel/comparação), que precisam de fundo escuro e
+    imersivo — é uma variação intencional de seção, não um dark mode
+    alternável pelo usuário.
+*/
+
+:root {
+  /* --- cor de marca --- */
+  --color-primary: #007aff;
+  --color-primary-fg: #ffffff;
+  --color-accent: #34c759;
+  --color-secondary: #5e5ce6;
+  --color-danger: #ff3b30;
+
+  /* --- feedback semântico (progresso, tendências) --- */
+  --color-success: #1e9e50;
+  --color-success-bg: #e3f7e9;
+  --color-negative: #d93025;
+  --color-negative-bg: #fdeceb;
+  --color-neutral: #6b6b70;
+  --color-neutral-bg: #eeeeef;
+
+  /* --- superfície padrão (conteúdo/formulários) --- */
+  --surface-bg: #f5f5f7;
+  --surface-fg: #1c1c1e;
+  --surface-card: #ffffff;
+  --surface-muted: #8e8e93;
+  --surface-border: #e1e1e5;
+
+  /* --- tipografia --- */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-lg: 20px;
+
+  /* --- espaçamento --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* --- forma --- */
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --shadow-card: 0 4px 14px rgba(0, 0, 0, 0.08);
+  --shadow-float: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Escopo da seção "viewer" (galeria, carrossel, comparação de fotos) */
+.theme-viewer {
+  --surface-bg: #000000;
+  --surface-fg: #f5f5f5;
+  --surface-card: #1c1c1e;
+  --surface-muted: #9a9a9e;
+  --surface-border: rgba(255, 255, 255, 0.12);
+  --shadow-card: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--surface-bg);
+  color: var(--surface-fg);
+  font-family: var(--font-sans);
+}
